@@ -24,6 +24,7 @@
 """
 import os
 import json
+import re
 import sys
 from datetime import datetime
 
@@ -90,6 +91,16 @@ def header_index(headers, name):
         if str(h).strip() == name:
             return i
     return None
+
+
+def norm_fabric(v):
+    """원단/가죽 값을 비교용으로 느슨하게 정규화 (띄어쓰기·대소문자 차이 무시).
+    예: '면 100%' 와 '면100%' 는 같은 걸로 취급하지만, '면 100%' 와 '울 100%' 는 다르게 취급."""
+    if v is None:
+        return ""
+    s = str(v).strip()
+    s = re.sub(r"\s+", "", s)
+    return s.lower()
 
 
 def main():
@@ -205,8 +216,9 @@ def main():
         matches = [h for h in hist_valid if h["브랜드"] == brand and h["디자인"] == design]
         if not matches:
             return "이전 유사거래 없음 (브랜드+디자인 일치 사례 없음)", None
+        fabric_n = norm_fabric(fabric)
         for m in matches:
-            m["원단일치"] = bool(fabric) and (m["원단"] == fabric)
+            m["원단일치"] = bool(fabric_n) and (norm_fabric(m["원단"]) == fabric_n)
             m["사이즈일치"] = (m["사이즈"] == size)
         same_fabric_n = sum(1 for m in matches if m["원단일치"])
         # 원단/가죽까지 같은 사례를 최우선으로, 그다음 최근 날짜 순
