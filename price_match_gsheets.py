@@ -7,7 +7,10 @@
 정해지지 않은(=지금 협의 중인) 행들에 대해 같은 브랜드+같은 디자인 과거 사례를 찾아
 참고 제안가/참고사례 문구를 두 개의 새 컬럼에 자동으로 채워 넣는다.
 
-- 브랜드+디자인 일치 = 필수 매칭 기준 (특이사항까지 똑같을 필요는 없음)
+- 브랜드+디자인 일치 = 필수 매칭 기준 (특이사항까지 똑같을 필요는 없음). 브랜드/디자인/원단은
+  띄어쓰기·대소문자 차이는 무시하고 비교함 (예: "PL/폴로랄프로렌" 과 "PL / 폴로 랄프로렌" 은
+  같은 걸로 인식). 다만 "HS/헤링슈" 와 "헤링슈"처럼 아예 다르게 적으면 여전히 다른 걸로 인식함
+  — 최대한 이전에 쓰던 표기 그대로 입력하는 게 제일 정확함
 - 원단/가죽까지 같은 사례가 있으면 그 사례를 우선순위로 올려서 보여줌
 - 받아갈금액, 브랜드, 디자인 등 기존 컬럼은 절대 건드리지 않음. 새 컬럼만 채움.
 - 이미 제안가가 채워진 행은 다시 건드리지 않음 (재실행해도 중복 작업 없음).
@@ -93,9 +96,10 @@ def header_index(headers, name):
     return None
 
 
-def norm_fabric(v):
-    """원단/가죽 값을 비교용으로 느슨하게 정규화 (띄어쓰기·대소문자 차이 무시).
-    예: '면 100%' 와 '면100%' 는 같은 걸로 취급하지만, '면 100%' 와 '울 100%' 는 다르게 취급."""
+def norm_text(v):
+    """브랜드/디자인/원단 값을 비교용으로 느슨하게 정규화 (띄어쓰기·대소문자 차이 무시).
+    예: 'PL / 폴로 랄프로렌' 과 'PL/폴로랄프로렌' 은 같은 걸로 취급. 단, 'HS/헤링슈' 와
+    '헤링슈'처럼 아예 다르게 적힌 건 여전히 다른 값으로 취급함 (부분 표기 통일까지는 안 함)."""
     if v is None:
         return ""
     s = str(v).strip()
@@ -155,6 +159,8 @@ def main():
         hist_valid.append({
             "브랜드": brand,
             "디자인": design,
+            "브랜드_n": norm_text(brand),
+            "디자인_n": norm_text(design),
             "사이즈": str(cell(row, "사이즈") or "").strip(),
             "원단": str(cell(row, "원단") or "").strip(),
             "받아갈금액": amt,
@@ -213,12 +219,14 @@ def main():
         print(f"새 컬럼 헤더 추가: {[label for _, label in header_writes]}")
 
     def build_reference(brand, design, size, fabric, max_cases=5):
-        matches = [h for h in hist_valid if h["브랜드"] == brand and h["디자인"] == design]
+        brand_n = norm_text(brand)
+        design_n = norm_text(design)
+        matches = [h for h in hist_valid if h["브랜드_n"] == brand_n and h["디자인_n"] == design_n]
         if not matches:
             return "이전 유사거래 없음 (브랜드+디자인 일치 사례 없음)", None
-        fabric_n = norm_fabric(fabric)
+        fabric_n = norm_text(fabric)
         for m in matches:
-            m["원단일치"] = bool(fabric_n) and (norm_fabric(m["원단"]) == fabric_n)
+            m["원단일치"] = bool(fabric_n) and (norm_text(m["원단"]) == fabric_n)
             m["사이즈일치"] = (m["사이즈"] == size)
         same_fabric_n = sum(1 for m in matches if m["원단일치"])
         # 원단/가죽까지 같은 사례를 최우선으로, 그다음 최근 날짜 순
