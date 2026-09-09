@@ -1,0 +1,26 @@
+name: 위탁 협의가 자동 참고 매칭 (구글시트)
+
+on:
+  schedule:
+    # UTC 기준 3시간마다. 한국 시간(UTC+9)으로는 03,06,09,...,00시에 실행됨.
+    - cron: '0 */3 * * *'
+  workflow_dispatch: {}   # Actions 탭에서 수동 "Run workflow" 로 즉시 테스트 가능
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 의존성 설치
+        run: pip install -r requirements.txt
+
+      - name: 스크립트 실행
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+        run: python price_match_gsheets.py
