@@ -8,7 +8,7 @@
 참고 제안가/참고사례 문구를 두 개의 새 컬럼에 자동으로 채워 넣는다.
 
 - 브랜드+디자인 일치 = 필수 매칭 기준 (특이사항까지 똑같을 필요는 없음)
-- 사이즈까지 같은 사례가 있으면 그 사례를 우선순위로 올려서 보여줌
+- 원단/가죽까지 같은 사례가 있으면 그 사례를 우선순위로 올려서 보여줌
 - 받아갈금액, 브랜드, 디자인 등 기존 컬럼은 절대 건드리지 않음. 새 컬럼만 채움.
 - 이미 제안가가 채워진 행은 다시 건드리지 않음 (재실행해도 중복 작업 없음).
 
@@ -114,6 +114,7 @@ def main():
         "브랜드": header_index(hist_headers, "브랜드"),
         "디자인": header_index(hist_headers, "디자인"),
         "사이즈": header_index(hist_headers, "사이즈"),
+        "원단": header_index(hist_headers, "원단/가죽"),
         "받아갈금액": header_index(hist_headers, "받아갈금액"),
         "판매금액": header_index(hist_headers, "판매금액"),
         "일자": header_index(hist_headers, "일자"),
@@ -144,6 +145,7 @@ def main():
             "브랜드": brand,
             "디자인": design,
             "사이즈": str(cell(row, "사이즈") or "").strip(),
+            "원단": str(cell(row, "원단") or "").strip(),
             "받아갈금액": amt,
             "판매금액": to_number(cell(row, "판매금액")),
             "일자": cell(row, "일자") or "",
@@ -166,9 +168,10 @@ def main():
         "브랜드": header_index(neg_headers, "브랜드"),
         "디자인": header_index(neg_headers, "디자인"),
         "사이즈": header_index(neg_headers, "사이즈"),
+        "원단": header_index(neg_headers, "원단/가죽"),
         "받아갈금액": header_index(neg_headers, "받아갈금액"),
     }
-    missing = [k for k, v in n_idx.items() if v is None]
+    missing = [k for k, v in n_idx.items() if v is None and k in ("브랜드", "디자인", "받아갈금액")]
     if missing:
         print(f"{NEG_SHEET_NAME} 시트에서 필수 컬럼을 못 찾았습니다: {missing}", file=sys.stderr)
         sys.exit(1)
@@ -198,25 +201,34 @@ def main():
         ).execute()
         print(f"새 컬럼 헤더 추가: {[label for _, label in header_writes]}")
 
-    def build_reference(brand, design, size, max_cases=5):
+    def build_reference(brand, design, size, fabric, max_cases=5):
         matches = [h for h in hist_valid if h["브랜드"] == brand and h["디자인"] == design]
         if not matches:
             return "이전 유사거래 없음 (브랜드+디자인 일치 사례 없음)", None
         for m in matches:
+            m["원단일치"] = bool(fabric) and (m["원단"] == fabric)
             m["사이즈일치"] = (m["사이즈"] == size)
-        same_size_n = sum(1 for m in matches if m["사이즈일치"])
-        matches.sort(key=lambda m: (not m["사이즈일치"], -(m["일자_dt"].timestamp() if m["일자_dt"] else 0)))
+        same_fabric_n = sum(1 for m in matches if m["원단일치"])
+        # 원단/가죽까지 같은 사례를 최우선으로, 그다음 최근 날짜 순
+        matches.sort(key=lambda m: (not m["원단일치"], -(m["일자_dt"].timestamp() if m["일자_dt"] else 0)))
         top = matches[0]
         lines = []
         for m in matches[:max_cases]:
             cost = f"{int(m['받아갈금액']):,}"
             sale = f"/판매 {int(m['판매금액']):,}" if m["판매금액"] is not None else ""
-            size_tag = " (사이즈 동일)" if m["사이즈일치"] else ""
-            lines.append(f"[{m['일자']} {m['코드']}] 사이즈 {m['사이즈'] or '사이즈미상'}{size_tag} 받아갈금액 {cost}{sale} — {m['특이사항']}")
+            tags = []
+            if m["원단일치"]:
+                tags.append("원단 동일")
+            if m["사이즈일치"]:
+                tags.append("사이즈 동일")
+            tag_s = f" ({', '.join(tags)})" if tags else ""
+            fabric_s = m["원단"] or "원단미상"
+            size_s = m["사이즈"] or "사이즈미상"
+            lines.append(f"[{m['일자']} {m['코드']}] 원단 {fabric_s} / 사이즈 {size_s}{tag_s} 받아갈금액 {cost}{sale} — {m['특이사항']}")
         extra = len(matches) - max_cases
         text = (
-            f"이전 유사사례 {len(matches)}건 (브랜드+디자인 일치, 그중 사이즈까지 같은 사례 {same_size_n}건, "
-            f"최근순 {min(max_cases, len(matches))}건 표시 · 사이즈 동일 사례 우선):\n" + "\n".join(lines)
+            f"이전 유사사례 {len(matches)}건 (브랜드+디자인 일치, 그중 원단까지 같은 사례 {same_fabric_n}건, "
+            f"최근순 {min(max_cases, len(matches))}건 표시 · 원단 동일 사례 우선):\n" + "\n".join(lines)
         )
         if extra > 0:
             text += f"\n...외 {extra}건 더 있음"
@@ -245,7 +257,8 @@ def main():
             continue
 
         size = str(g(n_idx["사이즈"]) or "").strip()
-        text, suggested = build_reference(brand, design, size)
+        fabric = str(g(n_idx["원단"]) or "").strip() if n_idx["원단"] is not None else ""
+        text, suggested = build_reference(brand, design, size, fabric)
 
         updates.append({
             "range": f"{NEG_SHEET_NAME}!{col_letter(text_col)}{r}",
