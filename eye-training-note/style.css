@@ -228,3 +228,30 @@ fieldset.ctl { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; fl
 .dEntry { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .dEntry img { width: 88px; height: 88px; object-fit: cover; display: block; background: var(--panel); }
 .dEntry p { margin: 2px 0 0; font-size: var(--fs-s); overflow-wrap: anywhere; }
+
+/* ── 4단계 추가: 검색, 시리즈 ── */
+.searchbar { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.searchbar .note { margin: 0; }
+.sRow { display: flex; flex-direction: column; gap: 8px; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 0 0 14px; width: 100%; }
+.sRow strong { font-size: var(--fs-l); }
+.sStrip { display: flex; gap: 4px; overflow: hidden; }
+.sStrip img { height: 72px; width: auto; display: block; background: var(--panel); }
+.sRow:hover .sStrip { opacity: 0.85; }
+.sName { font-size: var(--fs-xl); font-weight: 700; letter-spacing: -0.02em; }
+.cuts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+@media (min-width: 720px) { .cuts { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 18px; } }
+.cuts > .note { grid-column: 1 / -1; }
+.cut { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cutpic { border: 0; padding: 0; background: var(--panel); display: block; width: 100%; }
+.cutpic img { display: block; width: 100%; }
+.cut .meta { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--mute); }
+.cut .feel { font-size: var(--fs-s); font-weight: 500; overflow-wrap: anywhere; }
+.mini { border: 1px solid var(--line); background: var(--bg); color: var(--ink); min-width: 32px; min-height: 28px; padding: 0 6px; margin-left: 4px; }
+.mini:disabled { color: var(--line); cursor: default; }
+.narrow { max-width: 720px; }
+.pick { position: relative; display: flex; align-items: center; justify-content: center; }
+.pick.on { outline: 3px solid var(--ink); outline-offset: -3px; }
+.pick.on img { opacity: 0.55; }
+.pickmark { position: absolute; top: 0; left: 0; background: var(--ink); color: var(--bg); padding: 0 7px; font-size: var(--fs-s); }
+.tabs { flex-wrap: nowrap; }
+@media (max-width: 420px) { .tab { padding: 8px 11px; } }

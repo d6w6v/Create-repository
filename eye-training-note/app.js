@@ -41,16 +41,16 @@
   const DB_NAME = 'eye-training-note';
   let db = null;
   let storageOk = true;
-  const mem = { cards: new Map(), images: new Map(), diary: new Map(), meta: new Map() };
+  const mem = { cards: new Map(), images: new Map(), diary: new Map(), meta: new Map(), series: new Map() };
 
   function openDB() {
     return new Promise((resolve) => {
       try {
-        const req = indexedDB.open(DB_NAME, 2);
+        const req = indexedDB.open(DB_NAME, 3);
         req.onupgradeneeded = () => {
           const d = req.result;
           if (!d.objectStoreNames.contains('cards')) d.createObjectStore('cards', { keyPath: 'id' });
-          for (const name of ['images', 'diary', 'meta']) if (!d.objectStoreNames.contains(name)) d.createObjectStore(name, { keyPath: 'id' });
+          for (const name of ['images', 'diary', 'meta', 'series']) if (!d.objectStoreNames.contains(name)) d.createObjectStore(name, { keyPath: 'id' });
         };
         req.onsuccess = () => { db = req.result; resolve(); };
         req.onerror = () => { storageOk = false; resolve(); };
@@ -318,7 +318,7 @@
     saveTimer = setTimeout(saveNow, 400);
   }
   document.addEventListener('visibilitychange', () => { if (document.hidden && saveTimer) saveNow(); });
-  window.addEventListener('pagehide', () => { if (saveTimer) saveNow(); if (flushDiary) flushDiary(); });
+  window.addEventListener('pagehide', () => { if (saveTimer) saveNow(); if (flushPage) flushPage(); });
 
   /* ───────── 목록 화면 ───────── */
   async function showList() {
@@ -340,29 +340,64 @@
         h('button', { class: 'btn solid', onclick: () => { location.hash = 'new'; } }, '첫 카드 만들기')));
     } else {
       const sheet = h('div', { class: 'sheet' });
-      for (const c of cards) {
-        const pr = progress(c);
-        const src = c.image.kind === 'url' ? c.image.url : c.thumb;
-        const pic = src
-          ? h('img', { class: 'pic', src, alt: '', loading: 'lazy',
-              onerror: (e) => e.target.replaceWith(h('div', { class: 'nopic' }, '링크 이미지를 불러올 수 없어요')) })
-          : h('div', { class: 'nopic' }, '이미지 없음');
-        const feel = c.steps.s1.feel.trim();
-        sheet.append(h('button', { class: 'tile', onclick: () => { location.hash = 'card-' + c.id; } },
-          pic,
-          h('div', { class: 'meta mono' },
-            h('span', {}, `No.${pad(c.no, 3)} · ${c.date}`),
-            h('span', {}, c.steps.s1.score != null ? `${c.steps.s1.score}/10` : '')),
-          h('div', { class: 'feel' }, feel ? `${feel}한 느낌` : '첫 반응을 아직 안 썼어요'),
-          h('div', { class: 'meta' },
-            h('span', {}, c.tags.map((t) => '#' + t).join(' ')),
-            h('span', { class: 'chip-state' + (pr.done ? ' done' : '') },
-              (c.mode === 'quick' ? '5분 · ' : '') + (pr.done ? '완료' : `${pr.n}/${pr.total}단계`)))));
+      const count = h('p', { class: 'note', hidden: true });
+      const tagCount = new Map();
+      for (const c of cards) for (const t of c.tags) tagCount.set(t, (tagCount.get(t) || 0) + 1);
+      const tagBox = h('div', { class: 'tags' });
+      const search = h('input', { class: 'text', id: 'search', type: 'search', placeholder: '검색: 태그나 내가 쓴 단어 (예: 역광, #90s)', value: listQuery,
+        'aria-label': '카드 검색', oninput: () => { listQuery = search.value; draw(); } });
+      const terms = () => listQuery.toLowerCase().split(/\s+/).filter(Boolean);
+      function draw() {
+        const ts = terms();
+        const hit = cards.filter((c) => {
+          const text = cardText(c);
+          return ts.every((t) => t.startsWith('#') ? c.tags.some((x) => x.toLowerCase() === t.slice(1)) : text.includes(t));
+        });
+        sheet.replaceChildren(...hit.map(tile));
+        count.hidden = !ts.length;
+        count.textContent = hit.length ? `${hit.length}장 찾았어요.` : '맞는 카드가 없어요. 다른 단어로 찾아보세요.';
+        tagBox.replaceChildren(...[...tagCount].sort((a, b) => b[1] - a[1]).map(([t, n]) => {
+          const on = ts.includes('#' + t.toLowerCase());
+          return h('button', { class: 'btn small' + (on ? ' on' : ''), type: 'button', 'aria-pressed': String(on),
+            onclick: () => {
+              listQuery = on ? listQuery.split(/\s+/).filter((x) => x.toLowerCase() !== '#' + t.toLowerCase()).join(' ') : (listQuery + ' #' + t).trim();
+              search.value = listQuery; draw();
+            } }, `#${t} `, h('span', { class: 'mono' }, n));
+        }));
       }
-      wrap.append(sheet);
+      draw();
+      wrap.append(h('div', { class: 'searchbar' }, search, tagBox, count), sheet);
     }
     app.replaceChildren(wrap);
     window.scrollTo(0, 0);
+  }
+  let listQuery = '';
+  function cardText(c) {
+    const out = [c.date, c.source.text, ...c.tags];
+    (function walk(v) {
+      if (typeof v === 'string') out.push(v);
+      else if (v && typeof v === 'object') Object.values(v).forEach(walk);
+    })(c.steps);
+    return out.join(' ').toLowerCase();
+  }
+  function tile(c) {
+    const pr = progress(c);
+    const src = c.image.kind === 'url' ? c.image.url : c.thumb;
+    const pic = src
+      ? h('img', { class: 'pic', src, alt: '', loading: 'lazy',
+          onerror: (e) => e.target.replaceWith(h('div', { class: 'nopic' }, '링크 이미지를 불러올 수 없어요')) })
+      : h('div', { class: 'nopic' }, '이미지 없음');
+    const feel = c.steps.s1.feel.trim();
+    return h('button', { class: 'tile', onclick: () => { location.hash = 'card-' + c.id; } },
+      pic,
+      h('div', { class: 'meta mono' },
+        h('span', {}, `No.${pad(c.no, 3)} · ${c.date}`),
+        h('span', {}, c.steps.s1.score != null ? `${c.steps.s1.score}/10` : '')),
+      h('div', { class: 'feel' }, feel ? `${feel}한 느낌` : '첫 반응을 아직 안 썼어요'),
+      h('div', { class: 'meta' },
+        h('span', {}, c.tags.map((t) => '#' + t).join(' ')),
+        h('span', { class: 'chip-state' + (pr.done ? ' done' : '') },
+          (c.mode === 'quick' ? '5분 · ' : '') + (pr.done ? '완료' : `${pr.n}/${pr.total}단계`))));
   }
 
   /* ───────── 카드 화면 ───────── */
@@ -466,7 +501,7 @@
     }
 
     const body = h('div', { class: 'editor' }, stage);
-    if (c.image.kind !== 'none') body.append(buildForm(c));
+    if (c.image.kind !== 'none') body.append(buildForm(c, (await store.all('series')).filter((x) => x.cardIds.includes(c.id))));
     wrap.append(body);
     app.replaceChildren(wrap);
   }
@@ -595,7 +630,7 @@
     return holder;
   }
 
-  function buildForm(c) {
+  function buildForm(c, mySeries) {
     const form = h('div', { class: 'form' });
     let refresh = () => {};
     const changed = () => { refresh(); touch(); };
@@ -651,7 +686,10 @@
       h('div', { class: 'field' }, h('label', { class: 'label', for: 'f-date' }, '날짜'), date),
       h('div', { class: 'field' }, h('label', { class: 'label', for: 'f-tag' }, '태그'), tagBox, tagInput),
       h('div', { class: 'field' }, h('label', { class: 'label', for: 'f-source' }, '출처 / 크레딧'), h('div', { class: 'row' }, src, srcUnknown)),
-      h('div', { class: 'field' }, h('span', { class: 'label' }, '출처 신뢰도'), trustBox, trustNote)));
+      h('div', { class: 'field' }, h('span', { class: 'label' }, '출처 신뢰도'), trustBox, trustNote),
+      mySeries.length ? h('div', { class: 'field' }, h('span', { class: 'label' }, '들어 있는 시리즈'),
+        h('div', { class: 'seg' }, mySeries.map((x) =>
+          h('button', { class: 'btn small', type: 'button', onclick: () => { location.hash = 'series-' + x.id; } }, x.name)))) : null));
 
     /* ── 쓰는 방식: 전체 / 빠른 버전 ── */
     const setMode = async (m) => { if (c.mode === m) return; c.mode = m; await saveNow(); await renderCard(); };
@@ -803,6 +841,9 @@
     curPersisted = false;
     await store.del('cards', id);
     await store.del('images', id);
+    for (const x of await store.all('series')) {
+      if (x.cardIds.includes(id)) { x.cardIds = x.cardIds.filter((y) => y !== id); delete x.differ[id]; await store.put('series', x); }
+    }
     toast('카드를 지웠어요.');
     location.hash = 'list';
   }
@@ -844,7 +885,124 @@
     return [...count].filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]);
   }
 
-  let flushDiary = null;
+  /* ───────── 시리즈 묶기 ───────── */
+  const cardSrc = (c) => c.thumb || (c.image.kind === 'url' ? c.image.url : '');
+  const SERIES_NOTES = [
+    ['distance', '컷 간 거리의 변화', '카메라와 인물 사이가 컷마다 어떻게 달라지나'],
+    ['gaze', '컷 간 시선의 변화', '인물의 시선, 내 눈이 가는 곳이 어떻게 바뀌나'],
+    ['props', '컷 간 소품 위치의 변화', '같은 소품이 어디로 옮겨 가나'],
+    ['common', '이 시리즈를 한 줄로 묶는 공통 결정', '모든 컷에서 똑같이 지킨 것'],
+  ];
+  async function showSeriesList() {
+    cur = null; savedLabel = null;
+    const list = (await store.all('series')).sort((a, b) => b.createdAt - a.createdAt);
+    const cards = new Map((await store.all('cards')).map((c) => [c.id, c]));
+    const name = h('input', { class: 'text', id: 'series-name', placeholder: '새 시리즈 이름 (예: 같은 캠페인 컷 4장)', maxLength: 60,
+      onkeydown: (e) => { if (e.key === 'Enter' && !e.isComposing) create(); } });
+    async function create() {
+      const n = name.value.trim();
+      if (!n) { toast('시리즈 이름을 먼저 써 주세요.'); name.focus(); return; }
+      const s = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: n, cardIds: [],
+        notes: { distance: '', gaze: '', props: '', common: '' }, differ: {}, createdAt: Date.now() };
+      await store.put('series', s);
+      location.hash = 'series-' + s.id;
+    }
+    const body = h('div', { class: 'diary' },
+      h('div', { class: 'field' }, h('label', { class: 'label', for: 'series-name' }, '시리즈 만들기'),
+        h('div', { class: 'row' }, name, h('button', { class: 'btn solid', type: 'button', id: 'series-create', onclick: create }, '만들기'))),
+      list.length
+        ? h('div', { class: 'rows' }, list.map((s) => {
+            const cs = s.cardIds.map((id) => cards.get(id)).filter(Boolean);
+            return h('button', { class: 'sRow', type: 'button', onclick: () => { location.hash = 'series-' + s.id; } },
+              h('div', {}, h('strong', {}, s.name), h('span', { class: 'label mono' }, `  ${cs.length}컷`)),
+              h('div', { class: 'sStrip' }, cs.slice(0, 8).map((c) => cardSrc(c) ? h('img', { src: cardSrc(c), alt: '', loading: 'lazy' }) : null)),
+              has(s.notes.common) ? h('div', { class: 'note' }, s.notes.common) : null);
+          }))
+        : h('div', { class: 'empty' }, h('strong', {}, '아직 시리즈가 없어요'),
+            h('p', {}, '같은 캠페인, 같은 뮤비, 같은 작가의 컷을 한 줄로 세워 놓고 컷끼리 무엇이 같고 무엇이 다른지 비교하는 곳이에요.')));
+    app.replaceChildren(h('div', { class: 'wrap' }, topBar('series', '컷끼리 나란히 놓고 비교하기'), body));
+    window.scrollTo(0, 0);
+  }
+
+  async function showSeries(id) {
+    cur = null; savedLabel = null;
+    const s = await store.get('series', id);
+    if (!s) { toast('그 시리즈를 찾을 수 없어요.'); location.hash = 'series'; return; }
+    const all = (await store.all('cards')).sort((a, b) => b.createdAt - a.createdAt);
+    const byId = new Map(all.map((c) => [c.id, c]));
+    s.cardIds = s.cardIds.filter((cid) => byId.has(cid));
+    const status = h('span', { class: 'saved mono' }, '자동 저장됨');
+    let timer = null;
+    const save = async () => { clearTimeout(timer); timer = null; await store.put('series', s); status.textContent = `자동 저장됨 ${clock()}`; };
+    const touchS = () => { status.textContent = '저장 중…'; clearTimeout(timer); timer = setTimeout(save, 400); };
+    flushPage = async () => { if (timer) await save(); };
+
+    const name = h('input', { class: 'text sName', id: 'series-title', value: s.name, 'aria-label': '시리즈 이름', maxLength: 60,
+      oninput: () => { s.name = name.value; touchS(); } });
+
+    const strip = h('div', { class: 'cuts' });
+    const picker = h('div', { class: 'pickgrid' });
+    function move(i, d) { const j = i + d; if (j < 0 || j >= s.cardIds.length) return; [s.cardIds[i], s.cardIds[j]] = [s.cardIds[j], s.cardIds[i]]; draw(); touchS(); }
+    function draw() {
+      strip.replaceChildren(...(s.cardIds.length ? s.cardIds.map((cid, i) => {
+        const c = byId.get(cid);
+        const ta = h('textarea', { class: 'text area', rows: 1, placeholder: '이 컷만 다르게 한 결정', value: s.differ[cid] || '',
+          'aria-label': `컷 ${i + 1}만의 결정`, oninput: () => { s.differ[cid] = ta.value; touchS(); } });
+        grow(ta);
+        const holder = h('div', { class: 'field' }, ta);
+        watchVague([ta], holder);
+        return h('div', { class: 'cut' },
+          h('button', { class: 'cutpic', type: 'button', 'aria-label': `No.${pad(c.no, 3)} 카드 열기`, onclick: () => { location.hash = 'card-' + c.id; } },
+            cardSrc(c) ? h('img', { src: cardSrc(c), alt: '' }) : h('div', { class: 'nopic' }, '이미지 없음')),
+          h('div', { class: 'meta mono' }, h('span', {}, `컷 ${i + 1} · No.${pad(c.no, 3)}`),
+            h('span', {},
+              h('button', { class: 'mini', type: 'button', 'aria-label': '앞으로 옮기기', disabled: i === 0, onclick: () => move(i, -1) }, '←'),
+              h('button', { class: 'mini', type: 'button', 'aria-label': '뒤로 옮기기', disabled: i === s.cardIds.length - 1, onclick: () => move(i, 1) }, '→'))),
+          has(c.steps.s1.feel) ? h('div', { class: 'feel' }, `${c.steps.s1.feel}한 느낌`) : null,
+          holder);
+      }) : [h('p', { class: 'note' }, '아래 "컷 넣고 빼기"에서 카드를 눌러 이 시리즈에 넣어요.')]));
+      picker.replaceChildren(...all.map((c) => {
+        const on = s.cardIds.includes(c.id);
+        return h('button', { class: 'pick' + (on ? ' on' : ''), type: 'button', 'aria-pressed': String(on),
+          'aria-label': `No.${pad(c.no, 3)} ${on ? '빼기' : '넣기'}`,
+          onclick: () => { s.cardIds = on ? s.cardIds.filter((x) => x !== c.id) : [...s.cardIds, c.id]; draw(); touchS(); } },
+          cardSrc(c) ? h('img', { src: cardSrc(c), alt: '', loading: 'lazy' }) : h('span', { class: 'mono' }, pad(c.no, 3)),
+          on ? h('span', { class: 'pickmark mono' }, s.cardIds.indexOf(c.id) + 1) : null);
+      }));
+    }
+    draw();
+
+    const notes = SERIES_NOTES.map(([k, label, ph]) => {
+      const ta = h('textarea', { class: 'text area', id: 'sn-' + k, rows: 1, placeholder: ph, value: s.notes[k] || '',
+        oninput: () => { s.notes[k] = ta.value; touchS(); } });
+      grow(ta);
+      const holder = h('div', { class: 'field' }, h('label', { class: 'label', for: 'sn-' + k }, label), ta);
+      watchVague([ta], holder);
+      return holder;
+    });
+
+    const danger = h('div', { class: 'danger' });
+    const drawDanger = (asking) => danger.replaceChildren(...(asking
+      ? [h('span', {}, '이 시리즈를 지울까요? 안에 든 카드는 그대로 남아요.'),
+         h('button', { class: 'btn small solid', type: 'button', onclick: async () => { clearTimeout(timer); timer = null; await store.del('series', s.id); toast('시리즈를 지웠어요.'); location.hash = 'series'; } }, '네, 지워요'),
+         h('button', { class: 'btn small', type: 'button', onclick: () => drawDanger(false) }, '아니요')]
+      : [h('button', { class: 'btn small quiet', type: 'button', onclick: () => drawDanger(true) }, '이 시리즈 지우기')]));
+    drawDanger(false);
+
+    app.replaceChildren(h('div', { class: 'wrap' },
+      h('div', { class: 'bar' },
+        h('button', { class: 'btn quiet', onclick: () => { location.hash = 'series'; } }, '← 시리즈 목록'), status),
+      h('div', { class: 'form' },
+        name,
+        h('section', { class: 'sec' }, h('header', {}, h('h2', {}, '컷 나란히 보기'), h('span', { class: 'label mono' }, `${s.cardIds.length}컷`)), strip),
+        h('section', { class: 'sec' }, h('header', {}, h('h2', {}, '컷끼리 비교')), h('div', { class: 'stepbody narrow' }, notes)),
+        h('section', { class: 'sec' }, h('header', {}, h('h2', {}, '컷 넣고 빼기')),
+          all.length ? picker : h('p', { class: 'note' }, '아직 카드가 없어요. 카드를 먼저 만들어요.')),
+        danger)));
+    window.scrollTo(0, 0);
+  }
+
+  let flushPage = null;
   let diaryPaste = null;
   async function showDiary() {
     cur = null; savedLabel = null;
@@ -865,7 +1023,7 @@
       catch (e) { status.textContent = '저장 실패'; toast('저장하지 못했어요. 기기 저장 공간을 확인해 주세요.'); }
       drawStats();
     };
-    flushDiary = async () => { if (timer) await save(); };
+    flushPage = async () => { if (timer) await save(); };
     const touchDiary = () => { if (!persisted) return; status.textContent = '저장 중…'; clearTimeout(timer); timer = setTimeout(save, 400); };
     const withToday = () => (persisted ? [todayE, ...entries.filter((e) => e.id !== tid)] : entries);
 
@@ -983,15 +1141,17 @@
         h('h1', {}, '눈 훈련 노트'),
         h('div', { class: 'sub' }, sub)),
       h('div', { class: 'row' },
-        h('nav', { class: 'tabs', 'aria-label': '화면 이동' }, tab('list', '카드', 'list'), tab('diary', '일기', 'diary')),
+        h('nav', { class: 'tabs', 'aria-label': '화면 이동' }, tab('list', '카드', 'list'), tab('series', '시리즈', 'series'), tab('diary', '일기', 'diary')),
         action || null));
   }
 
   async function route() {
     const name = location.hash.replace(/^#/, '');
-    if (flushDiary) { await flushDiary(); flushDiary = null; }
+    if (flushPage) { await flushPage(); flushPage = null; }
     diaryPaste = null;
     if (name === 'diary') return showDiary();
+    if (name === 'series') return showSeriesList();
+    if (name.startsWith('series-')) return showSeries(name.slice(7));
     if (name === 'new') return showCard(null);
     if (name.startsWith('card-')) {
       const id = name.slice(5);
