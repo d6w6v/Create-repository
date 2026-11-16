@@ -41,16 +41,16 @@
   const DB_NAME = 'eye-training-note';
   let db = null;
   let storageOk = true;
-  const mem = { cards: new Map(), images: new Map() };
+  const mem = { cards: new Map(), images: new Map(), diary: new Map(), meta: new Map() };
 
   function openDB() {
     return new Promise((resolve) => {
       try {
-        const req = indexedDB.open(DB_NAME, 1);
+        const req = indexedDB.open(DB_NAME, 2);
         req.onupgradeneeded = () => {
           const d = req.result;
           if (!d.objectStoreNames.contains('cards')) d.createObjectStore('cards', { keyPath: 'id' });
-          if (!d.objectStoreNames.contains('images')) d.createObjectStore('images', { keyPath: 'id' });
+          for (const name of ['images', 'diary', 'meta']) if (!d.objectStoreNames.contains(name)) d.createObjectStore(name, { keyPath: 'id' });
         };
         req.onsuccess = () => { db = req.result; resolve(); };
         req.onerror = () => { storageOk = false; resolve(); };
@@ -318,7 +318,7 @@
     saveTimer = setTimeout(saveNow, 400);
   }
   document.addEventListener('visibilitychange', () => { if (document.hidden && saveTimer) saveNow(); });
-  window.addEventListener('pagehide', () => { if (saveTimer) saveNow(); });
+  window.addEventListener('pagehide', () => { if (saveTimer) saveNow(); if (flushDiary) flushDiary(); });
 
   /* ───────── 목록 화면 ───────── */
   async function showList() {
@@ -330,10 +330,7 @@
       wrap.append(h('div', { class: 'banner' },
         '이 브라우저에서는 기록을 저장할 수 없어요. 창을 닫으면 사라져요. (시크릿 창이면 일반 창에서 열어 주세요.)'));
     }
-    wrap.append(h('div', { class: 'top' },
-      h('div', {},
-        h('h1', {}, '눈 훈련 노트'),
-        h('div', { class: 'sub' }, cards.length ? `분해한 컷 ${cards.length}장` : '내가 먼저 쓰고, 앱은 돕기만 한다')),
+    wrap.append(topBar('list', cards.length ? `분해한 컷 ${cards.length}장` : '내가 먼저 쓰고, 앱은 돕기만 한다',
       h('button', { class: 'btn solid', id: 'new-card', onclick: () => { location.hash = 'new'; } }, '+ 새 카드')));
 
     if (!cards.length) {
@@ -415,9 +412,10 @@
     setImage({ kind: 'url', url }, '', null);
   }
   document.addEventListener('paste', (e) => {
-    if (!cur || cur.image.kind !== 'none') return;
+    const target = cur && cur.image.kind === 'none' ? takeFile : (!cur && diaryPaste) || null;
+    if (!target) return;
     const file = [...(e.clipboardData?.files || [])].find((f) => f.type.startsWith('image/'));
-    if (file) { e.preventDefault(); takeFile(file); }
+    if (file) { e.preventDefault(); target(file); }
   });
 
   function picker(labelText, cls) {
@@ -810,8 +808,190 @@
   }
 
   /* ───────── 길 찾기 ───────── */
-  function route() {
+  /* ───────── 매일 세 줄 일기 ───────── */
+  const DECISIONS = ['색', '구도', '빛', '소품', '연출'];
+  const LINES = [
+    ['good', '좋다', '구체 요소: 무엇이 좋은가'],
+    ['why', '왜', '효과: 그게 무엇을 만드나'],
+    ['diff', '내가 다르게 한다면', '나라면 무엇을 바꿀까'],
+  ];
+  const dstr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const entryDone = (e) => !!e.img && LINES.every(([k]) => has(e.lines[k]));
+  function streakOf(entries) {
+    const set = new Set(entries.filter(entryDone).map((e) => e.id));
+    const d = new Date();
+    if (!set.has(dstr(d))) d.setDate(d.getDate() - 1);
+    let n = 0;
+    while (set.has(dstr(d))) { n++; d.setDate(d.getDate() - 1); }
+    return n;
+  }
+  /* 단어 뽑기: 띄어쓰기로 자르고, 끝에 붙은 조사(은/는/이/가…)를 떼는 단순한 방식 */
+  const PARTICLES = ['에서는', '으로는', '에서', '으로', '에게', '까지', '부터', '처럼', '보다', '이라', '라는', '이다', '하고',
+    '은', '는', '이', '가', '을', '를', '의', '에', '로', '와', '과', '도', '만'];
+  const STOP = new Set(['그리고', '그래서', '하지만', '그게', '이게', '이건', '그건', '너무', '정말', '진짜', '약간', '조금', '있다', '없다',
+    '같다', '같은', '있는', '없는', '있어서', '한다', '된다', '하는', '되는', '느낌', '이미지', '사진', '때문', '나는', '내가', '나라면',
+    '다르게', '한다면', '좋다', '어떤', '이런', '그런', '저런', '위해', '대한', '통해', '그냥', '아주', '매우', '가장', '모든', '것이', '하게', '해서', '만든다', '만들', '준다']);
+  function wordsOf(text) {
+    return (text.match(/[가-힣A-Za-z0-9]+/g) || []).map((w) => {
+      w = w.toLowerCase();
+      for (const p of PARTICLES) if (w.length - p.length >= 2 && w.endsWith(p)) { w = w.slice(0, -p.length); break; }
+      return w;
+    }).filter((w) => w.length >= 2 && !STOP.has(w) && !/^\d+$/.test(w));
+  }
+  function repeatedWords(entries) {
+    const count = new Map();
+    for (const e of entries) for (const [k] of LINES) for (const w of wordsOf(e.lines[k] || '')) count.set(w, (count.get(w) || 0) + 1);
+    return [...count].filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]);
+  }
+
+  let flushDiary = null;
+  let diaryPaste = null;
+  async function showDiary() {
+    cur = null; savedLabel = null;
+    const entries = (await store.all('diary')).sort((a, b) => (a.id < b.id ? 1 : -1));
+    const cards = (await store.all('cards')).sort((a, b) => b.createdAt - a.createdAt);
+    const wordMap = ((await store.get('meta', 'wordMap')) || { id: 'wordMap', map: {} });
+    const tid = today();
+    let todayE = entries.find((e) => e.id === tid);
+    let persisted = !!todayE;
+    if (!todayE) todayE = { id: tid, img: '', cardId: null, lines: { good: '', why: '', diff: '' }, createdAt: Date.now() };
+
+    const status = h('span', { class: 'saved mono' });
+    let timer = null;
+    const save = async () => {
+      clearTimeout(timer); timer = null;
+      if (!persisted) return;
+      try { await store.put('diary', todayE); status.textContent = `자동 저장됨 ${clock()}`; }
+      catch (e) { status.textContent = '저장 실패'; toast('저장하지 못했어요. 기기 저장 공간을 확인해 주세요.'); }
+      drawStats();
+    };
+    flushDiary = async () => { if (timer) await save(); };
+    const touchDiary = () => { if (!persisted) return; status.textContent = '저장 중…'; clearTimeout(timer); timer = setTimeout(save, 400); };
+    const withToday = () => (persisted ? [todayE, ...entries.filter((e) => e.id !== tid)] : entries);
+
+    /* 오늘 칸 */
+    const todayBox = h('section', { class: 'sec' });
+    async function setDiaryImage(img, cardId) {
+      todayE.img = img; todayE.cardId = cardId || null;
+      persisted = true;
+      await save();
+      drawToday();
+    }
+    async function diaryFile(file) {
+      if (!file || !file.type.startsWith('image/')) { toast('사진 파일만 올릴 수 있어요.'); return; }
+      const url = URL.createObjectURL(file);
+      try { setDiaryImage(shrink(await loadImg(url), 1000, 0.85)); }
+      catch (e) { toast('이 파일은 사진으로 읽을 수 없어요.'); }
+      finally { URL.revokeObjectURL(url); }
+    }
+    function drawToday() {
+      const head = h('header', {}, h('h2', {}, '오늘의 세 줄'), h('span', { class: 'mono label' }, tid));
+      diaryPaste = null;
+      if (!todayE.img) {
+        const input = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: () => diaryFile(input.files[0]) });
+        diaryPaste = diaryFile;
+        const withPic = cards.filter((c) => c.thumb || c.image.kind === 'url').slice(0, 12);
+        todayBox.replaceChildren(head,
+          h('div', { class: 'drop' },
+            h('p', { class: 'big' }, '오늘의 이미지 한 장'),
+            input, h('button', { class: 'btn solid', type: 'button', id: 'diary-pick', onclick: () => input.click() }, '사진 고르기'),
+            h('p', {}, '스크린샷을 복사해서 붙여넣기 해도 돼요. 하루에 한 장, 세 줄만 써요.')),
+          withPic.length ? h('div', { class: 'field' },
+            h('span', { class: 'label' }, '또는 내 카드에서 고르기'),
+            h('div', { class: 'pickgrid' }, withPic.map((c) =>
+              h('button', { class: 'pick', type: 'button', 'aria-label': `No.${pad(c.no, 3)} 카드 이미지`,
+                onclick: () => setDiaryImage(c.thumb || c.image.url, c.id) },
+                h('img', { src: c.thumb || c.image.url, alt: '', loading: 'lazy' }))))) : null);
+        return;
+      }
+      const fields = LINES.map(([k, label, ph]) => {
+        const inp = h('textarea', { class: 'text area', id: 'd-' + k, rows: 1, placeholder: ph, value: todayE.lines[k],
+          oninput: () => { todayE.lines[k] = inp.value; touchDiary(); } });
+        grow(inp);
+        const holder = h('div', { class: 'field' }, h('label', { class: 'label', for: 'd-' + k }, label), inp);
+        watchVague([inp], holder);
+        return holder;
+      });
+      todayBox.replaceChildren(head,
+        h('div', { class: 'dToday' },
+          h('div', {}, h('img', { class: 'dImg', src: todayE.img, alt: '오늘의 이미지' }),
+            h('div', { class: 'under' }, status,
+              h('button', { class: 'btn quiet small', type: 'button', onclick: () => { todayE.img = ''; drawToday(); } }, '이미지 바꾸기'))),
+          h('div', { class: 'stepbody' }, fields)));
+    }
+
+    /* 연속 일수 + 반복어 */
+    const stats = h('div', { class: 'dStats' });
+    const wordsBox = h('section', { class: 'sec' });
+    function drawStats() {
+      const all = withToday();
+      const done = all.filter(entryDone);
+      const todayOk = done.some((e) => e.id === tid);
+      stats.replaceChildren(
+        h('div', {}, h('strong', { class: 'mono' }, streakOf(all)), h('span', { class: 'label' }, '일 연속')),
+        h('div', {}, h('strong', { class: 'mono' }, done.length), h('span', { class: 'label' }, '일 썼음')),
+        h('div', {}, h('strong', {}, todayOk ? '오늘 완료' : '오늘 아직'), h('span', { class: 'label' }, todayOk ? '내일 또 만나요' : '세 줄을 다 채우면 하루로 쳐요')));
+      const head = h('header', {}, h('h2', {}, '내가 자꾸 쓰는 단어'));
+      if (done.length < 7) {
+        wordsBox.replaceChildren(head, h('p', { class: 'note' },
+          `일기가 7일 쌓이면, 내가 3번 이상 쓴 단어를 뽑아서 보여줘요. 지금 ${done.length}/7일.`));
+        return;
+      }
+      const words = repeatedWords(done);
+      wordsBox.replaceChildren(head,
+        h('p', { class: 'note' }, words.length
+          ? '이 단어는 어떤 결정을 가리키나요? 내가 직접 골라요. 앱은 세기만 했어요.'
+          : '아직 3번 이상 쓴 단어가 없어요. 계속 쓰다 보면 나타나요.'),
+        h('div', { class: 'rows' }, words.map(([w, n]) => {
+          const box = h('div', { class: 'seg', role: 'group', 'aria-label': `${w}가 가리키는 결정` });
+          const draw = () => box.replaceChildren(...DECISIONS.map((d) =>
+            h('button', { class: 'btn small' + (wordMap.map[w] === d ? ' on' : ''), type: 'button', 'aria-pressed': String(wordMap.map[w] === d),
+              onclick: async () => {
+                if (wordMap.map[w] === d) delete wordMap.map[w]; else wordMap.map[w] = d;
+                draw();
+                await store.put('meta', wordMap);
+              } }, d)));
+          draw();
+          return h('div', { class: 'eraserow' }, h('span', {}, h('strong', {}, w), h('span', { class: 'mono label' }, ` ×${n}`)), box);
+        })));
+    }
+
+    /* 지난 일기 */
+    const past = entries.filter((e) => e.id !== tid);
+    const pastBox = h('section', { class: 'sec' }, h('header', {}, h('h2', {}, '지난 일기')),
+      past.length
+        ? h('div', { class: 'rows' }, past.map((e) => h('article', { class: 'dEntry' },
+            e.img ? h('img', { src: e.img, alt: '', loading: 'lazy' }) : h('div', {}),
+            h('div', {},
+              h('div', { class: 'mono label' }, e.id + (entryDone(e) ? '' : ' · 다 못 씀')),
+              LINES.map(([k, label]) => has(e.lines[k]) ? h('p', {}, h('span', { class: 'label' }, label + '  '), e.lines[k]) : null)))))
+        : h('p', { class: 'note' }, '아직 지난 일기가 없어요. 오늘 것부터 시작해요.'));
+
+    drawToday(); drawStats();
+    if (persisted) status.textContent = '자동 저장됨';
+    app.replaceChildren(h('div', { class: 'wrap' },
+      topBar('diary', '하루 한 장, 세 줄'),
+      h('div', { class: 'diary' }, stats, todayBox, wordsBox, pastBox)));
+    window.scrollTo(0, 0);
+  }
+
+  function topBar(active, sub, action) {
+    const tab = (key, name, hash) => h('button', { class: 'tab' + (active === key ? ' on' : ''), type: 'button', id: 'tab-' + key,
+      'aria-current': active === key ? 'page' : null, onclick: () => { location.hash = hash; } }, name);
+    return h('div', { class: 'top' },
+      h('div', {},
+        h('h1', {}, '눈 훈련 노트'),
+        h('div', { class: 'sub' }, sub)),
+      h('div', { class: 'row' },
+        h('nav', { class: 'tabs', 'aria-label': '화면 이동' }, tab('list', '카드', 'list'), tab('diary', '일기', 'diary')),
+        action || null));
+  }
+
+  async function route() {
     const name = location.hash.replace(/^#/, '');
+    if (flushDiary) { await flushDiary(); flushDiary = null; }
+    diaryPaste = null;
+    if (name === 'diary') return showDiary();
     if (name === 'new') return showCard(null);
     if (name.startsWith('card-')) {
       const id = name.slice(5);
