@@ -6,11 +6,12 @@ css = (root / "style.css").read_text(encoding="utf-8")
 js = (root / "app.js").read_text(encoding="utf-8")
 out = f"""<title>눈 훈련 노트</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Silkscreen:wght@400;700&display=swap">
 <style>
 {css}
 </style>
 <div id="app"></div>
+<script>window.EYE_PREVIEW = true;</script>
 <script>
 {js}
 </script>

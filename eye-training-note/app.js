@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   document.documentElement.lang = 'ko';
+  const PREVIEW = !!window.EYE_PREVIEW; // 미리보기 주소에서는 파일 저장과 인쇄가 막혀 있다
 
   /* ───────── 작은 도구들 ───────── */
   function h(tag, attrs, ...kids) {
@@ -72,6 +73,7 @@
     get: (s, id) => db ? run(s, 'readonly', (o) => o.get(id)) : Promise.resolve(mem[s].get(id)),
     put: (s, v) => db ? run(s, 'readwrite', (o) => o.put(v)) : Promise.resolve(void mem[s].set(v.id, v)),
     del: (s, id) => db ? run(s, 'readwrite', (o) => o.delete(id)) : Promise.resolve(void mem[s].delete(id)),
+    clear: (s) => db ? run(s, 'readwrite', (o) => o.clear()) : Promise.resolve(void mem[s].clear()),
   };
 
   /* ───────── 카드 모양 ───────── */
@@ -429,6 +431,7 @@
     }
     const first = !curPersisted;
     curPersisted = true;
+    if (first) { try { navigator.storage.persist(); } catch (e) { /* 지원 안 함 */ } }
     if (first) history.replaceState(null, '', '#card-' + c.id);
     await renderCard();
   }
@@ -830,7 +833,10 @@
     app.replaceChildren(h('div', { class: 'wrap' },
       h('div', { class: 'bar noprint' },
         h('button', { class: 'btn quiet', onclick: () => { location.hash = 'card-' + c.id; } }, '← 카드로 돌아가기'),
-        h('button', { class: 'btn quiet', onclick: () => { location.hash = 'list'; } }, '목록')),
+        h('div', { class: 'row' },
+          h('button', { class: 'btn', id: 'copy-md', onclick: () => copyText(cardMarkdown(c), '복사했어요. 노션에 붙여 넣으면 돼요.') }, '노션용으로 복사'),
+          PREVIEW ? null : h('button', { class: 'btn', id: 'print', onclick: () => window.print() }, '인쇄 / PDF로 저장'),
+          h('button', { class: 'btn quiet', onclick: () => { location.hash = 'list'; } }, '목록'))),
       page));
     window.scrollTo(0, 0);
   }
@@ -1133,6 +1139,153 @@
     window.scrollTo(0, 0);
   }
 
+  /* ───────── 백업과 내보내기 ───────── */
+  const STORES = ['cards', 'images', 'diary', 'meta', 'series'];
+  const trustLabel = (c) => (TRUST.find(([k]) => k === c.trust) || [])[1] || '';
+  function cardMarkdown(c) {
+    const L = [];
+    L.push(`# 눈 훈련 노트 No.${pad(c.no, 3)}`, '');
+    L.push(`- 날짜: ${c.date}`);
+    L.push(`- 종류: 스틸 · ${c.mode === 'quick' ? '빠른 버전' : '전체 버전'}`);
+    if (c.tags.length) L.push(`- 태그: ${c.tags.map((t) => '#' + t).join(' ')}`);
+    L.push(`- 출처: ${c.source.unknown ? '모름' : (c.source.text.trim() || '(안 씀)')}` + (trustLabel(c) ? ` (신뢰도: ${trustLabel(c)})` : ''));
+    if (c.image.kind === 'url') L.push('', `![이미지](${c.image.url})`);
+    const fin = (c.steps.s11 || {}).final;
+    if (has(fin)) L.push('', `> ${fin.trim()}`);
+    const core = coreElements(c);
+    if (core.length) L.push('', `**이 이미지의 핵심 요소**: ${core.join(' · ')}`);
+    const unk = [];
+    for (const st of STEPS) {
+      const rows = [];
+      for (const f of st.fields) {
+        if (f.type === 'head') continue;
+        if (isUnknown(c, st, f)) { unk.push(`${pad(stepNo(st))} ${st.title} · ${f.label}`); rows.push(`- **${f.label}**: 모르겠음`); continue; }
+        const text = fmt(c, st, f);
+        if (!text) continue;
+        if (text.includes('\n')) rows.push(`- **${f.label}**:`, ...text.split('\n').map((t) => `  - ${t}`));
+        else rows.push(`- **${f.label}**: ${text}`);
+      }
+      if (rows.length) L.push('', `## ${pad(stepNo(st))} ${st.title}`, ...rows);
+    }
+    if (unk.length) L.push('', '## 모르겠음으로 남긴 칸', ...unk.map((u) => `- ${u}`));
+    return L.join('\n') + '\n';
+  }
+  async function copyText(text, okMsg) {
+    try { await navigator.clipboard.writeText(text); toast(okMsg); }
+    catch (e) {
+      const ta = h('textarea', { class: 'text copyarea', readOnly: true, value: text, 'aria-label': '복사할 글' });
+      const box = h('div', { class: 'sheetbox', role: 'dialog', 'aria-label': '직접 복사하기' },
+        h('p', {}, '자동 복사가 막혀 있어요. 아래 글을 길게 눌러(또는 Ctrl+C / ⌘C) 직접 복사해 주세요.'), ta,
+        h('button', { class: 'btn solid', type: 'button', onclick: () => box.remove() }, '닫기'));
+      document.body.append(box);
+      ta.focus(); ta.select();
+    }
+  }
+  async function saveFile(name, text) {
+    const file = new File([text], name, { type: 'application/json' });
+    if (matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: name }); return true; }
+      catch (e) { if (e.name === 'AbortError') return false; }
+    }
+    const url = URL.createObjectURL(file);
+    const a = h('a', { href: url, download: name });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 15000);
+    return true;
+  }
+  const daysAgo = (t) => { const n = Math.floor((Date.now() - t) / 86400000); return n <= 0 ? '오늘' : `${n}일 전`; };
+
+  async function showBackup() {
+    cur = null; savedLabel = null;
+    const all = {};
+    for (const s of STORES) all[s] = await store.all(s);
+    const last = all.meta.find((m) => m.id === 'lastBackup');
+    let protect = null; let usage = null;
+    try { protect = await navigator.storage.persisted(); const est = await navigator.storage.estimate(); usage = est.usage; } catch (e) { /* 알 수 없음 */ }
+
+    const lastLine = h('p', { class: 'note' }, last ? `마지막으로 내보낸 날: ${dstr(new Date(last.at))} (${daysAgo(last.at)})` : '아직 한 번도 내보내지 않았어요.');
+    const exportBtn = h('button', { class: 'btn solid', type: 'button', id: 'export', disabled: PREVIEW,
+      onclick: async () => {
+        const data = { app: 'eye-training-note', version: 1, exportedAt: new Date().toISOString() };
+        for (const s of STORES) data[s] = await store.all(s);
+        const ok = await saveFile(`eye-note-backup-${today()}.json`, JSON.stringify(data));
+        if (!ok) return;
+        const at = Date.now();
+        await store.put('meta', { id: 'lastBackup', at });
+        lastLine.textContent = `마지막으로 내보낸 날: ${dstr(new Date(at))} (오늘)`;
+        toast('백업 파일을 만들었어요. 잃어버리지 않을 곳에 보관해 주세요.');
+      } }, '전체 기록을 파일 하나로 내보내기');
+
+    const importBox = h('div', { class: 'field' });
+    const fileIn = h('input', { type: 'file', accept: '.json,application/json', hidden: true, id: 'import-file',
+      onchange: async () => {
+        const f = fileIn.files[0]; fileIn.value = '';
+        if (!f) return;
+        let data;
+        try { data = JSON.parse(await f.text()); } catch (e) { data = null; }
+        if (!data || data.app !== 'eye-training-note' || !Array.isArray(data.cards)) {
+          toast('눈 훈련 노트의 백업 파일이 아니에요. "eye-note-backup-날짜.json" 파일을 골라 주세요.');
+          return;
+        }
+        drawImport(data);
+      } });
+    function drawImport(data) {
+      if (!data) { importBox.replaceChildren(fileIn, h('div', {}, h('button', { class: 'btn', type: 'button', onclick: () => fileIn.click() }, '백업 파일 고르기'))); return; }
+      importBox.replaceChildren(fileIn,
+        h('p', {}, h('strong', {}, `이 파일에는 카드 ${data.cards.length}장, 일기 ${(data.diary || []).length}일, 시리즈 ${(data.series || []).length}개가 들어 있어요.`),
+          h('span', { class: 'note' }, `  (${String(data.exportedAt || '').slice(0, 10)}에 내보낸 파일)`)),
+        h('div', { class: 'seg' },
+          h('button', { class: 'btn solid', type: 'button', id: 'import-merge', onclick: () => doImport(data, false) }, '지금 기록에 합치기'),
+          h('button', { class: 'btn', type: 'button', id: 'import-replace', onclick: () => doImport(data, true) }, '지금 기록을 지우고 이 파일로 바꾸기'),
+          h('button', { class: 'btn quiet', type: 'button', onclick: () => drawImport(null) }, '취소')),
+        h('p', { class: 'note' }, '합치기: 같은 카드가 양쪽에 있으면 파일 쪽 내용으로 덮어써요. 바꾸기: 이 기기의 지금 기록은 사라져요.'));
+    }
+    async function doImport(data, replace) {
+      try {
+        if (replace) for (const s of STORES) await store.clear(s);
+        const existing = replace ? [] : await store.all('cards');
+        const haveId = new Set(existing.map((c) => c.id));
+        const usedNo = new Set(existing.map((c) => c.no));
+        let max = existing.reduce((m, c) => Math.max(m, c.no || 0), 0);
+        for (const c of [...data.cards].sort((a, b) => a.createdAt - b.createdAt)) {
+          if (!haveId.has(c.id) && usedNo.has(c.no)) c.no = ++max;
+          usedNo.add(c.no); max = Math.max(max, c.no || 0);
+          await store.put('cards', c);
+        }
+        for (const s of ['images', 'diary', 'series', 'meta']) for (const rec of (data[s] || [])) await store.put(s, rec);
+        toast('불러왔어요.');
+        location.hash = 'list';
+      } catch (e) {
+        toast('불러오다가 멈췄어요. 기기 저장 공간이 부족한지 확인해 주세요.');
+      }
+    }
+    drawImport(null);
+
+    const mb = usage != null ? `약 ${(usage / 1048576).toFixed(1)}MB 사용 중` : '';
+    const protectBtn = h('button', { class: 'btn small', type: 'button', onclick: async () => {
+      let ok = false;
+      try { ok = await navigator.storage.persist(); } catch (e) { /* 지원 안 함 */ }
+      toast(ok ? '이 기기에서 기록 보호를 켰어요.' : '이 브라우저는 지금 보호를 허락하지 않았어요. 홈 화면에 추가한 뒤 다시 눌러 보세요.');
+      if (ok) showBackup();
+    } }, '기록 보호 켜기');
+
+    app.replaceChildren(h('div', { class: 'wrap' }, topBar('backup', '기록을 파일로 지키기'),
+      h('div', { class: 'diary' },
+        h('section', { class: 'sec' }, h('header', {}, h('h2', {}, '내보내기')),
+          h('p', { class: 'note' }, '카드, 이미지, 일기, 시리즈를 전부 파일 하나에 담아요. 기록은 이 기기의 브라우저 안에만 있어서, 이 파일이 유일한 보험이에요. 일주일에 한 번을 추천해요.'),
+          PREVIEW ? h('div', { class: 'nudge' }, '지금 보고 있는 미리보기 주소에서는 파일 저장이 막혀 있어요. 정식 주소에서는 이 버튼이 눌려요.') : null,
+          h('div', {}, exportBtn), lastLine),
+        h('section', { class: 'sec' }, h('header', {}, h('h2', {}, '불러오기')),
+          h('p', { class: 'note' }, '내보낸 파일을 다시 넣어요. 컴퓨터에서 쓴 기록을 폰으로 옮길 때도 이걸 써요.'), importBox),
+        h('section', { class: 'sec' }, h('header', {}, h('h2', {}, '이 기기의 기록')),
+          h('p', {}, `카드 ${all.cards.length}장 · 일기 ${all.diary.length}일 · 시리즈 ${all.series.length}개` + (mb ? ` · ${mb}` : '')),
+          h('p', { class: 'note' }, protect === true
+            ? '기록 보호: 켜짐. 브라우저가 저장 공간을 정리할 때 이 앱의 기록은 건드리지 않아요.'
+            : '기록 보호: 꺼짐. 오래 안 열면 브라우저가 기록을 정리해 버릴 수 있어요. 특히 아이폰은 홈 화면에 추가하지 않으면 7일쯤 안 쓴 사이트의 기록을 지워요.'),
+          protect === true ? null : h('div', {}, protectBtn)))));
+    window.scrollTo(0, 0);
+  }
+
   function topBar(active, sub, action) {
     const tab = (key, name, hash) => h('button', { class: 'tab' + (active === key ? ' on' : ''), type: 'button', id: 'tab-' + key,
       'aria-current': active === key ? 'page' : null, onclick: () => { location.hash = hash; } }, name);
@@ -1141,7 +1294,7 @@
         h('h1', {}, '눈 훈련 노트'),
         h('div', { class: 'sub' }, sub)),
       h('div', { class: 'row' },
-        h('nav', { class: 'tabs', 'aria-label': '화면 이동' }, tab('list', '카드', 'list'), tab('series', '시리즈', 'series'), tab('diary', '일기', 'diary')),
+        h('nav', { class: 'tabs', 'aria-label': '화면 이동' }, tab('list', '카드', 'list'), tab('series', '시리즈', 'series'), tab('diary', '일기', 'diary'), tab('backup', '백업', 'backup')),
         action || null));
   }
 
@@ -1150,6 +1303,7 @@
     if (flushPage) { await flushPage(); flushPage = null; }
     diaryPaste = null;
     if (name === 'diary') return showDiary();
+    if (name === 'backup') return showBackup();
     if (name === 'series') return showSeriesList();
     if (name.startsWith('series-')) return showSeries(name.slice(7));
     if (name === 'new') return showCard(null);
@@ -1163,4 +1317,7 @@
   }
   window.addEventListener('hashchange', route);
   openDB().then(route);
+  if (!PREVIEW && 'serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
 })();
