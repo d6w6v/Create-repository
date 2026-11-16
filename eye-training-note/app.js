@@ -736,7 +736,27 @@
       h('header', {}, h('h2', {}, '모르겠음으로 남긴 칸')),
       h('p', { class: 'note' }, '다음에 다시 볼 때 여기부터 채워 보세요. 누르면 그 칸으로 가요.'), unkList);
     const finish = h('div', { class: 'finish', hidden: true });
-    form.append(unkSec, finish);
+    /* ── 정답 확인: 11단계를 다 쓴 뒤에만 열린다 ── */
+    const rv = c.review || (c.review = { ai: '', missed: '', disagree: '' });
+    const rvBadge = h('span', { class: 'chip-state' });
+    const rvNote = h('p', { class: 'note' }, '전체 버전 11단계를 다 쓰면 열려요. 내 눈으로 먼저 본 다음에만 남의 분석을 봐요.');
+    const rvArea = (k, label, ph) => {
+      const ta = h('textarea', { class: 'text area', id: 'rv-' + k, rows: 2, placeholder: ph, value: rv[k] || '', oninput: () => { rv[k] = ta.value; touch(); } });
+      grow(ta);
+      return h('div', { class: 'field' }, h('label', { class: 'label', for: 'rv-' + k }, label), ta);
+    };
+    const rvBody = h('div', { class: 'stepbody', hidden: true },
+      h('ol', { class: 'howto' },
+        h('li', {}, '아래 버튼으로 "내 분석 + 질문"을 복사해요.'),
+        h('li', {}, 'Claude 앱에서 새 대화를 열고 붙여 넣어요. 이 이미지도 같이 올려요.'),
+        h('li', {}, '돌아와서, AI의 답과 내 생각을 아래에 적어요.')),
+      h('div', {}, h('button', { class: 'btn solid', type: 'button', id: 'rv-copy',
+        onclick: () => copyText(reviewPrompt(c), '복사했어요. Claude 새 대화에 붙여 넣고, 이미지도 같이 올려 주세요.') }, '내 분석 + 질문 복사하기')),
+      rvArea('ai', 'AI의 답 (붙여넣기, 보관용)', 'AI가 한 말을 그대로 붙여 넣어요'),
+      rvArea('missed', 'AI는 봤는데 나는 못 본 것', '다음 카드에서 먼저 볼 것'),
+      rvArea('disagree', 'AI가 틀렸다고 생각하는 것', 'AI의 말도 정답이 아니라 하나의 의견이에요'));
+    const rvSec = h('section', { class: 'sec step', id: 'review' }, h('header', {}, h('h2', {}, '정답 확인'), rvBadge), rvNote, rvBody);
+    form.append(unkSec, finish, rvSec);
 
     refresh = () => {
       let blocked = false;
@@ -769,6 +789,10 @@
           document.getElementById('fld-' + fid(st, f).replace('.', '-'))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } }, h('span', { class: 'mono' }, pad(stepNo(st))), ` ${st.title} · ${f.label}`))));
       const allDone = !blocked;
+      const rvOpen = allDone && c.mode !== 'quick';
+      rvSec.classList.toggle('locked', !rvOpen);
+      rvBadge.textContent = rvOpen ? '열림' : '잠김';
+      rvNote.hidden = rvOpen; rvBody.hidden = !rvOpen;
       finish.hidden = !(allDone || c.mode === 'quick');
       finish.replaceChildren(
         allDone ? h('p', { class: 'note' }, c.mode === 'quick' ? '빠른 버전을 다 썼어요.' : '11단계를 모두 썼어요.') : null,
@@ -1142,7 +1166,7 @@
   /* ───────── 백업과 내보내기 ───────── */
   const STORES = ['cards', 'images', 'diary', 'meta', 'series'];
   const trustLabel = (c) => (TRUST.find(([k]) => k === c.trust) || [])[1] || '';
-  function cardMarkdown(c) {
+  function cardMarkdown(c, forAi) {
     const L = [];
     L.push(`# 눈 훈련 노트 No.${pad(c.no, 3)}`, '');
     L.push(`- 날짜: ${c.date}`);
@@ -1168,7 +1192,30 @@
       if (rows.length) L.push('', `## ${pad(stepNo(st))} ${st.title}`, ...rows);
     }
     if (unk.length) L.push('', '## 모르겠음으로 남긴 칸', ...unk.map((u) => `- ${u}`));
+    const rv = c.review || {};
+    if (!forAi && (has(rv.missed) || has(rv.disagree))) {
+      L.push('', '## 정답 확인');
+      if (has(rv.missed)) L.push(`- **AI는 봤는데 나는 못 본 것**: ${rv.missed.trim()}`);
+      if (has(rv.disagree)) L.push(`- **AI가 틀렸다고 생각하는 것**: ${rv.disagree.trim()}`);
+    }
     return L.join('\n') + '\n';
+  }
+  function reviewPrompt(c) {
+    return [
+      '나는 뮤직비디오 감독을 목표로 이미지 분석 연습을 하고 있어. 첨부한 이미지를 아래처럼 내 눈으로 먼저 분석했어.',
+      '내 분석을 끝까지 읽고 나서, 이미지와 비교해서 아래 네 가지를 알려줘.',
+      '',
+      '1. 내가 놓친 시각적 결정 3가지 (구도, 빛, 색, 질감, 소품, 연출 중에서. 화면의 어디를 보면 되는지 위치로 짚어줘)',
+      '2. 내 관찰 중 이미지와 달라 보이는 것 (어느 칸이 왜 다른지)',
+      '3. 내가 "모르겠음"으로 남긴 칸: 답을 바로 말하지 말고, 어디를 어떻게 보면 알 수 있는지 힌트만',
+      '4. 내 최종 문장을 더 구체적으로 만들려면 어떤 단어를 바꿔야 하는지',
+      '',
+      '규칙: 칭찬은 빼줘. 감독의 의도는 크레딧이나 인터뷰로 확인된 게 아니면 반드시 "추정"이라고 표시해줘. 쉬운 말로 써줘.',
+      '',
+      '--- 내 분석 ---',
+      '',
+      cardMarkdown(c, true),
+    ].join('\n');
   }
   async function copyText(text, okMsg) {
     try { await navigator.clipboard.writeText(text); toast(okMsg); }

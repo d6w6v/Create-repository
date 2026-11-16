@@ -369,3 +369,4 @@ body { letter-spacing: -0.01em; }
 .step.locked ~ .step.locked > .note { display: none !important; }
 .step.locked ~ .step.locked > header { border-bottom: 0 !important; }
 .step.locked ~ .step.locked { padding-bottom: 0; }
+.howto { margin: 0; padding-left: 1.3em; font-size: var(--fs-s); display: flex; flex-direction: column; gap: 4px; }
