@@ -141,3 +141,68 @@ button { cursor: pointer; }
 .note { color: var(--mute); font-size: var(--fs-s); margin: 0; }
 .danger { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: var(--fs-s); color: var(--mute); }
 @media (prefers-reduced-motion: no-preference) { .tile .pic, .btn { transition: opacity .15s, background-color .15s; } }
+
+/* ── 2단계 추가: 분석 단계, 잠금, 모르겠음, 한 장 보기 ── */
+fieldset.ctl { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.field.unk fieldset.ctl { opacity: 0.35; }
+.fieldtop { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 32px; }
+.unkbtn { flex: none; }
+.area { resize: none; overflow: hidden; line-height: 1.5; display: block; }
+.numwrap { display: inline-flex; align-items: baseline; gap: 6px; }
+.num { width: 5.5em; flex: none; text-align: right; }
+.subhead { margin: 10px 0 0; font-size: var(--fs-m); font-weight: 700; padding-top: 14px; border-top: 1px solid var(--line); }
+.steptoggle { border: 0; background: none; padding: 0; text-align: left; flex: 1; min-width: 0; }
+.stepno { color: var(--mute); font-weight: 400; margin-right: 10px; font-size: var(--fs-s); }
+.stepbody { display: flex; flex-direction: column; gap: 22px; }
+.step.locked > header { border-bottom-color: var(--line); }
+.step.locked h2, .step.locked .stepno { color: var(--mute); font-weight: 500; }
+.step.locked .steptoggle { cursor: default; }
+.form .step { gap: 14px; }
+.form:has(.step) { gap: 26px; }
+.rows { display: flex; flex-direction: column; gap: 14px; }
+.rowitem { display: flex; gap: 10px; align-items: flex-start; }
+.rowlabel { flex: none; min-width: 2em; padding-top: 9px; font-size: var(--fs-s); color: var(--mute); }
+.rowcells { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.rowcells.inline { flex-direction: row; align-items: flex-end; gap: 12px; }
+.rowcells.inline > .text { flex: 1; }
+.eraserow { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.eraserow .btn { min-width: 44px; }
+.core { border: 2px solid var(--ink); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.core strong { font-size: var(--fs-l); }
+.unklist { list-style: none; margin: 0; padding: 0; }
+.unklist li { border-bottom: 1px solid var(--line); }
+.linkbtn { border: 0; background: none; padding: 9px 0; text-align: left; width: 100%; font-size: var(--fs-s); }
+.linkbtn:hover { text-decoration: underline; }
+.finish { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+.onepage { display: flex; flex-direction: column; gap: 18px; }
+.opHead { display: flex; justify-content: space-between; gap: 4px 16px; flex-wrap: wrap; font-size: var(--fs-s); border-bottom: 2px solid var(--ink); padding-bottom: 8px; }
+.opLead { display: grid; gap: 18px; }
+.opLead > * { min-width: 0; }
+.opLead img { display: block; max-height: 60vh; object-fit: contain; background: var(--panel); }
+@media (min-width: 720px) { .opLead { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
+.opLeadText p { margin: 0 0 8px; }
+.opFinal { font-size: var(--fs-l); font-weight: 600; line-height: 1.45; text-wrap: balance; }
+.opCols { columns: 1; column-gap: 28px; }
+@media (min-width: 720px) { .opCols { columns: 2; } }
+@media (min-width: 1040px) { .opCols { columns: 3; } }
+.opStep { break-inside: avoid; margin-bottom: 18px; }
+.opStep h3 { margin: 0 0 6px; font-size: var(--fs-s); border-bottom: 1px solid var(--ink); padding-bottom: 3px; }
+.opStep dl, .opStep ul { margin: 0; padding: 0; list-style: none; font-size: var(--fs-s); }
+.opRow { padding: 3px 0; }
+.opRow dt { color: var(--mute); font-size: var(--fs-xs); }
+.opRow dd { margin: 0; white-space: pre-line; overflow-wrap: anywhere; line-height: 1.45; }
+.opStep li { color: var(--mute); padding: 2px 0; }
+@media print {
+  @page { size: A4; margin: 9mm; }
+  html { font-size: 8px; }
+  .noprint, .toast { display: none !important; }
+  .wrap { padding: 0; max-width: none; }
+  .onepage { gap: 10px; }
+  .opLead { grid-template-columns: auto 1fr; gap: 14px; }
+  .opLead img { max-height: 62mm; }
+  .opCols { columns: 4; column-gap: 14px; }
+  .opStep { margin-bottom: 9px; }
+  .opRow { padding: 1px 0; }
+  .opRow dd { line-height: 1.3; }
+}
