@@ -908,3 +908,6 @@ html[data-skin="school"] .core .label { color: #fff; opacity: 0.8; font-weight: 
 .badges li { display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
 .badges li.not strong, .badges li.not .note { opacity: 0.55; }
 .delbox { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.gamerow { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; }
+#boss { margin-bottom: 20px; }
+#boss .missiontext + .note { margin: 0; }

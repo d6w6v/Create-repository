@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '27 · 레벨판';
+  const APP_VERSION = '28 · 콤보·타임어택·보스';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -577,7 +577,24 @@
       const g = await gameState();
       let was = 0; try { was = Number(localStorage.getItem('eye-level') || 0); localStorage.setItem('eye-level', String(g.lv)); } catch (e) { /* 기억 못 해도 진행 */ }
       if (g.lv > was && cards.length) wrap.append(h('div', { class: 'banner', id: 'levelup' }, `등급이 올랐어요. Lv.${g.lv + 1} ${g.title}`));
-      wrap.append(playerBar(g), box);
+      const wid = weekId();
+      const [bName, bDesc] = bossOf(wid);
+      const bCard = g.cards.find((x) => x.boss === wid);
+      const beaten = bCard && bossBeaten(bCard);
+      const hp = bCard ? bossHp(bCard) : null;
+      const bossBox = h('section', { class: 'sec', id: 'boss' },
+        h('header', {}, h('h2', {}, '이번 주 보스'), h('span', { class: 'chip-state' + (beaten ? ' done' : '') }, beaten ? '격파' : bCard ? '도전 중' : '도전 전')),
+        h('div', { class: 'stepbody', style: 'padding-top:14px' },
+          h('p', { class: 'missiontext' }, bName),
+          h('p', { class: 'note' }, bDesc),
+          h('p', { class: 'note' }, '격파 조건: 이 주제에 맞는 이미지를 직접 골라, 깊게 파기로 11단계를 끝내고 "모르겠음"은 3개 이하. 보상 150 XP.'),
+          bCard ? h('div', { class: 'field' }, h('span', { class: 'label mono' }, beaten ? '보스 체력 0' : `보스 체력 ${hp.left}/${hp.total}`),
+            h('span', { class: 'bartrack', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': hp.total, 'aria-valuenow': hp.left, 'aria-label': '보스 체력' },
+              h('span', { class: 'barfill', style: `width:${beaten ? 0 : (hp.left / hp.total) * 100}%` }))) : null,
+          h('div', { class: 'row' }, bCard
+            ? h('button', { class: 'btn small', type: 'button', id: 'boss-open', onclick: () => { location.hash = 'card-' + bCard.id; } }, beaten ? `격파한 카드 보기 (No.${pad(bCard.no, 3)})` : `이어서 싸우기 (No.${pad(bCard.no, 3)})`)
+            : h('button', { class: 'btn small', type: 'button', id: 'boss-new', onclick: () => { pendingBoss = true; location.hash = 'new'; } }, '새 카드로 도전'))));
+      wrap.append(playerBar(g), box, bossBox);
     }
     if (new Date().getDay() === 0 && cards.length) {
       const wkNote = await store.get('meta', 'week-' + dstr(weekStart(new Date())));
@@ -671,6 +688,7 @@
     } else {
       const all = await store.all('cards');
       cur = newCard(all.reduce((m, c) => Math.max(m, c.no || 0), 0) + 1, nextCut ? 'video' : 'still');
+      if (pendingBoss) { cur.boss = weekId(); cur.mode = 'deep'; pendingBoss = false; }
       if (nextCut) {
         cur.steps.video = { title: nextCut.title, url: nextCut.url };
         cur.tags = [...nextCut.tags]; cur.source = { ...nextCut.source }; cur.trust = nextCut.trust;
@@ -779,6 +797,7 @@
       siblings: videoKey(c) ? (await store.all('cards')).filter((x) => x.id !== c.id && videoKey(x) === videoKey(c)).sort((a, b) => tcSec(a) - tcSec(b)) : [],
       hasShots: !!(await store.get('shotlists', c.id)),
       origSrc: await cardImage(c),
+      others: store.all('cards').then((all) => all.filter((x) => x.id !== c.id)),
       otherTerms: (() => { const t = new Set(); return store.all('cards').then((all) => { all.filter((x) => x.id !== c.id).forEach((x) => cardTerms(x).forEach((v) => t.add(v))); return t; }); })(),
       reImg: c.reshoot && c.reshoot.has ? ((await store.get('images', c.id + '-re')) || {}).data || '' : '',
     }));
@@ -1022,8 +1041,11 @@
 
   function buildForm(c, ctx) {
     const { mySeries = [], pass2 = null, origSrc = '', reImg = '', siblings = [], hasShots = false, otherTerms = null } = ctx || {};
-    let knownTerms = new Set(); let myTerms = cardTerms(c); let doneBefore = null;
+    let knownTerms = new Set(); let myTerms = cardTerms(c); let doneBefore = null; let bossWasBeaten = bossBeaten(c);
     if (otherTerms && otherTerms.then) otherTerms.then((t) => { knownTerms = t; });
+    let otherCards = [];
+    if (ctx && ctx.others) ctx.others.then((list) => { otherCards = list; drawGameRow(); });
+    let drawGameRow = () => {};
     const form = h('div', { class: 'form' });
     let refresh = () => {};
     const changed = () => { refresh(); touch(); };
@@ -1086,6 +1108,45 @@
 
     /* ── 쓰는 방식: 전체 / 빠른 버전 ── */
     const setMode = async (m) => { if (c.mode === m) return; c.mode = m; try { localStorage.setItem('eye-mode', m); } catch (e) { /* 기억 못 해도 진행 */ } await saveNow(); await renderCard(); };
+    /* ── 게임: 타임어택과 보스 도전 ── */
+    const gameRow = h('div', { class: 'gamerow' });
+    let atkTick = null;
+    drawGameRow = () => {
+      if (pass2) return;
+      clearInterval(atkTick); atkTick = null;
+      const out = [];
+      if (c.mode === 'quick') {
+        const at = c.attack;
+        if (at && at.secs != null) {
+          out.push(h('span', { class: 'note', id: 'atk-result' }, `타임어택 기록 ${mmss(at.secs)} · ${at.ok ? '성공' : '시간 초과'}`));
+        } else if (at && at.startAt) {
+          const clockEl = h('strong', { class: 'mono', id: 'atk-clock' });
+          const tickFn = () => {
+            if (!document.body.contains(clockEl)) { clearInterval(atkTick); atkTick = null; return; }
+            const left = ATTACK_SECS - (Date.now() - at.startAt) / 1000;
+            clockEl.textContent = left >= 0 ? `타임어택 ${mmss(left)} 남음` : `시간 초과 +${mmss(left)}`;
+          };
+          atkTick = setInterval(tickFn, 500);
+          out.push(clockEl); setTimeout(tickFn, 0);
+        } else {
+          const fresh = !stepDone(c, STEPS[0]);
+          out.push(h('button', { class: 'btn small', type: 'button', id: 'atk-start', disabled: !fresh,
+            onclick: () => { c.attack = { startAt: Date.now() }; touch(); drawGameRow(); } }, '타임어택 시작 (5분)'));
+          if (!fresh) out.push(h('span', { class: 'note' }, '타임어택은 아직 아무것도 안 쓴 카드에서만 시작할 수 있어요.'));
+        }
+      }
+      const wid = weekId();
+      if (c.boss === wid) {
+        out.push(h('span', { class: 'note', id: 'boss-note' }, bossBeaten(c) ? `이번 주 보스 "${bossOf(wid)[0]}" 격파` : `이번 주 보스 "${bossOf(wid)[0]}"에 도전 중. 깊게 파기로 끝까지, "모르겠음"은 3개 이하.`));
+      } else if (!otherCards.some((x) => x.boss === wid) && !cardDone(c)) {
+        out.push(h('button', { class: 'btn small', type: 'button', id: 'boss-claim',
+          onclick: async () => { c.boss = wid; c.mode = 'deep'; await saveNow(); await renderCard(); toast(`보스 도전 시작: ${bossOf(wid)[0]}`); } }, `이 카드로 이번 주 보스 "${bossOf(wid)[0]}"에 도전`));
+      }
+      gameRow.replaceChildren(...out);
+      gameRow.hidden = !out.length;
+    };
+    drawGameRow();
+
     /* ── 영상 정보 (영상 카드만) ── */
     if (!pass2 && c.type === 'video') {
       const vd = c.steps.video || (c.steps.video = {});
@@ -1117,6 +1178,7 @@
       c.mode === 'deep'
         ? h('p', { class: 'note' }, '미술대학 크리틱 수업처럼 써요. 버튼을 고를 때마다 근거를 한 줄 쓰고, 단계마다 더 촘촘한 관찰 칸과 한 줄 결론이 열려요. 칸 옆의 ?를 누르면 용어 설명이 나와요.')
         : null,
+      gameRow,
       c.mode === 'quick'
         ? h('p', { class: 'note' }, '첫 반응 → 시선 지도 → 지우기 테스트 → 정리만 써요. 나중에 전체 버전으로 이어 쓸 수 있고, 쓴 내용은 그대로 남아요.')
         : null));
@@ -1348,6 +1410,21 @@
           if (fresh.length) toast(`새 용어 획득: ${fresh.join(', ')} · +${fresh.length * 15} XP`);
           else if (newly.length) toast(allDone ? `카드 완주 · +${STEP_XP[c.mode] || 15} XP` : `${stepNo(STEPS.find((x) => x.id === newly[0]))}단계 완료 · +${STEP_XP[c.mode] || 15} XP`);
         }
+        if (doneBefore && doneNow.has('s8') && !doneBefore.has('s8') && guessed(c)) {
+          if (!c.guessAt) c.guessAt = Date.now();
+          const combo = comboOf([...otherCards, c]);
+          const hit = coreElements(c).includes(c.steps.s8.guess);
+          toast(hit ? (combo.streak >= 2 ? `예측 적중 · 콤보 ${combo.streak} · +${30 + Math.min(50, 10 * (combo.streak - 1))} XP` : '예측 적중 · +30 XP') : '예측 빗나감 · 콤보가 끊겼어요');
+        }
+        if (allDone && c.mode === 'quick' && c.attack && c.attack.startAt && c.attack.secs == null) {
+          c.attack.secs = Math.round((Date.now() - c.attack.startAt) / 1000);
+          c.attack.ok = c.attack.secs <= ATTACK_SECS;
+          const best = Math.min(...otherCards.filter((x) => x.attack && x.attack.ok).map((x) => x.attack.secs), Infinity);
+          toast(c.attack.ok ? (c.attack.secs < best ? `타임어택 성공 ${mmss(c.attack.secs)} · 최고 기록 · +40 XP` : `타임어택 성공 ${mmss(c.attack.secs)} · +40 XP`) : `시간 초과 ${mmss(c.attack.secs)}. 다음 카드에서 다시 도전해요.`);
+          drawGameRow();
+        }
+        if (allDone && doneBefore && !bossWasBeaten && bossBeaten(c)) { toast(`보스 격파: ${bossOf(c.boss)[0]} · +150 XP`); drawGameRow(); }
+        bossWasBeaten = bossBeaten(c);
         doneBefore = doneNow; myTerms = nowTerms;
       }
       { // 예측 게임: 예측을 고르기 전에는 가려 보기를 잠그고, 가려 보기 시작하면 예측을 잠근다
@@ -2302,6 +2379,34 @@
     return box;
   }
 
+  /* ───────── 게임: 콤보, 타임어택, 이번 주 보스 ───────── */
+  const ATTACK_SECS = 300;
+  const mmss = (sec) => `${pad(Math.floor(Math.abs(sec) / 60))}:${pad(Math.floor(Math.abs(sec)) % 60)}`;
+  const guessed = (c) => { const s8 = c.steps.s8 || {}; return has(s8.guess) && ERASE.every((n) => (s8.erase || {})[n] != null); };
+  function comboOf(cards) { // 지우기 테스트 예측을 연달아 맞힌 횟수
+    let streak = 0, best = 0, bonus = 0;
+    for (const c of cards.filter(guessed).sort((x, y) => (x.guessAt || x.createdAt) - (y.guessAt || y.createdAt))) {
+      if (coreElements(c).includes(c.steps.s8.guess)) { streak++; best = Math.max(best, streak); bonus += Math.min(50, 10 * (streak - 1)); }
+      else streak = 0;
+    }
+    return { streak, best, bonus };
+  }
+  const BOSSES = [
+    ['빛의 보스', '광원이 셋 이상인 이미지. 빛마다 방향과 역할을 따로 가려내야 해요.'],
+    ['어둠의 보스', '화면의 대부분이 검은 로우키 이미지. 안 보이는 곳에서 단서를 찾아야 해요.'],
+    ['군중의 보스', '인물이 다섯 명 이상인 이미지. 시선과 배치를 한 명씩 읽어야 해요.'],
+    ['빈 화면의 보스', '인물이 없는 이미지. 사람 없이 무엇이 화면을 떠받치는지 찾아야 해요.'],
+    ['흑백의 보스', '색이 없는 이미지. 밝기와 질감만으로 4단계와 5단계를 끝내야 해요.'],
+    ['움직임의 보스', '흔들리거나 끌린 자국이 있는 이미지. 한 장에서 앞뒤 시간을 읽어야 해요.'],
+    ['과잉의 보스', '소품과 색이 넘치는 이미지. 스무 가지가 넘는 것 중 기둥을 가려내야 해요.'],
+    ['평범함의 보스', '아무것도 특별해 보이지 않는데 끌리는 이미지. "틀린 것"을 찾기가 가장 어려워요.'],
+  ];
+  const weekId = () => dstr(weekStart(new Date()));
+  const bossOf = (wid) => BOSSES[[...wid].reduce((x, ch) => x * 31 + ch.charCodeAt(0), 3) % BOSSES.length];
+  const bossBeaten = (c) => !!c.boss && c.mode === 'deep' && cardDone(c) && c.unknown.length <= 3;
+  function bossHp(c) { const vs = STEPS; let n = 0; for (const st of vs) { if (stepDone(c, st)) n++; else break; } return { left: vs.length - n, total: vs.length }; }
+  let pendingBoss = false; // "새 카드로 도전"을 눌렀을 때 다음 새 카드에 보스 표시를 한다
+
   /* ───────── 게임: 경험치, 레벨, 업적 ───────── */
   const LEVELS = [[0, '구경꾼'], [100, '현장 막내'], [250, '그립'], [450, '조명팀'], [700, '포커스 풀러'], [1000, '카메라 오퍼레이터'], [1400, '촬영감독'], [1900, '조감독'], [2500, '디렉터'], [3300, 'DOPE EYE']];
   const STEP_XP = { quick: 10, full: 15, deep: 25 };
@@ -2322,6 +2427,10 @@
     const gs = guessStats(cards);
     const terms = new Set(); cards.forEach((c) => cardTerms(c).forEach((t) => terms.add(t)));
     const stepsDone = (c) => { const vs = visibleSteps(c); let n = 0; for (const st of vs) { if (stepDone(c, st)) n++; else break; } return n; };
+    const combo = comboOf(cards);
+    const attacks = cards.filter((c) => c.attack && c.attack.ok);
+    const bestAttack = attacks.length ? Math.min(...attacks.map((c) => c.attack.secs)) : null;
+    const bossWins = cards.filter(bossBeaten).length;
     const parts = [
       ['단계 완료', cards.reduce((a, c) => a + stepsDone(c) * (STEP_XP[c.mode] || 15), 0)],
       ['용어 획득', terms.size * 15],
@@ -2332,6 +2441,9 @@
       ['다시 쓰기', cards.filter((c) => c.second && c.second.newSeen.some(has)).length * 40],
       ['샷리스트', shotlists.length * 20],
       ['확인 문제', Object.keys(study.quiz).length * 5],
+      ['예측 콤보 보너스', combo.bonus],
+      ['타임어택 성공', attacks.length * 40],
+      ['보스 격파', bossWins * 150],
     ];
     const xp = parts.reduce((a, [, n]) => a + n, 0);
     let lv = 0; while (lv + 1 < LEVELS.length && xp >= LEVELS[lv + 1][0]) lv++;
@@ -2350,9 +2462,14 @@
       ['미션 일주일', '오늘의 미션 7일 연속', missionStreak(ms.done) >= 7],
       ['한 편 뜯기', '한 뮤직비디오에서 다섯 컷 분석하기', (() => { const m = new Map(); cards.forEach((c) => { const k = videoKey(c); if (k) m.set(k, (m.get(k) || 0) + 1); }); return [...m.values()].some((n) => n >= 5); })()],
       ['콘티 작가', '샷리스트 한 장 만들기', shotlists.length >= 1],
+      ['5콤보', '지우기 테스트 예측을 다섯 번 연달아 맞히기', combo.best >= 5],
+      ['5분 컷', '타임어택을 5분 안에 끝내기', attacks.length >= 1],
+      ['3분 컷', '타임어택을 3분 안에 끝내기', bestAttack != null && bestAttack <= 180],
+      ['보스 사냥꾼', '이번 주 보스를 한 번 격파하기', bossWins >= 1],
+      ['보스 세 마리', '보스를 세 번 격파하기', bossWins >= 3],
       ['우등생', '교과서 확인 문제를 전부 맞히기', Object.keys(study.quiz).length >= BOOK.reduce((n, ch) => n + ch.quiz.length, 0)],
     ];
-    return { xp, lv, title: LEVELS[lv][1], floor: LEVELS[lv][0], next: LEVELS[lv + 1] || null, parts, badges, terms };
+    return { xp, lv, title: LEVELS[lv][1], floor: LEVELS[lv][0], next: LEVELS[lv + 1] || null, parts, badges, terms, combo, bestAttack, attacks: attacks.length, bossWins, cards };
   }
   function playerBar(g) {
     const span = g.next ? g.next[0] - g.floor : 1;
@@ -2360,7 +2477,7 @@
     return h('div', { class: 'player', id: 'player' },
       h('div', { class: 'fieldtop' },
         h('strong', { class: 'playerlv' }, `Lv.${g.lv + 1} ${g.title}`),
-        h('span', { class: 'mono label' }, g.next ? `${g.xp} XP · 다음 "${g.next[1]}"까지 ${g.next[0] - g.xp}` : `${g.xp} XP · 최고 등급`)),
+        h('span', { class: 'mono label' }, (g.combo.streak >= 2 ? `콤보 ${g.combo.streak} · ` : '') + (g.next ? `${g.xp} XP · 다음 "${g.next[1]}"까지 ${g.next[0] - g.xp}` : `${g.xp} XP · 최고 등급`))),
       h('span', { class: 'bartrack', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(pct), 'aria-label': '다음 등급까지' },
         h('span', { class: 'barfill', style: `width:${pct}%` })));
   }
@@ -2489,6 +2606,11 @@
       h('header', {}, h('h2', {}, '등급과 업적'), h('span', { class: 'chip-state' + (got === g.badges.length ? ' done' : '') }, `업적 ${got}/${g.badges.length}`)),
       h('div', { class: 'stepbody', style: 'padding-top:14px' },
         playerBar(g),
+        h('div', { class: 'field' }, h('span', { class: 'label' }, '기록'),
+          h('ul', { class: 'plain', id: 'records' },
+            h('li', {}, '예측 콤보', h('span', { class: 'label mono' }, `  지금 ${g.combo.streak} · 최고 ${g.combo.best}`)),
+            h('li', {}, '타임어택', h('span', { class: 'label mono' }, g.bestAttack != null ? `  최고 ${mmss(g.bestAttack)} · 성공 ${g.attacks}번` : '  아직 기록 없음')),
+            h('li', {}, '보스 격파', h('span', { class: 'label mono' }, `  ${g.bossWins}번`)))),
         h('div', { class: 'field' }, h('span', { class: 'label' }, '경험치를 얻은 곳'),
           h('ul', { class: 'plain' }, g.parts.filter(([, n]) => n).map(([name, n]) => h('li', {}, name, h('span', { class: 'label mono' }, `  ${n} XP`))),
             g.xp ? null : h('li', {}, '아직 없어요. 카드의 한 단계를 끝내면 쌓이기 시작해요.'))),
