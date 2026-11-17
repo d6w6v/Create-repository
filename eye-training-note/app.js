@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '32 · 촬영장 새 그림';
+  const APP_VERSION = '33 · 내 필름';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -641,10 +641,13 @@
           h('div', { class: 'row' }, bCard
             ? h('button', { class: 'btn small', type: 'button', id: 'boss-open', onclick: () => { location.hash = 'card-' + bCard.id; } }, beaten ? `격파한 카드 보기 (No.${pad(bCard.no, 3)})` : `이어서 싸우기 (No.${pad(bCard.no, 3)})`)
             : h('button', { class: 'btn small', type: 'button', id: 'boss-new', onclick: () => { pendingBoss = true; location.hash = 'new'; } }, '새 카드로 도전'))));
-      const scene = setScene(g);
-      let hadGear = scene.count; try { hadGear = Number(localStorage.getItem('eye-gear') ?? scene.count); localStorage.setItem('eye-gear', String(scene.count)); } catch (e) { /* 기억 못 해도 진행 */ }
-      if (scene.count > hadGear) celebrate(`새 장비가 들어왔어요: ${scene.newest}`, 30);
-      wrap.append(scene.fig, playerBar(g), box, bossBox);
+      const film = filmStrip(g);
+      let had = film.count; try { had = Number(localStorage.getItem('eye-frames') ?? film.count); localStorage.setItem('eye-frames', String(film.count)); } catch (e) { /* 기억 못 해도 진행 */ }
+      if (film.count > had) {
+        if (film.count % ROLL === 0) celebrate(`롤 ${film.count / ROLL} 현상 완료 · 36컷을 다 찍었어요`, 60);
+        else celebrate(`오늘의 컷이 찍혔어요 · ${((film.count - 1) % ROLL) + 1}번째 컷`, 18);
+      }
+      wrap.append(film.fig, playerBar(g), box, bossBox);
     }
     if (new Date().getDay() === 0 && cards.length) {
       const wkNote = await store.get('meta', 'week-' + dstr(weekStart(new Date())));
@@ -2464,32 +2467,8 @@
   function bossHp(c) { const vs = STEPS; let n = 0; for (const st of vs) { if (stepDone(c, st)) n++; else break; } return { left: vs.length - n, total: vs.length }; }
   let pendingBoss = false; // "새 카드로 도전"을 눌렀을 때 다음 새 카드에 보스 표시를 한다
 
-  /* ───────── 키우기: 내 촬영장. 연습한 날이 쌓일수록 장비가 하나씩 들어온다 ───────── */
-  const sh = (x, w) => `<ellipse class="sh" cx="${x}" cy="275" rx="${w}" ry="5"/>`;
-  const stand = (x, top) => `${sh(x, 26)}<path class="st5" d="M${x} 270V${top}"/><path class="st4" d="M${x - 20} 270L${x} 250L${x + 20} 270"/><rect class="ink" x="${x - 4}" y="${top + 26}" width="8" height="10" rx="2"/>`;
-  const zig = Array.from({ length: 50 }, (_, i) => `${20 + i * 20} ${i % 2 ? 14 : 30}`).join('L');
-  const GEAR = [ // [필요한 날 수, 이름, 들어오는 움직임, 그림, 불이 켜졌을 때 더 그릴 것, 뒤에 깔리는가]
-    [1, '바닥 표시', 'pop', '<rect class="red" x="436" y="279" width="30" height="5" rx="1"/><rect class="red" x="448.5" y="279" width="5" height="17" rx="1"/>'],
-    [2, '삼각대', 'rise', `${sh(280, 36)}<path class="st6" d="M280 196L252 270M280 196V270M280 196L308 270"/><path class="st3" d="M263 242H297"/><rect class="ink" x="268" y="182" width="24" height="16" rx="3"/><path class="st3" d="M290 191L320 206"/>`],
-    [3, '카메라', 'drop', '<rect class="ink" x="244" y="146" width="66" height="36" rx="5"/><rect class="ink" x="310" y="153" width="24" height="22" rx="2"/><path class="ink" d="M334 148h13l7-5v46l-7-5h-13z"/><path class="st4" d="M256 146v-10h40v10"/><rect class="ink" x="229" y="154" width="15" height="14" rx="2"/><path class="hl" d="M253 157h28M253 163h16"/>', '<circle class="tally" cx="301" cy="155" r="3.5"/>'],
-    [4, '주광', 'rise', `${stand(660, 118)}<g transform="rotate(-24 660 112)"><rect class="ink" x="648" y="99" width="26" height="26" rx="3"/><path class="pap" d="M650 97L598 76V148L650 127Z"/><path class="thin" d="M624 87v50M598 112h52"/></g>`, '<path class="cone" d="M586 103L617 173L524 270L388 206Z"/>'],
-    [5, '애플박스', 'pop', `${sh(515, 34)}<rect class="ink" x="486" y="250" width="58" height="20" rx="2"/><rect class="pap" x="505" y="257" width="20" height="5" rx="2.5"/>`],
-    [6, '반사판', 'rise', `${stand(118, 180)}<ellipse class="pap" cx="118" cy="140" rx="30" ry="42" transform="rotate(12 118 140)"/><ellipse class="thin" cx="118" cy="140" rx="23" ry="34" transform="rotate(12 118 140)"/>`],
-    [7, '배경지', 'unroll', '<path class="st4" d="M356 270V44M544 270V44"/><path class="cyc" d="M364 46H536V236Q536 268 582 270H318Q364 268 364 236Z"/><path class="cycsh" d="M364 206H536V236Q536 268 582 270H318Q364 268 364 236Z"/><rect class="ink" x="346" y="36" width="208" height="11" rx="5.5"/>', '', true],
-    [9, '감독 의자', 'slideR', `${sh(905, 30)}<path class="st5" d="M885 270L925 214M925 270L885 214"/><rect class="ink" x="880" y="208" width="50" height="7" rx="2"/><path class="st4" d="M884 210V168M926 210V168"/><rect class="ink" x="882" y="166" width="46" height="18" rx="2"/><rect class="red" x="882" y="173" width="46" height="4"/>`],
-    [11, '슬레이트', 'pop', '<g transform="rotate(-8 752 256)"><rect class="pap" x="730" y="240" width="46" height="30" rx="2"/><path class="thin" d="M730 250h46M730 260h46M746 250v20"/><g transform="rotate(-16 730 240)"><rect class="ink" x="730" y="229" width="46" height="10" rx="1"/><path class="hlw" d="M738 230l-5 8M750 230l-5 8M762 230l-5 8M774 230l-5 8"/></g></g>'],
-    [13, '모니터', 'slideL', `${sh(58, 26)}<path class="st5" d="M58 270V196"/><path class="st4" d="M38 270h40"/><rect class="ink" x="18" y="138" width="80" height="60" rx="6"/><rect class="scr" x="25" y="145" width="66" height="46" rx="2"/>`, '<rect class="scron" x="25" y="145" width="66" height="46" rx="2"/><path class="wave" d="M31 183l8-14 7 8 8-20 8 13 7-6 7 13"/><circle class="tally" cx="83" cy="153" r="3"/>'],
-    [15, '보조광', 'rise', `${stand(180, 152)}<rect class="ink" x="158" y="110" width="44" height="44" rx="5"/><rect class="pap" x="164" y="116" width="32" height="32" rx="2"/><path class="thin" d="M174.6 116v32M185.3 116v32M164 126.6h32M164 137.3h32"/>`, '<path class="cone soft" d="M202 116V148L392 250V128Z"/>'],
-    [18, '붐 마이크', 'rise', `${stand(694, 116)}<path class="st4" d="M700 122L486 66"/><rect class="ink" x="696" y="114" width="20" height="13" rx="2"/><ellipse class="ink" cx="470" cy="62" rx="26" ry="9.5" transform="rotate(14 470 62)"/>`],
-    [21, '달리 레일', 'slideL', '<path class="st3" d="M212 277H348M212 285H348"/><path class="st3" d="M224 277v8M248 277v8M272 277v8M296 277v8M320 277v8M344 277v8"/><circle class="ink" cx="252" cy="271" r="5.5"/><circle class="ink" cx="308" cy="271" r="5.5"/>'],
-    [24, '헤이즈 머신', 'pop', `${sh(576, 24)}<rect class="ink" x="560" y="252" width="34" height="18" rx="3"/><rect class="ink" x="551" y="257" width="11" height="8" rx="2"/>`, '<g class="hz"><ellipse cx="522" cy="246" rx="34" ry="10"/><ellipse cx="476" cy="230" rx="42" ry="12"/><ellipse cx="428" cy="244" rx="36" ry="10"/><ellipse cx="500" cy="212" rx="30" ry="9"/><ellipse cx="404" cy="222" rx="26" ry="8"/></g>'],
-    [27, '윤곽광', 'rise', `${stand(614, 78)}<g transform="rotate(22 614 72)"><rect class="ink" x="586" y="57" width="34" height="30" rx="6"/><path class="ink" d="M586 58l-11-7v42l11-7z"/></g>`, '<path class="cone" d="M574 60L586 100L474 196L426 112Z"/>'],
-    [30, '소품 테이블', 'slideR', `${sh(832, 40)}<rect class="ink" x="796" y="222" width="72" height="7" rx="2"/><path class="st4" d="M805 229V270M859 229V270"/><path class="st3" d="M813 196q19-17 38 0"/><rect class="ink" x="806" y="196" width="52" height="26" rx="4"/><circle class="pap" cx="819" cy="210" r="7"/><circle class="pap" cx="845" cy="210" r="7"/><rect class="pap" x="827" y="200" width="10" height="5" rx="1"/>`],
-    [35, '의상 행거', 'slideR', `${sh(977, 30)}<path class="st4" d="M956 270V150M998 270V150M950 150h54"/><path class="st3" d="M950 270h12M992 270h12"/><path class="ink" d="M961 156h15l4 54h-23z"/><path class="red" d="M980 156h14l3 42h-20z"/>`],
-    [40, '조명 트러스', 'drop', `<path class="st3" d="M20 14H1000M20 30H1000"/><path class="st2" d="M20 30L${zig}"/><path class="st3" d="M410 30v10M500 30v10"/><path class="ink" d="M397 40h26l5 20h-36zM487 40h26l5 20h-36z"/>`, '<path class="cone soft" d="M392 60H428L462 250H350Z"/><path class="cone soft" d="M482 60H518L556 250H444Z"/>', true],
-    [50, '네온 사인', 'fade', '<text class="neon" x="450" y="120" text-anchor="middle">DOPEYE</text>', '<text class="neon lit" x="450" y="120" text-anchor="middle">DOPEYE</text>'],
-    [60, '감독', 'slideL', `${sh(222, 22)}<path class="st6" d="M214 218L210 270M230 218L234 270"/><path class="ink" d="M207 168q15-9 30 0l4 54h-38z"/><circle class="ink" cx="222" cy="151" r="11"/><path class="ink" d="M211 145h29v5h-29z"/><path class="st5" d="M235 176L248 166"/>`],
-  ];
+  /* ───────── 키우기: 내 필름. 연습한 날마다 한 컷씩 찍혀서 36컷이 되면 한 롤이 된다 ───────── */
+  const ROLL = 36;
   function activeDays(d) { // 무엇이든 한 날을 모은다
     const days = new Set();
     const add = (t) => { if (t) days.add(dstr(new Date(t))); };
@@ -2500,36 +2479,72 @@
     d.shotlists.forEach((x) => add(x.createdAt));
     return days;
   }
-  function setScene(g) {
-    const n = g.days.size;
-    const today = dstr(new Date()); const y = new Date(); y.setDate(y.getDate() - 1);
-    const lit = g.days.has(today) || g.days.has(dstr(y));
-    const have = GEAR.filter(([need]) => n >= need);
-    const next = GEAR.find(([need]) => n < need);
-    const newest = have.length ? have[have.length - 1][1] : '';
-    const order = new Map(have.map((x, i) => [x[1], i]));
-    const gear = (list) => list.map(([, name, kind, art]) => `<g class="gear a-${kind}${name === newest ? ' newest' : ''}" style="--i:${order.get(name)}">${art}</g>`).join('');
-    const lights = lit ? `<g class="lights" style="--n:${have.length}">${have.map((x) => x[4] || '').join('')}</g>` : '';
-    const fig = h('figure', { class: 'fig setfig' + (lit ? ' lit' : ''), id: 'myset' });
-    const paint = () => {
-      const svg = `<svg viewBox="0 0 1010 310" role="img" aria-label="내 촬영장. 장비 ${have.length}개">
-        <rect class="floor" x="0" y="270" width="1010" height="40"/><path class="st3" d="M0 270H1010"/>
-        ${gear(have.filter((x) => x[5]))}${gear(have.filter((x) => !x[5]))}${lights}
-        ${have.length ? '' : '<text class="empty" x="505" y="150" text-anchor="middle">빈 스튜디오예요. 오늘 한 단계만 써도 첫 장비가 들어와요.</text>'}</svg>`;
-      const old = fig.querySelector('svg');
-      if (old) old.remove();
-      fig.insertAdjacentHTML('afterbegin', svg);
-    };
-    paint();
-    fig.append(h('figcaption', {},
-      h('span', { class: 'figno' }, `내 촬영장 ${n}일차`),
-      `장비 ${have.length}/${GEAR.length}` + (next ? ` · 다음 장비 "${next[1]}"까지 ${next[0] - n}일` : ' · 촬영장 완성'),
-      h('br', {}),
-      n === 0 ? '연습한 날이 하루 쌓일 때마다 촬영장이 자라요.'
-        : lit ? '조명이 켜져 있어요. 오늘도 한 단계만 쓰면 계속 켜져 있어요.'
-          : '조명이 꺼졌어요. 장비는 그대로 있어요. 오늘 한 단계만 써도 다시 켜져요.',
-      have.length > 1 ? h('button', { class: 'linkbtn replay', type: 'button', id: 'set-replay', onclick: paint }, '세트 짓는 장면 다시 보기') : null));
-    return { fig, count: have.length, newest };
+  function filmFrames(g) { // 날짜마다 그날의 이미지 한 장을 고른다
+    const pic = new Map();
+    const put = (t, src, hash) => { if (!t || !src) return; const k = typeof t === 'string' ? t : dstr(new Date(t)); if (!pic.has(k)) pic.set(k, { src, hash }); };
+    for (const c of [...g.cards].sort((a, b) => b.createdAt - a.createdAt)) {
+      const src = cardSrc(c);
+      put(c.createdAt, src, 'card-' + c.id); put(c.doneAt, src, 'card-' + c.id); put(c.updatedAt, src, 'card-' + c.id);
+    }
+    for (const e of g.diary) if (entryDone(e)) put(e.id, e.img, 'diary');
+    return [...g.days].sort().map((day, i) => ({ day, no: i + 1, ...(pic.get(day) || { src: '', hash: '' }) }));
+  }
+  function filmStrip(g) {
+    const frames = filmFrames(g);
+    const n = frames.length;
+    const today = dstr(new Date());
+    const doneToday = g.days.has(today);
+    const rolls = Math.max(1, Math.ceil((n + (doneToday ? 0 : 1)) / ROLL));
+    let roll = rolls; // 보고 있는 롤
+    const fig = h('figure', { class: 'film', id: 'film' });
+    const scroller = h('div', { class: 'filmscroll' });
+    const caption = h('figcaption', {});
+    const gapDays = (a, b) => Math.round((new Date(b + 'T00:00') - new Date(a + 'T00:00')) / DAY) - 1;
+    function paint(wind) {
+      const from = (roll - 1) * ROLL;
+      const mine = frames.slice(from, from + ROLL);
+      const strip = h('div', { class: 'filmstrip' });
+      mine.forEach((f, i) => {
+        const prev = i ? mine[i - 1] : frames[from - 1];
+        const gap = prev ? gapDays(prev.day, f.day) : 0;
+        if (gap > 0) strip.append(h('span', { class: 'splice' }, `${gap}일 쉼`));
+        const no = ((f.no - 1) % ROLL) + 1;
+        const fresh = f.day === today && wind;
+        strip.append(h('button', { class: 'frame' + (fresh ? ' develop' : '') + (f.day === today ? ' today' : ''), type: 'button', disabled: !f.hash,
+          'aria-label': `${f.day}의 컷`, onclick: () => { if (f.hash) location.hash = f.hash; } },
+          f.src ? h('img', { src: f.src, alt: '', loading: 'lazy', onerror: (e) => e.target.remove() }) : h('span', { class: 'noimg' }, '글로 연습한 날'),
+          h('span', { class: 'fno' }, `${no}`), h('span', { class: 'fday' }, f.day.slice(5).replace('-', '.'))));
+      });
+      if (roll === rolls) {
+        const used = n - from;
+        if (!doneToday && used < ROLL) strip.append(h('span', { class: 'frame blank today' }, h('span', { class: 'noimg' }, '오늘의 컷', h('br', {}), '아직 안 찍었어요'), h('span', { class: 'fno' }, `${used + 1}`)));
+        const pad2 = Math.min(3, ROLL - used - (doneToday ? 0 : 1));
+        for (let i = 0; i < pad2; i++) strip.append(h('span', { class: 'frame blank' }, h('span', { class: 'fno' }, `${used + (doneToday ? 1 : 2) + i}`)));
+      }
+      scroller.replaceChildren(strip);
+      const lastGap = n && !doneToday ? gapDays(frames[n - 1].day, today) : 0;
+      caption.replaceChildren(
+        h('span', { class: 'figno' }, `내 필름 · 롤 ${roll}`),
+        roll === rolls ? `${n - from}/${ROLL}컷` : `${ROLL}/${ROLL}컷 · 현상 완료`,
+        rolls > 1 ? h('span', { class: 'rollpick' }, Array.from({ length: rolls }, (_, i) =>
+          h('button', { class: 'linkbtn' + (i + 1 === roll ? ' on' : ''), type: 'button', onclick: () => { roll = i + 1; paint(false); } }, `롤 ${i + 1}`))) : null,
+        h('br', {}),
+        n === 0 ? '연습한 날마다 그날의 이미지가 한 컷씩 찍혀요. 36컷이 차면 한 롤이 돼요.'
+          : doneToday ? '오늘의 컷이 찍혔어요. 컷을 누르면 그날의 카드가 열려요.'
+            : lastGap > 0 ? `${lastGap}일 쉬었어요. 오늘 한 단계만 써도 다음 컷이 찍혀요.` : '오늘 한 단계만 쓰면 다음 컷이 찍혀요.');
+      requestAnimationFrame(() => {
+        const max = scroller.scrollWidth - scroller.clientWidth;
+        if (max <= 0) return;
+        const real = scroller.querySelectorAll('.frame.today, .frame:not(.blank)');
+        const aim = real[real.length - 1];
+        const end = aim ? Math.min(max, Math.max(0, aim.offsetLeft - (scroller.clientWidth - aim.offsetWidth) / 2)) : max;
+        if (wind && !matchMedia('(prefers-reduced-motion: reduce)').matches) { scroller.scrollLeft = Math.max(0, end - 700); scroller.scrollTo({ left: end, behavior: 'smooth' }); }
+        else scroller.scrollLeft = end;
+      });
+    }
+    paint(true);
+    fig.append(scroller, caption);
+    return { fig, count: n, rollsDone: Math.floor(n / ROLL) };
   }
 
   /* ───────── 게임: 경험치, 레벨, 업적 ───────── */
@@ -2595,7 +2610,7 @@
       ['우등생', '교과서 확인 문제를 전부 맞히기', Object.keys(study.quiz).length >= BOOK.reduce((n, ch) => n + ch.quiz.length, 0)],
     ];
     const days = activeDays({ cards, diary, shotlists, missions: ms, study });
-    return { days, xp, lv, title: LEVELS[lv][1], floor: LEVELS[lv][0], next: LEVELS[lv + 1] || null, parts, badges, terms, combo, bestAttack, attacks: attacks.length, bossWins, cards };
+    return { days, diary, xp, lv, title: LEVELS[lv][1], floor: LEVELS[lv][0], next: LEVELS[lv + 1] || null, parts, badges, terms, combo, bestAttack, attacks: attacks.length, bossWins, cards };
   }
   function playerBar(g) {
     const span = g.next ? g.next[0] - g.floor : 1;
