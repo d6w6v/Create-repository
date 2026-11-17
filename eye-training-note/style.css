@@ -880,3 +880,16 @@ html[data-skin="school"] .qopt.right { background: var(--red); border-color: var
 html[data-skin="school"] .qopt:hover { background: #fff; color: var(--ink); border-color: var(--red); }
 html[data-skin="school"] .qopt.right:hover { background: var(--red); color: #fff; }
 html[data-skin="school"] .tabs { gap: 16px; }
+
+/* ── 크리틱 워크시트 (모양은 기존 칸과 같은 규칙) ── */
+.wslist { display: flex; flex-direction: column; }
+.ws { border-bottom: 1px solid var(--line); }
+.wsrow { display: grid; grid-template-columns: 2em minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; background: none; border: 0; padding: 12px 0; text-align: left; color: var(--ink); }
+.wscode { font-weight: 800; color: var(--red, var(--mute)); font-variant-numeric: tabular-nums; }
+.wstitle { font-weight: 700; font-size: 0.9375rem; }
+.wsrow:hover .wstitle { text-decoration: underline; }
+.wsbody { display: flex; flex-direction: column; gap: 14px; padding: 2px 0 18px; }
+.chapter ol { margin: 0; padding-left: 1.4em; }
+.fig svg { max-width: 520px; }
+html[data-skin="school"] .ws { border-bottom-color: #dcdcdc; }
+html[data-skin="school"] .wsbody > .field { padding: 0; }

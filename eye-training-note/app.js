@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '21 · 교과서판';
+  const APP_VERSION = '22 · 워크시트판';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -20,6 +20,10 @@
   const nativeReplace = Element.prototype.replaceChildren;
   Element.prototype.replaceChildren = function (...kids) {
     return nativeReplace.apply(this, kids.flat().filter((k) => k != null && k !== false));
+  };
+  const nativeAppend = Element.prototype.append;
+  Element.prototype.append = function (...kids) {
+    return nativeAppend.apply(this, kids.flat().filter((k) => k != null && k !== false));
   };
 
   /* ───────── 작은 도구들 ───────── */
@@ -346,7 +350,7 @@
     return has(v);
   }
   const realFields = (c, st) => visibleFields(c, st).filter((f) => f.type !== 'head');
-  const whyOk = (c, st, f) => c.mode !== 'deep' || st.id === 'video' || !needsWhy(f) || has((c.steps[st.id] || {})[f.k + 'Why']);
+  const whyOk = (c, st, f) => c.mode !== 'deep' || st.id === 'video' || st.sheet || !needsWhy(f) || has((c.steps[st.id] || {})[f.k + 'Why']);
   const fieldOk = (c, st, f) => f.opt || isUnknown(c, st, f) || (filled(c, st, f) && whyOk(c, st, f));
   const stepDone = (c, st) => realFields(c, st).every((f) => fieldOk(c, st, f));
   const stepHasData = (c, st) => realFields(c, st).some((f) => hasAny(c, st, f));
@@ -841,7 +845,7 @@
       drawCore();
     }
 
-    const deep = c.mode === 'deep' && st.id !== 'video';
+    const deep = c.mode === 'deep' && st.id !== 'video' && !st.sheet;
     let whyBox = null;
     if (deep && needsWhy(f)) {
       const ta = h('textarea', { class: 'text area why', id: dom + '-why', rows: 1, placeholder: '근거: 화면의 어디를 보고 그렇게 판단했나', value: data[f.k + 'Why'] || '',
@@ -853,7 +857,7 @@
     const holder = h('div', { class: 'field' + (isUnknown(c, st, f) ? ' unk' : ''), id: 'fld-' + id.replace('.', '-') });
     const top = h('div', { class: 'fieldtop' },
       h('label', { class: 'label', for: dom },
-        st.id !== 'video' ? h('span', { class: 'fnum' }, `${stepNo(st)}.${realFields(c, st).indexOf(f) + 1}`) : null,
+        st.id !== 'video' ? h('span', { class: 'fnum' }, `${st.code || stepNo(st)}.${st.sheet ? st.fields.indexOf(f) + 1 : realFields(c, st).indexOf(f) + 1}`) : null,
         f.label + (f.opt ? ' · 없으면 비워 둬요' : '')));
     let helpBox = null;
     if (f.help) {
@@ -1122,7 +1126,61 @@
     const rsSec = h('section', { class: 'sec step', id: 'reshoot' }, h('header', {}, h('h2', {}, '재현 촬영 기록'), rsBadge), rsBody);
     if (!pass2) drawReshoot(reImg);
 
+    /* ── 크리틱 워크시트 ── */
+    const wsOpen = new Set();
+    const wsList = h('div', { class: 'wslist' });
+    const wsSec = h('section', { class: 'sec step', id: 'sheets' },
+      h('header', {}, h('h2', {}, '크리틱 워크시트'), h('span', { class: 'chip-state', id: 'ws-count' })),
+      h('div', { class: 'stepbody' },
+        h('p', { class: 'note' }, '미술대학과 영화과 수업에서 널리 쓰이는 분석법 열 가지예요. 같은 이미지를 다른 틀로 다시 써 보는 연습이에요. 필수가 아니니 하나씩 골라서 해요.'),
+        wsList));
+    const wsBlocks = WORKSHEETS.map((st) => {
+      const chip = h('span', { class: 'chip-state' });
+      const body = h('div', { class: 'wsbody', hidden: true });
+      let built = false;
+      const draw = () => { const n = sheetCount(c, st); chip.textContent = `${n}/${st.fields.length}칸`; chip.classList.toggle('done', n === st.fields.length); };
+      const toggle = h('button', { class: 'wsrow', type: 'button', 'aria-expanded': 'false', id: 'ws-' + st.id, onclick: () => {
+        const open = body.hidden;
+        if (open && !built) {
+          built = true;
+          body.append(h('p', { class: 'help' }, h('span', { class: 'helptag' }, '출처'), st.by), h('p', { class: 'help' }, h('span', { class: 'helptag' }, '하는 법'), st.how));
+          if (st.id === 'w_slow') {
+            const clock = h('strong', { class: 'mono' }, '00:00');
+            let t0 = 0, tick = null;
+            const say = h('span', { class: 'note' }, '타이머를 켜고 이미지만 봐요.');
+            const btn = h('button', { class: 'btn small', type: 'button', onclick: () => {
+              if (tick) { clearInterval(tick); tick = null; btn.textContent = '10분 타이머 시작'; return; }
+              t0 = Date.now(); btn.textContent = '타이머 멈추기';
+              tick = setInterval(() => {
+                if (!document.body.contains(clock)) { clearInterval(tick); tick = null; return; }
+                const sec = Math.floor((Date.now() - t0) / 1000);
+                clock.textContent = `${pad(Math.floor(sec / 60))}:${pad(sec % 60)}`;
+                say.textContent = sec < 60 ? '보기만 해요. 아직 쓰지 않아요.' : sec < 300 ? '1분째 칸을 쓰고, 다시 봐요.' : sec < 600 ? '5분째 칸을 쓰고, 다시 봐요.' : '10분이 됐어요. 마지막 칸을 써요.';
+                if (sec >= 600) { clearInterval(tick); tick = null; btn.textContent = '10분 타이머 시작'; }
+              }, 1000);
+            } }, '10분 타이머 시작');
+            body.append(h('div', { class: 'row' }, btn, clock, say));
+          }
+          for (const f of st.fields) body.append(buildField(c, st, f, () => { draw(); drawWsCount(); touch(); }, { origSrc }));
+        }
+        body.hidden = !open;
+        toggle.setAttribute('aria-expanded', String(open));
+      } }, h('span', { class: 'wscode' }, st.code), h('span', { class: 'wstitle' }, st.title), chip);
+      draw();
+      return h('div', { class: 'ws' }, toggle, body);
+    });
+    wsList.append(...wsBlocks);
+    function drawWsCount() {
+      const n = WORKSHEETS.filter((st) => sheetCount(c, st) > 0).length;
+      const chip = wsSec.querySelector('#ws-count');
+      chip.textContent = n ? `${n}개 씀` : '선택';
+      chip.classList.toggle('done', n > 0);
+    }
+    drawWsCount();
+    void wsOpen;
+
     form.append(unkSec, finish);
+    if (!pass2) form.append(wsSec);
     const shSec = h('section', { class: 'sec step', id: 'shots' },
       h('header', {}, h('h2', {}, '샷리스트'), h('span', { class: 'chip-state' + (hasShots ? ' done' : '') }, hasShots ? '있음' : '아직 없음')),
       h('div', { class: 'stepbody' },
@@ -1161,6 +1219,7 @@
           document.getElementById('fld-' + fid(st, f).replace('.', '-'))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } }, h('span', { class: 'mono' }, pad(stepNo(st))), ` ${st.title} · ${f.label}`))));
       const allDone = !blocked;
+      if (!pass2) { const s1ok = stepDone(c, STEPS[0]); wsSec.classList.toggle('locked', !s1ok); wsSec.querySelector('.stepbody').hidden = !s1ok; }
       if (!pass2) {
         if (allDone && !c.doneAt) { c.doneAt = Date.now(); touch(); }
         drawAgain(allDone);
@@ -1227,7 +1286,7 @@
         if (text) rows.push(h('div', { class: 'opRow' }, h('dt', {}, f.label), h('dd', {}, text)));
       }
       if (rows.length) cols.append(h('section', { class: 'opStep' },
-        h('h3', {}, h('span', { class: 'mono' }, pad(stepNo(st))), ' ' + st.title), h('dl', {}, rows)));
+        h('h3', {}, h('span', { class: 'mono' }, stepCode(st)), ' ' + st.title), h('dl', {}, rows)));
     }
     if (unk.length) cols.append(h('section', { class: 'opStep' }, h('h3', {}, '모르겠음으로 남긴 칸'), h('ul', {}, unk.map((t) => h('li', {}, t)))));
     page.append(cols);
@@ -1621,7 +1680,7 @@
     C('kind', '샷 종류', ['퍼포먼스', '내러티브']),
     T('beat', '비트와 컷이 맞는 지점'),
     T('around', '이 컷 앞뒤에 오는 컷') ] };
-  const allSteps = (c) => (c.type === 'video' ? [VIDEO_STEP, ...STEPS] : STEPS);
+  const allSteps = (c) => [...(c.type === 'video' ? [VIDEO_STEP] : []), ...STEPS, ...WORKSHEETS];
   const typeName = (c) => (c.type === 'video' ? '영상' : '스틸');
   function videoKey(c) {
     if (c.type !== 'video') return '';
@@ -1870,7 +1929,7 @@
         if (text.includes('\n')) rows.push(`- **${f.label}**:`, ...text.split('\n').map((t) => `  - ${t}`));
         else rows.push(`- **${f.label}**: ${text}`);
       }
-      if (rows.length) L.push('', `## ${pad(stepNo(st))} ${st.title}`, ...rows);
+      if (rows.length) L.push('', `## ${stepCode(st)} ${st.title}`, ...rows);
     }
     if (unk.length) L.push('', '## 모르겠음으로 남긴 칸', ...unk.map((u) => `- ${u}`));
     if (!forAi && c.second) {
@@ -2291,6 +2350,172 @@
       quiz: [{ q: '크리틱의 순서로 알맞은 것은?', o: ['판단, 해석, 분석, 묘사', '묘사, 분석, 해석, 판단'], a: 1, why: '본 것에서 시작해 판단으로 끝나요.' },
         { q: '더 좋은 레시피는?', o: ['조명을 분위기 있게', '빨간 필터 조명 하나를 오른쪽 앞 45도에'], a: 1, why: '남이 읽고 그대로 따라 할 수 있어야 레시피예요.' }] },
   ];
+  /* ───────── 크리틱 워크시트: 미술·영화 수업에서 널리 쓰이는 공개된 분석법 ───────── */
+  const W = (id, code, title, by, how, fields) => ({ id, code, title, by, how, sheet: true, noUnknown: true, fields });
+  const WORKSHEETS = [
+    W('w_stw', 'A', '보고 · 생각하고 · 궁금해하기',
+      '하버드 교육대학원의 연구 모임 "프로젝트 제로"가 만든 생각 루틴(See–Think–Wonder)이에요. 미술관과 교실에서 관찰과 해석을 떼어 놓는 첫 연습으로 널리 써요.',
+      '세 칸을 순서대로 써요. 첫 칸에는 해석을 한 마디도 넣지 않는 게 규칙이에요.',
+      [A('see', '보이는 것: 해석 없이 열 가지'), A('think', '그래서 드는 생각: 무슨 일이 벌어지고 있나'), A('wonder', '궁금한 것: 화면이 답해 주지 않는 질문 세 가지')]),
+    W('w_vts', 'B', '세 가지 질문 (시각적 사고 전략)',
+      '인지심리학자 애비게일 하우젠과 뉴욕 현대미술관(MoMA) 교육 책임자였던 필립 예나윈이 만든 방법(VTS)이에요. 질문 세 개만으로 수업 전체를 끌어가요.',
+      '둘째 질문이 핵심이에요. 첫 칸에 쓴 문장마다 화면의 근거를 하나씩 대요.',
+      [A('going', '이 이미지에서 무슨 일이 일어나고 있나'), A('evidence', '무엇을 보고 그렇게 말하나 (화면의 근거)'), A('more', '더 찾을 수 있는 것은 무엇인가')]),
+    W('w_feldman', 'C', '펠드먼의 네 단계',
+      '미국 조지아대학교의 미술교육자 에드먼드 펠드먼이 정리한 비평 순서예요. 미술대학 크리틱의 뼈대로 가장 널리 쓰여요.',
+      '순서를 건너뛰지 않아요. 묘사가 끝나기 전에는 좋다 나쁘다를 말하지 않는 게 규칙이에요.',
+      [A('describe', '묘사: 무엇이 보이는가 (판단하는 말 금지)'), A('analyze', '분석: 요소들이 어떻게 짜여 있는가'), A('interpret', '해석: 그래서 무엇을 뜻하는가'), A('judge', '판단: 잘 되었는가, 근거는 무엇인가')]),
+    W('w_barthes', 'D', '스투디움과 푼크툼',
+      '프랑스 비평가 롤랑 바르트가 『밝은 방』에서 쓴 구분이에요. 사진 이론 수업에서 빠지지 않아요.',
+      '스투디움은 누구나 알아볼 주제이고, 푼크툼은 설명하기 어려운데 나만 찔리는 작은 디테일이에요. 푼크툼은 찾는 게 아니라 걸리는 거라서, 없으면 "없음"이라고 써요.',
+      [A('studium', '스투디움: 누구나 알아볼 이 이미지의 주제와 관심사'), T('punctum', '푼크툼: 이유 없이 나를 찌르는 작은 디테일 하나'), A('why', '그 디테일이 왜 나에게 걸리는가')]),
+    W('w_panofsky', 'E', '파노프스키의 세 층',
+      '미술사학자 에르빈 파노프스키의 도상 해석 방법이에요. 미술사 수업의 기본 틀이에요.',
+      '아래층을 다 쓰고 위층으로 올라가요. 3층은 대개 추정이니 추정이라고 적어요.',
+      [A('pre', '1층: 눈에 보이는 사물과 동작'), A('icon', '2층: 그것이 관습적으로 뜻하는 것 (상징, 장르, 인용)'), A('logy', '3층: 이 이미지가 드러내는 시대와 문화의 태도')]),
+    W('w_gestalt', 'F', '게슈탈트 원리',
+      '20세기 초 독일 심리학에서 나온 지각 원리예요. 바우하우스 이후 전 세계 디자인 기초 수업에 자리 잡았어요.',
+      '눈이 낱개가 아니라 덩어리로 본다는 원리예요. 화면에서 실제로 작동하는 것만 써요.',
+      [A('figure', '전경과 배경: 무엇이 앞으로 나오고 무엇이 물러나나'), A('group', '묶임: 가깝거나 닮아서 한 덩어리로 보이는 것'), A('cont', '연속과 닫힘: 끊겼는데 이어져 보이는 선, 일부만 보이는데 전체로 읽히는 형태')]),
+    W('w_barrett', 'G', '바렛의 식',
+      '오하이오주립대학교의 테리 바렛이 『사진 비평』에서 제안한 식이에요. 주제 + 매체 + 형식 + 맥락 = 내용.',
+      '네 칸을 따로 쓴 다음, 마지막 칸에서 하나로 합쳐요.',
+      [T('subject', '주제: 무엇을 찍었나'), T('medium', '매체: 무엇으로 만들었나 (필름, 디지털, 합성 등)'), A('form', '형식: 어떻게 보이게 했나 (구도, 빛, 색)'), A('context', '맥락: 어디에, 누구를 위해, 언제 나왔나'), A('content', '내용: 네 가지를 합치면 이 이미지는 무엇을 말하나')]),
+    W('w_film', 'H', '영화 형식 분석',
+      '위스콘신대학교의 데이비드 보드웰과 크리스틴 톰슨이 『영화 예술』에서 쓴 틀이에요. 여러 나라 영화과의 입문 교재예요.',
+      '스틸 한 장이라도 영상의 한 순간으로 읽어요. 편집과 사운드는 상상해서 쓰고 추정이라고 적어요.',
+      [A('mise', '미장센: 카메라 앞에 놓인 것 (장소, 의상, 조명, 연기)'), A('cine', '촬영: 어떻게 찍었나 (거리, 각도, 렌즈, 움직임)'), A('edit', '편집: 앞뒤 컷과 어떻게 이어질까'), A('sound', '사운드: 어떤 소리가 들릴까'), A('func', '기능: 이 네 가지가 함께 하는 일 한 가지')]),
+    W('w_slow', 'I', '느리게 보기',
+      '하버드대학교의 미술사학자 제니퍼 로버츠는 학생들에게 한 작품을 세 시간 동안 보게 해요. 오래 봐야만 보이는 것이 있다는 훈련이에요. 여기서는 10분으로 줄였어요.',
+      '타이머를 켜고 이미지만 봐요. 1분, 5분, 10분이 될 때마다 그때 새로 보인 것을 적어요. 중간에 다른 칸을 쓰지 않아요.',
+      [A('m1', '1분째에 본 것'), A('m5', '5분째에 새로 보인 것'), A('m10', '10분째에 새로 보인 것')]),
+    W('w_crp', 'J', '비평적 반응 과정',
+      '안무가 리즈 러먼이 만든 피드백 방식이에요. 미술·공연 대학의 크리틱에서 널리 써요. 원래는 여럿이 하는데, 여기서는 혼자 하는 판으로 줄였어요.',
+      '의견을 바로 말하지 않는 게 핵심이에요. 질문에 내 의견이 숨어 있으면 중립 질문이 아니에요. "왜 이렇게 어둡게 했나"가 아니라 "밝기는 어떻게 정했나"예요.',
+      [A('meaning', '의미 진술: 이 이미지에서 나에게 남은 것'), A('neutral', '만든 사람에게 묻고 싶은 중립 질문 두 가지'), A('opinion', '허락을 구하고 말할 의견 한 가지')]),
+  ];
+  const stepCode = (st) => st.code || pad(stepNo(st));
+  const sheetCount = (c, st) => st.fields.filter((f) => hasAny(c, st, f)).length;
+
+  /* 교과서에 더하는 예시 그림 */
+  Object.assign(FIG, {
+    spheres() {
+      const items = [['정면', 50, 45, 0], ['앞사선', 70, 34, 0], ['측면', 92, 44, 0], ['뒤사선', 112, 40, 1], ['역광', 50, 50, 2]];
+      return `<svg viewBox="0 0 340 92" role="img" aria-label="빛의 방향에 따라 달라지는 공의 모습">
+        <defs>${items.map(([, fx, fy, mode], i) => mode === 2
+          ? `<radialGradient id="sp${i}" cx="50%" cy="50%" r="50%"><stop offset="0.82" stop-color="#0a0a0a"/><stop offset="0.93" stop-color="#f2e2c4"/><stop offset="1" stop-color="#fff6e0"/></radialGradient>`
+          : `<radialGradient id="sp${i}" cx="${fx}%" cy="${fy}%" r="${mode ? 34 : 62}%"><stop offset="0" stop-color="#fff6e0"/><stop offset="${mode ? 0.5 : 0.45}" stop-color="${mode ? '#3a3026' : '#b08a5e'}"/><stop offset="1" stop-color="#0a0a0a"/></radialGradient>`).join('')}</defs>
+        ${items.map(([name], i) => `<g transform="translate(${i * 68},0)"><rect x="2" y="2" width="62" height="62" fill="#161616"/><circle cx="33" cy="33" r="24" fill="url(#sp${i})"/><text x="33" y="80" text-anchor="middle">${name}</text></g>`).join('')}</svg>`;
+    },
+    hardsoft() {
+      return `<svg viewBox="0 0 300 100" role="img" aria-label="딱딱한 빛과 부드러운 빛을 받은 공">
+        <defs><radialGradient id="hs1" cx="30%" cy="30%" r="70%"><stop offset="0" stop-color="#fff6e0"/><stop offset="0.52" stop-color="#c79f6b"/><stop offset="0.55" stop-color="#17120c"/><stop offset="1" stop-color="#0a0a0a"/></radialGradient>
+        <radialGradient id="hs2" cx="30%" cy="30%" r="85%"><stop offset="0" stop-color="#fff6e0"/><stop offset="0.5" stop-color="#b58d5f"/><stop offset="1" stop-color="#241c13"/></radialGradient></defs>
+        <rect x="8" y="4" width="130" height="72" fill="#1c1c1c"/><ellipse cx="96" cy="66" rx="30" ry="6" fill="#000"/><circle cx="66" cy="38" r="26" fill="url(#hs1)"/><text x="73" y="92" text-anchor="middle">딱딱한 빛: 그림자가 칼같이 갈린다</text>
+        <rect x="162" y="4" width="130" height="72" fill="#1c1c1c"/><ellipse cx="248" cy="66" rx="34" ry="7" fill="#000" opacity="0.35"/><circle cx="220" cy="38" r="26" fill="url(#hs2)"/><text x="227" y="92" text-anchor="middle">부드러운 빛: 서서히 어두워진다</text></svg>`;
+    },
+    camera() {
+      const cam = (y, tilt, name) => `<g transform="translate(60,${y}) rotate(${tilt})"><rect x="-12" y="-6" width="20" height="12" class="ink"/><path d="M8 -4l8 -4v16l-8 -4z" class="ink"/></g><path d="M78 ${y}L196 ${82 - (82 - y) * 0}" class="ray" stroke-dasharray="3 3"/><text x="6" y="${y + 3}">${name}</text>`;
+      return `<svg viewBox="0 0 280 150" role="img" aria-label="카메라 높이와 앵글을 옆에서 본 그림">
+        <path d="M0 136H280" class="frame"/>
+        <circle cx="210" cy="46" r="11" class="ink"/><path d="M210 57V104M210 70L192 88M210 70L228 88M210 104L198 136M210 104L222 136" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <g transform="translate(60,24) rotate(14)"><rect x="-12" y="-6" width="20" height="12" class="ink"/><path d="M8 -4l8 -4v16l-8 -4z" class="ink"/></g><path d="M78 30L196 54" class="ray" stroke-dasharray="3 3"/><text x="4" y="14">위에서: 하이 앵글</text>
+        <g transform="translate(60,62)"><rect x="-12" y="-6" width="20" height="12" class="ink"/><path d="M8 -4l8 -4v16l-8 -4z" class="ink"/></g><path d="M78 62L196 62" class="ray" stroke-dasharray="3 3"/><text x="4" y="82">눈높이: 아이레벨</text>
+        <g transform="translate(60,122) rotate(-22)"><rect x="-12" y="-6" width="20" height="12" class="ink"/><path d="M8 -4l8 -4v16l-8 -4z" class="ink"/></g><path d="M78 114L196 70" class="ray" stroke-dasharray="3 3"/><text x="4" y="146">바닥에서: 로우 앵글</text></svg>`;
+    },
+    shots() {
+      const frames = [['롱', 150, 4, 150, 142], ['풀', 176, 16, 98, 124], ['미디엄', 190, 20, 70, 62], ['바스트', 198, 22, 54, 44], ['클로즈업', 208, 24, 34, 28]];
+      return `<svg viewBox="0 0 320 150" role="img" aria-label="샷 크기 다섯 가지">
+        <circle cx="225" cy="38" r="10" class="ink"/><path d="M225 48V96M225 60L208 80M225 60L242 80M225 96L214 134M225 96L236 134" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round"/>
+        ${frames.map(([name, x, y, w, hh], i) => `<rect x="${x}" y="${y}" width="${w}" height="${hh}" fill="none" stroke="${i % 2 ? 'currentColor' : 'var(--red, currentColor)'}" stroke-width="1.2"/><path d="M${x} ${y + 6 + i * 2}H${118}" class="thin"/><text x="112" y="${y + 9 + i * 2}" text-anchor="end">${name}</text>`).join('')}</svg>`;
+    },
+    palettes() {
+      const rows = [['따뜻한 유사색', ['#b4341f', '#e08a2c', '#f3d27a']], ['차가운 유사색', ['#12355b', '#2f7a8c', '#a9d6d0']], ['보색 (빨강과 청록)', ['#9c1f2e', '#12202a', '#27b3a8']], ['무채색에 포인트', ['#1b1b1b', '#8d8d8d', '#f2d21b']]];
+      return `<svg viewBox="0 0 320 132" role="img" aria-label="지배색 6, 보조색 3, 포인트색 1의 예시 네 가지">${rows.map(([name, cols], i) =>
+        `<g transform="translate(0,${i * 32})"><rect x="4" y="4" width="120" height="20" fill="${cols[0]}"/><rect x="124" y="4" width="60" height="20" fill="${cols[1]}"/><rect x="184" y="4" width="20" height="20" fill="${cols[2]}"/><text x="212" y="18">${name}</text></g>`).join('')}</svg>`;
+    },
+    keys() {
+      const bar = (y, stops, name) => `<g transform="translate(0,${y})">${stops.map((v, i) => `<rect x="${4 + i * 20}" y="0" width="20" height="22" fill="hsl(30 8% ${v}%)"/>`).join('')}<text x="212" y="15">${name}</text></g>`;
+      return `<svg viewBox="0 0 320 62" role="img" aria-label="하이키와 로우키">
+        ${bar(4, [96, 94, 90, 88, 84, 80, 74, 66, 50, 20], '하이키: 대부분 밝다')}${bar(34, [4, 6, 8, 10, 12, 16, 20, 30, 60, 92], '로우키: 대부분 어둡다')}</svg>`;
+    },
+    reflect() {
+      const s = (x, id, name) => `<rect x="${x}" y="4" width="92" height="66" fill="#1c1c1c"/><circle cx="${x + 46}" cy="37" r="25" fill="url(#${id})"/><text x="${x + 46}" y="86" text-anchor="middle">${name}</text>`;
+      return `<svg viewBox="0 0 320 94" role="img" aria-label="재질에 따른 반사의 차이">
+        <defs><radialGradient id="rf1" cx="32%" cy="28%" r="80%"><stop offset="0" stop-color="#fff"/><stop offset="0.07" stop-color="#fff"/><stop offset="0.1" stop-color="#555"/><stop offset="1" stop-color="#0a0a0a"/></radialGradient>
+        <radialGradient id="rf2" cx="32%" cy="28%" r="85%"><stop offset="0" stop-color="#f6dcc0"/><stop offset="0.5" stop-color="#b98863"/><stop offset="1" stop-color="#3a2618"/></radialGradient>
+        <radialGradient id="rf3" cx="32%" cy="28%" r="95%"><stop offset="0" stop-color="#7c5a48"/><stop offset="1" stop-color="#4a342a"/></radialGradient></defs>
+        ${s(6, 'rf1', '금속·젖은 표면: 날카로운 반사')}${s(114, 'rf2', '피부·천: 부드러운 반사')}${s(222, 'rf3', '벽돌·모직: 거의 없음')}</svg>`;
+    },
+    blocking() {
+      const man = (x, y, sc) => `<g transform="translate(${x},${y}) scale(${sc})"><circle cx="0" cy="-34" r="7" class="ink"/><path d="M0 -27V4M0 -18L-10 -4M0 -18L10 -4M0 4L-7 26M0 4L7 26" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/></g>`;
+      return `<svg viewBox="0 0 320 96" role="img" aria-label="인물의 배치가 말하는 관계">
+        <rect x="4" y="4" width="96" height="64" class="frame"/>${man(42, 44, 0.8)}${man(60, 44, 0.8)}<text x="52" y="84" text-anchor="middle">가까움: 한편</text>
+        <rect x="112" y="4" width="96" height="64" class="frame"/>${man(128, 44, 0.8)}${man(192, 44, 0.8)}<text x="160" y="84" text-anchor="middle">멂: 거리감, 대립</text>
+        <rect x="220" y="4" width="96" height="64" class="frame"/><path d="M270 46H316" class="frame"/>${man(246, 48, 0.62)}${man(292, 34, 0.95)}<text x="268" y="84" text-anchor="middle">높낮이: 힘의 차이</text></svg>`;
+    },
+  });
+  /* 교과서 본문에 더하는 긴 설명 */
+  const BOOK_MORE = {
+    1: [['h', '쓰는 순서'], ['ol', ['이미지를 3초만 본다. 더 보지 않는다.', '눈을 떼고, 몸에 남은 느낌을 감각어 한두 개로 적는다.', '떠오른 단어 세 개를 고르지 않고 나오는 대로 적는다.', '좋음 점수를 매긴다. 고민이 길어지면 처음 떠오른 숫자를 쓴다.']],
+      ['h', '예시로 읽기'], ['p', '밤 골목에서 붉은 빛을 받은 두 사람이 카메라를 올려다보는 사진이 있다고 해요. "멋있다"는 아무것도 알려 주지 않아요. "뜨겁게 가라앉은 느낌"이라고 쓰면, 뒤에서 풀어야 할 문제가 둘 생겨요. 무엇이 뜨겁게 만들었나(색일 가능성), 무엇이 가라앉게 만들었나(앵글이나 어둠일 가능성).'],
+      ['h', '자주 하는 실수'], ['ul', ['첫 반응에 벌써 "역광이라서" 같은 원인을 쓴다. 원인은 뒤 단원의 일이다.', '남의 평을 본 뒤에 쓴다. 그러면 내 반응이 아니라 남의 반응을 옮기게 된다.', '점수를 끝까지 분석한 뒤에 고친다. 처음 점수는 기록이니 그대로 둔다.']],
+      ['h', '더 읽을거리'], ['ul', ['존 버거, 『다른 방식으로 보기』: 보는 일이 중립적이지 않다는 것을 가장 쉽게 설명한 책', '하버드 프로젝트 제로의 "보고·생각하고·궁금해하기": 카드의 워크시트 A로 연습할 수 있다']]],
+    2: [['h', '카메라가 있던 자리 찾기'], ['fig', 'camera', '같은 인물을 세 높이에서 찍을 때. 높이와 기울기가 함께 바뀐다.'],
+      ['p', '카메라 자리를 찾을 때는 수평선부터 봐요. 바다, 바닥과 벽이 만나는 선, 창틀 같은 수평선이 인물의 어느 높이를 지나가는지가 곧 카메라의 높이예요. 그다음 인물의 턱 밑과 정수리 중 어느 쪽이 보이는지로 기울기를 정해요.'],
+      ['h', '샷 크기'], ['fig', 'shots', '같은 인물을 얼마나 담느냐에 따라 부르는 이름이 달라진다.'],
+      ['p', '샷 크기는 보는 사람과 인물 사이의 거리예요. 클로즈업은 감정을, 풀 샷은 자세와 옷을, 롱 샷은 인물과 장소의 관계를 보여 줘요. 같은 장면이라도 크기를 바꾸면 말하는 내용이 달라져요.'],
+      ['h', '쓰는 순서'], ['ol', ['이미지를 열자마자 눈이 간 곳 세 군데에 핀을 찍는다. 생각하지 말고 찍는다.', '핀마다 이유를 고른다. 밝아서인가, 얼굴이라서인가, 선이 가리켜서인가.', '수평선을 찾아 카메라 높이를 정한다.', '턱 밑과 정수리로 앵글을 정한다.', '화면 가장자리를 한 바퀴 돌며 잘려 나간 것을 찾는다.']],
+      ['h', '예시로 읽기'], ['p', '붉은 골목 사진에서 눈은 왼쪽 인물의 얼굴(가장 밝음), 오른쪽 인물의 얼굴(시선), 오른쪽 위의 흰 등(색 대비) 순으로 가요. 두 사람의 정수리와 어깨 윗면이 보이니 하이 앵글이고, 머리가 크고 발이 작으니 광각이에요. 하늘과 골목 끝이 잘려 있어서 빠져나갈 곳이 없어 보여요.'],
+      ['h', '자주 하는 실수'], ['ul', ['높이와 앵글을 같은 것으로 쓴다. 높은 곳에서 수평으로 찍을 수도 있다.', '광각과 "넓게 찍힘"을 혼동한다. 멀리서 망원으로 찍어도 넓게 담긴다. 원근의 과장을 봐야 한다.', '구도 이름만 고르고 주인공이 어느 선 위에 있는지는 안 본다.']],
+      ['h', '더 읽을거리'], ['ul', ['브루스 블록, 『비주얼 스토리』: 공간, 선, 형태가 이야기에 하는 일을 다룬 영화과 교재', '카드의 워크시트 F(게슈탈트 원리)로 덩어리와 선을 따로 연습할 수 있다']]],
+    3: [['h', '방향에 따라 달라지는 얼굴'], ['fig', 'spheres', '같은 공에 빛의 자리만 바꿨다. 뒤로 갈수록 밝은 면이 줄고 가장자리만 남는다.'],
+      ['p', '정면광은 그림자를 지워 납작하고 깨끗하게, 앞사선은 입체감을, 측면광은 얼굴을 반으로 갈라 긴장을, 뒤사선과 역광은 윤곽만 남겨 인물을 배경에서 떼어 내요. 어느 방향을 골랐는지가 곧 인물을 어떻게 보이게 하고 싶은지예요.'],
+      ['fig', 'hardsoft', '바닥에 떨어진 그림자까지 같이 본다. 그림자의 경계가 광원의 크기를 말해 준다.'],
+      ['h', '쓰는 순서'], ['ol', ['눈동자를 확대해 반사광의 개수를 센다.', '코 그림자와 턱 그림자가 어느 쪽으로 떨어지는지 본다. 빛은 그 반대편에 있다.', '그림자 가장자리가 또렷한지 번지는지 본다.', '얼굴의 밝은 쪽과 어두운 쪽의 차이를 본다.', '머리카락이나 어깨 가장자리에 밝은 선이 있는지 본다. 있으면 뒤에 빛이 하나 더 있다.', '화면 안에 그 빛을 설명해 주는 창이나 등이 있는지 찾는다.']],
+      ['h', '예시로 읽기'], ['p', '붉은 골목 사진에서 왼쪽 인물의 그림자가 왼쪽 벽에 또렷하게 떨어져 있어요. 그러니 붉은 빛은 인물의 오른쪽 앞에 있는 작고 센 광원이에요. 오른쪽 위에는 흰 등이 화면 안에 보이고, 젖은 바닥에 반짝이는 점을 만들어요. 광원은 둘, 주광은 오른쪽 앞사선의 딱딱한 빛이에요.'],
+      ['h', '자주 하는 실수'], ['ul', ['밝은 곳만 보고 방향을 정한다. 증거는 그림자다.', '광원이 화면에 보이면 그것이 주광이라고 단정한다. 보이는 등은 장식이고 실제 주광은 화면 밖에 있는 경우가 많다.', '역광과 윤곽광을 구별하지 않는다. 역광은 인물 전체가 어두워지고, 윤곽광은 가장자리에 선만 생긴다.']],
+      ['h', '더 읽을거리'], ['ul', ['존 올튼, 『빛으로 그리기』: 흑백 영화 시절 촬영감독이 쓴 조명의 고전', '블레인 브라운, 『촬영: 이론과 실제』: 주광·보조광·윤곽광을 그림으로 설명한 교재']]],
+    4: [['h', '비율로 보기'], ['fig', 'palettes', '넓은 색, 중간 색, 작은 색의 비를 6:3:1로 놓은 예시 네 가지.'],
+      ['p', '색을 고르는 일은 색 이름을 고르는 일이 아니라 면적을 나누는 일이에요. 같은 빨강이라도 화면의 6을 차지하면 분위기가 되고 1을 차지하면 신호가 돼요.'],
+      ['fig', 'keys', '화면의 밝기 분포. 어느 쪽이 넓은지가 분위기의 뼈대다.'],
+      ['h', '색은 옆의 색에 따라 달라 보인다'], ['p', '같은 회색도 빨강 옆에서는 푸르게, 파랑 옆에서는 붉게 보여요. 그래서 색 하나를 떼어 말하지 않고 "무엇 옆의 무슨 색"이라고 말해요. 피부색이 유난히 살아 보이거나 죽어 보인다면 주변 색을 먼저 봐요.'],
+      ['h', '쓰는 순서'], ['ol', ['눈을 가늘게 뜨고 가장 넓은 색을 적는다.', '둘째로 넓은 색, 작지만 튀는 색을 적는다.', '밝은 곳과 그림자의 온도가 같은지 다른지 본다.', '같은 색이 화면의 어디어디에 되풀이되는지 찾는다.', '색이 주인공을 떼어 내는지, 화면을 묶는지 정한다.']],
+      ['h', '예시로 읽기'], ['p', '붉은 골목 사진은 빨강이 6, 검정이 3.5, 오른쪽 위의 흰푸른 등이 0.5쯤이에요. 빨강은 벽, 얼굴, 넥타이, 바닥에 되풀이되어 화면을 하나로 묶고, 차가운 등 하나가 그 통일을 깨뜨리며 눈을 끌어요.'],
+      ['h', '자주 하는 실수'], ['ul', ['색 이름만 적고 면적을 안 적는다.', '조명의 색과 물건 자체의 색을 구별하지 않는다. 벽이 붉은 것인지 빛이 붉은 것인지 따져 본다.', '채도와 밝기를 섞어 쓴다. 어두운데 진한 색도 있고 밝은데 바랜 색도 있다.']],
+      ['h', '더 읽을거리'], ['ul', ['요제프 알베르스, 『색채의 상호작용』: 예일대 수업에서 나온 책. 색이 옆의 색에 따라 달라 보인다는 것을 실험으로 보여 준다']]],
+    5: [['h', '세 가지 반사'], ['fig', 'reflect', '같은 빛을 받아도 표면에 따라 반사광의 크기와 또렷함이 다르다.'],
+      ['p', '반사광이 작고 날카로우면 매끈한 표면, 넓고 흐리면 거친 표면이에요. 만든 사람은 이 차이를 써서 화면에 "만져지는 느낌"을 넣어요. 젖은 바닥을 쓰는 것도 어두운 화면에 날카로운 반사점을 만들기 위해서예요.'],
+      ['h', '쓰는 순서'], ['ol', ['화면에서 가장 번들거리는 것과 가장 빛을 먹는 것을 하나씩 찾는다.', '둘이 화면에서 맞닿아 있는지 본다.', '어두운 곳을 확대해 입자가 있는지 본다.', '가장 검은 곳이 완전히 검은지, 회색이나 색이 떠 있는지 본다.', '화면 가장자리와 밝은 광원 주변에서 렌즈의 흔적을 찾는다.']],
+      ['h', '예시로 읽기'], ['p', '붉은 골목 사진에서는 젖은 아스팔트와 권총의 금속이 날카롭게 반사하고, 두꺼운 코트는 빛을 거의 먹어요. 그래서 코트는 검은 덩어리로 뭉개지고 얼굴과 총만 떠올라요. 어두운 곳에는 굵은 입자가 깔려 있고 검정은 뭉개져 있어요.'],
+      ['h', '자주 하는 실수'], ['ul', ['"필름 느낌"이라고만 쓴다. 입자인지, 색인지, 번짐인지 나눠 쓴다.', '선명도를 화질로만 본다. 일부러 무르게 한 곳이 어디인지가 중요하다.']],
+      ['h', '더 읽을거리'], ['ul', ['블레인 브라운, 『촬영: 이론과 실제』의 노출과 색 보정 부분']]],
+    6: [['h', '배치가 말하는 관계'], ['fig', 'blocking', '두 사람을 어디에 세우느냐만으로 관계가 달라진다.'],
+      ['p', '대사가 없어도 인물 사이의 거리, 높낮이, 누가 누구를 가리는지가 관계를 말해요. 뮤직비디오에서 가수와 댄서, 가수와 카메라 사이의 거리도 같은 방식으로 읽어요.'],
+      ['h', '쓰는 순서'], ['ol', ['인물의 눈이 어디를 향하는지 적는다.', '어깨, 손, 발의 무게를 본다.', '인물이 둘 이상이면 거리와 높낮이를 적는다.', '화면에 보이는 물건을 빠짐없이 적는다.', '그 물건 중 시대나 직업을 알려 주는 것에 표시한다.']],
+      ['h', '예시로 읽기'], ['p', '붉은 골목 사진의 두 사람은 어깨가 붙어 있어 한편이고, 둘 다 카메라를 올려다봐요. 총구는 바닥을 향해 있어서 쏘려는 순간이 아니라 끝난 뒤이거나 기다리는 중으로 읽혀요. 굵은 웨이브 머리와 어깨 넓은 코트가 시대감을 만들어요.'],
+      ['h', '자주 하는 실수'], ['ul', ['표정만 보고 자세를 안 본다.', '소품을 "총"처럼 이름만 적고 어떻게 들고 있는지는 안 적는다.', '배경을 빈 곳으로 본다. 장소도 정보다.']],
+      ['h', '더 읽을거리'], ['ul', ['데이비드 보드웰·크리스틴 톰슨, 『영화 예술』의 미장센 장: 카드의 워크시트 H로 연습할 수 있다']]],
+    7: [['h', '찾는 순서'], ['ol', ['이 이미지와 같은 종류의 이미지 열 장을 머릿속에 떠올린다.', '그 열 장이 공통으로 하는 것을 세 가지 적는다.', '이 이미지가 그중 무엇을 안 하는지 찾는다.', '그 "안 함"을 다른 요소가 받쳐 주는지 본다.']],
+      ['h', '예시로 읽기'], ['p', '총을 든 인물은 대개 아래에서 올려 찍어 크고 세게 보이게 해요. 붉은 골목 사진은 반대로 위에서 내려다봐요. 그런데 인물들이 눈을 치켜떠 카메라를 보고 있어서, 작아지는 대신 보는 사람이 들킨 쪽이 돼요. 앵글의 위반을 시선이 받쳐 주니 선택이에요.'],
+      ['h', '자주 하는 실수'], ['ul', ['마음에 안 드는 곳을 "틀린 것"으로 적는다. 이 칸은 취향이 아니라 관습과의 차이를 적는 곳이다.', '위반을 찾고 효과를 안 쓴다. 효과까지 써야 내 작업에 가져갈 수 있다.']]],
+    8: [['h', '하는 순서'], ['ol', ['손가락이나 종이로 인물만 가린다. 남은 화면의 좋음을 다시 매긴다.', '같은 식으로 소품, 배경을 차례로 가린다.', '색은 가릴 수 없으니 화면을 흑백으로 상상한다.', '질감은 매끈한 그림으로, 구도는 정면 눈높이로 바꿔 상상한다.', '가장 많이 내려간 것에 표시한다.']],
+      ['h', '예시로 읽기'], ['p', '붉은 골목 사진에서 인물을 가리면 빈 골목만 남아 3점이 떨어지고, 빨강을 흑백으로 바꿔도 3점이 떨어져요. 총을 가리면 1점만 떨어져요. 이 이미지를 떠받치는 것은 총이 아니라 "위에서 본 두 사람"과 "빨강"이에요.'],
+      ['h', '자주 하는 실수'], ['ul', ['전부 -3을 준다. 다 중요하다는 말은 아무것도 모른다는 말이다.', '실제로 가리지 않고 머리로만 한다.']]],
+    9: [['h', '하는 순서'], ['ol', ['비슷한데 덜 끌렸던 이미지를 하나 떠올리거나 찾아 놓는다.', '닮은 점을 먼저 세 가지 적는다.', '다른 점을 하나만 고른다. 가장 큰 것 하나.', '그 하나가 끌림의 차이를 설명하는지 따져 본다.']],
+      ['h', '예시로 읽기'], ['p', '같은 붉은 조명을 쓴 정면 눈높이 인물 사진이 있다고 해요. 색도 인물도 비슷한데 덜 끌려요. 차이는 카메라의 자리 하나예요. 위에서 내려다보는 자리가 "누가 보고 있나"라는 질문을 만들어요.'],
+      ['h', '더 읽을거리'], ['ul', ['에르빈 파노프스키의 도상 해석: 카드의 워크시트 E로 연습할 수 있다']]],
+    10: [['h', '쓰는 순서'], ['ol', ['화면에서 벌어지는 일을 한 문장으로 쓴다. 주어와 동사가 있어야 한다.', '앞 단원에서 찾은 것 중 가장 큰 세 가지를 "만든 사람이 ~했다"로 바꿔 쓴다.', '결정마다 효과를 쓴다.', '결정마다 흔히 택했을 다른 방법을 하나 떠올리고, 그것을 버릴 이유를 쓴다.', '이 한 장을 움직이는 샷으로 바꾼다면 어디서 시작해 어디서 끝날지 쓴다.']],
+      ['h', '예시로 읽기'], ['p', '붉은 골목 사진의 결정 하나: 카메라를 위에 뒀다. 효과: 목격자의 자리에서 보게 된다. 버린 대안: 아래에서 올려 찍기. 세 보이지만 흔하고, 보는 사람이 안전한 자리에 남는다. 이렇게 쓰면 다음 촬영에서 같은 갈림길에 섰을 때 고를 수 있어요.'],
+      ['h', '자주 하는 실수'], ['ul', ['확인되지 않은 의도를 사실처럼 쓴다.', '효과를 "분위기를 만든다"로 뭉갠다. 보는 사람이 무엇을 하게 되는지로 쓴다.', '대안을 안 쓴다. 대안이 없으면 결정이 아니라 묘사다.']],
+      ['h', '더 읽을거리'], ['ul', ['롤랑 바르트, 「이미지의 수사학」과 『밝은 방』: 외연과 내포, 스투디움과 푼크툼. 카드의 워크시트 D로 연습할 수 있다']]],
+    11: [['h', '쓰는 순서'], ['ol', ['최종 문장을 쓴다. 자동으로 들어간 문장을 내 말로 고친다.', '레시피 일곱 칸을 남이 읽고 찍을 수 있게 숫자와 방향으로 쓴다.', '훔칠 것 하나를 정한다. 여러 개가 아니라 하나.', '쓴 것을 확실, 추정, 모름으로 나눈다.']],
+      ['h', '예시로 읽기'], ['p', '최종 문장: "이 이미지가 좋은 이유는 위에서 내려다본 두 인물과 화면을 덮은 빨강 때문이고, 그게 뜨겁게 가라앉은 느낌을 만든다." 레시피: 카메라는 3미터 위, 빨간 필터 조명 하나를 오른쪽 앞에, 바닥에 물을 뿌린다. 훔칠 것: 젖은 바닥으로 차가운 반사점 만들기.'],
+      ['h', '자주 하는 실수'], ['ul', ['최종 문장에 새 내용을 넣는다. 앞에서 찾은 것만으로 써야 한다.', '레시피를 느낌으로 쓴다. "어둡게"는 레시피가 아니다.', '약점을 안 찾는다. 좋아하는 이미지에서도 덜어낼 것을 하나 찾는다.']],
+      ['h', '더 읽을거리'], ['ul', ['에드먼드 펠드먼의 비평 네 단계: 카드의 워크시트 C로 연습할 수 있다', '테리 바렛, 『사진 비평』: 묘사하고 해석하고 평가하는 법을 다룬 교재']]],
+  };
+  for (const ch of BOOK) if (BOOK_MORE[ch.n]) ch.body.push(...BOOK_MORE[ch.n]);
+
   async function loadStudy() { return (await store.get('meta', 'study')) || { id: 'study', read: {}, quiz: {} }; }
   const quizDone = (study, ch) => ch.quiz.filter((_, i) => study.quiz[`${ch.n}.${i}`]).length;
 
@@ -2322,6 +2547,7 @@
       if (kind === 'h') return h('h3', {}, a);
       if (kind === 'p') return h('p', {}, a);
       if (kind === 'ul') return h('ul', {}, a.map((t) => h('li', {}, t)));
+      if (kind === 'ol') return h('ol', {}, a.map((t) => h('li', {}, t)));
       const fig = h('figure', { class: 'fig' });
       fig.innerHTML = FIG[a]();
       fig.append(h('figcaption', {}, h('span', { class: 'figno' }, `그림 ${ch.n}-${++figNo}`), b));
