@@ -155,7 +155,8 @@
       T('era', '시대감을 만드는 것') ] },
     { id: 's7', title: '일부러 틀린 것', interp: true, fields: [
       T('wrong', '"원래라면 안 그럴 텐데" 싶은 것 1개'),
-      T('effect', '그게 만드는 효과') ] },
+      T('effect', '그게 만드는 효과'),
+      C('wrongType', '틀린 것의 종류', ['구도', '빛', '색', '질감', '소품', '연출'], { opt: true }) ] },
     { id: 's8', title: '지우기 테스트', quick: true, noUnknown: true, fields: [
       { k: 'erase', label: '이 요소를 가리면 좋음이 얼마나 줄어드나', type: 'erase' } ] },
     { id: 's9', title: '비교', fields: [
@@ -348,6 +349,11 @@
     wrap.append(topBar('list', cards.length ? `분해한 컷 ${cards.length}장` : '내가 먼저 쓰고, 앱은 돕기만 한다',
       h('button', { class: 'btn solid', id: 'new-card', onclick: () => { location.hash = 'new'; } }, '+ 새 카드')));
 
+    if (new Date().getDay() === 0 && cards.length) {
+      const wkNote = await store.get('meta', 'week-' + dstr(weekStart(new Date())));
+      if (!wkNote || !has(wkNote.change)) wrap.append(h('div', { class: 'banner row' }, h('span', {}, '일요일이에요. 이번 주 회고를 쓸 때예요.'),
+        h('button', { class: 'btn small', type: 'button', onclick: () => { location.hash = 'look'; } }, '회고 쓰러 가기')));
+    }
     if (!cards.length) {
       wrap.append(h('div', { class: 'empty' },
         h('strong', {}, '아직 카드가 없어요'),
@@ -1796,6 +1802,138 @@
     window.scrollTo(0, 0);
   }
 
+  /* ───────── 돌아보기: 로드맵 카운터 + 주간 회고 + 취향 지도 ───────── */
+  function tally(items) {
+    const m = new Map();
+    for (const it of items) { const k = String(it == null ? '' : it).trim(); if (k) m.set(k, (m.get(k) || 0) + 1); }
+    return [...m].sort((a, b) => b[1] - a[1]);
+  }
+  function tasteData(cards) {
+    const st = (c, id) => c.steps[id] || {};
+    return [
+      ['지배색', '4단계에서 지배색으로 적은 색', tally(cards.map((c) => ((st(c, 's4').colors || [])[0] || {}).name))],
+      ['구도', '2단계에서 고른 구도', tally(cards.map((c) => st(c, 's2').comp))],
+      ['광원 방향', '3단계에서 고른 빛의 방향', tally(cards.flatMap((c) => [].concat(st(c, 's3').dir || [])))],
+      ['소품', '6단계 소품 목록에 적은 것', tally(cards.flatMap((c) => String(st(c, 's6').props || '').split(/[,\n·/]+/)))],
+      ['"틀린 것"의 종류', '7단계에서 고른 종류', tally(cards.map((c) => st(c, 's7').wrongType))],
+      ['핵심 요소', '8단계 지우기 테스트에서 가장 많이 줄어든 것', tally(cards.flatMap(coreElements))],
+    ];
+  }
+  function barChart(title, sub, rows, unit) {
+    const top = rows.slice(0, 8);
+    const max = top.length ? top[0][1] : 1;
+    return h('section', { class: 'sec' }, h('header', {}, h('h2', {}, title), h('span', { class: 'label' }, sub)),
+      top.length
+        ? h('div', { class: 'bars', role: 'list', 'aria-label': `${title} 막대 그래프` }, top.map(([k, n]) =>
+            h('div', { class: 'barrow', role: 'listitem', title: `${k}: ${n}${unit}` },
+              h('span', { class: 'barname' }, k),
+              h('span', { class: 'bartrack' }, h('span', { class: 'bar', style: `width:${Math.max(4, (n / max) * 100)}%` })),
+              h('span', { class: 'barval' }, n))))
+        : h('p', { class: 'note barsempty' }, '아직 자료가 없어요. 이 칸을 채운 카드가 생기면 여기에 쌓여요.'),
+      rows.length > 8 ? h('p', { class: 'note' }, `외 ${rows.length - 8}가지`) : null);
+  }
+  function weekStart(d) {
+    const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); // 월요일
+    return x;
+  }
+  function weekStats(cards) {
+    const from = weekStart(new Date()).getTime();
+    const mine = cards.filter((c) => c.createdAt >= from);
+    const picks = [];
+    const unk = [];
+    for (const c of mine) {
+      for (const st of STEPS) for (const f of st.fields) {
+        if (f.type === 'choice' && has((c.steps[st.id] || {})[f.k])) picks.push(`${f.label.replace(/ \(.*\)$/, '')}: ${c.steps[st.id][f.k]}`);
+        if (f.type === 'choices') for (const v of [].concat((c.steps[st.id] || {})[f.k] || [])) picks.push(`${f.label.replace(/ \(.*\)$/, '')}: ${v}`);
+        if (f.type !== 'head' && isUnknown(c, st, f)) unk.push(`${pad(stepNo(st))} ${st.title} · ${f.label}`);
+      }
+      for (const e of coreElements(c)) picks.push(`핵심 요소: ${e}`);
+    }
+    return { n: mine.length, repeated: tally(picks).filter(([, n]) => n >= 2), unknown: tally(unk) };
+  }
+  const DEFAULT_GOALS = { cuts: 30, reshoots: 4, shots: 3, streak: 7 };
+
+  async function showLook() {
+    cur = null; savedLabel = null;
+    const cards = await store.all('cards');
+    const diary = await store.all('diary');
+    const shotlists = await store.all('shotlists');
+    const metas = await store.all('meta');
+    const goals = { id: 'goals', ...DEFAULT_GOALS, ...(metas.find((m) => m.id === 'goals') || {}) };
+    const wkId = 'week-' + dstr(weekStart(new Date()));
+    const wk = metas.find((m) => m.id === wkId) || { id: wkId, change: '' };
+    let timer = null;
+    const status = h('span', { class: 'saved mono' });
+    const save = async () => { clearTimeout(timer); timer = null; await store.put('meta', goals); await store.put('meta', wk); status.textContent = `자동 저장됨 ${clock()}`; };
+    const touchL = () => { status.textContent = '저장 중…'; clearTimeout(timer); timer = setTimeout(save, 400); };
+    flushPage = async () => { if (timer) await save(); };
+
+    /* 로드맵 카운터 */
+    const counts = {
+      cuts: cards.filter(cardDone).length,
+      reshoots: cards.filter((c) => c.reshoot && c.reshoot.has).length,
+      shots: shotlists.length,
+      streak: streakOf(diary),
+    };
+    const ROAD = [['cuts', '분해한 컷', '끝까지 쓴 카드', '장'], ['reshoots', '재현 촬영', '재현 사진을 올린 카드', '번'], ['shots', '샷리스트', '만든 샷리스트', '개'], ['streak', '세 줄 일기', '연속으로 쓴 날', '일']];
+    const road = h('div', { class: 'road' }, ROAD.map(([k, name, sub, unit]) => {
+      const fill = h('span', { class: 'bar' });
+      const meter = h('span', { class: 'bartrack', role: 'progressbar', 'aria-valuemin': 0, 'aria-label': `${name} 진행도` }, fill);
+      const goalIn = h('input', { class: 'text mono num', id: 'goal-' + k, type: 'number', min: 1, inputMode: 'numeric', value: goals[k], 'aria-label': `${name} 목표`,
+        oninput: () => { goals[k] = Math.max(1, parseInt(goalIn.value, 10) || 1); draw(); touchL(); } });
+      const big = h('strong', { class: 'roadnum' });
+      const draw = () => {
+        big.replaceChildren(String(counts[k]), h('span', { class: 'label' }, ` / ${goals[k]}${unit}`));
+        fill.style.width = Math.min(100, (counts[k] / goals[k]) * 100) + '%';
+        meter.setAttribute('aria-valuenow', counts[k]); meter.setAttribute('aria-valuemax', goals[k]);
+        tile.classList.toggle('reached', counts[k] >= goals[k]);
+      };
+      const tile = h('div', { class: 'roadtile' }, h('span', { class: 'label' }, name), big, meter,
+        h('span', { class: 'note' }, sub),
+        h('label', { class: 'goalrow label', for: 'goal-' + k }, '목표 ', goalIn));
+      draw();
+      return tile;
+    }));
+
+    /* 주간 회고 */
+    const ws = weekStats(cards);
+    const from = weekStart(new Date()); const to = new Date(from); to.setDate(to.getDate() + 6);
+    const change = h('textarea', { class: 'text area', id: 'week-change', rows: 2, placeholder: '다음 주에는 무엇을 다르게 볼까. 딱 하나만.', value: wk.change,
+      oninput: () => { wk.change = change.value; touchL(); } });
+    grow(change);
+    const changeField = h('div', { class: 'field' }, h('label', { class: 'label', for: 'week-change' }, '다음 주에 바꿀 것 1개'), change);
+    watchVague([change], changeField);
+    const past = metas.filter((m) => m.id.startsWith('week-') && m.id !== wkId && has(m.change)).sort((a, b) => (a.id < b.id ? 1 : -1));
+    const week = h('section', { class: 'sec' },
+      h('header', {}, h('h2', {}, '이번 주 회고'), h('span', { class: 'label mono' }, `${dstr(from).slice(5)} ~ ${dstr(to).slice(5)}`)),
+      h('div', { class: 'stepbody' },
+        h('p', { class: 'note' }, `이번 주에 만든 카드 ${ws.n}장.` + (new Date().getDay() === 0 ? ' 오늘이 일요일이에요. 한 주를 정리할 때예요.' : ' 일요일에 한 번 정리하면 좋아요.')),
+        h('div', { class: 'field' }, h('span', { class: 'label' }, '이번 주에 반복된 결정 (2번 이상 고른 것)'),
+          ws.repeated.length ? h('ul', { class: 'plain' }, ws.repeated.slice(0, 8).map(([k, n]) => h('li', {}, k, h('span', { class: 'label' }, `  ${n}번`))))
+            : h('p', { class: 'note' }, '아직 두 번 이상 겹친 선택이 없어요.')),
+        h('div', { class: 'field' }, h('span', { class: 'label' }, '가장 많이 "모르겠음"을 누른 칸'),
+          ws.unknown.length ? h('ul', { class: 'plain' }, ws.unknown.slice(0, 5).map(([k, n]) => h('li', {}, k, h('span', { class: 'label' }, `  ${n}번`))))
+            : h('p', { class: 'note' }, '이번 주에는 "모르겠음"이 없어요.')),
+        changeField,
+        past.length ? h('div', { class: 'field' }, h('span', { class: 'label' }, '지난 주들에 적은 것'),
+          h('ul', { class: 'plain' }, past.slice(0, 8).map((m) => h('li', {}, h('span', { class: 'label mono' }, m.id.slice(5) + '  '), m.change)))) : null));
+
+    /* 취향 지도 */
+    const done1 = cards.filter((c) => stepDone(c, STEPS[0]));
+    const charts = tasteData(cards).map(([t, sub, rows]) => barChart(t, sub, rows, '장'));
+
+    app.replaceChildren(h('div', { class: 'wrap' }, topBar('look', '쌓인 기록에서 내 취향 찾기'),
+      h('div', { class: 'look' },
+        h('div', { class: 'fieldtop' }, h('h2', { class: 'lookh' }, '로드맵'), status), road,
+        week,
+        h('div', { class: 'fieldtop' }, h('h2', { class: 'lookh' }, '취향 지도'), h('span', { class: 'label' }, `카드 ${cards.length}장 기준`)),
+        cards.length < 3 ? h('p', { class: 'note' }, '카드가 몇 장 더 쌓여야 무늬가 보여요. 지금은 있는 만큼만 보여줘요.') : null,
+        h('div', { class: 'charts' }, charts))));
+    window.scrollTo(0, 0);
+    void done1;
+  }
+
   function topBar(active, sub, action) {
     const tab = (key, name, hash) => h('button', { class: 'tab' + (active === key ? ' on' : ''), type: 'button', id: 'tab-' + key,
       'aria-current': active === key ? 'page' : null, onclick: () => { location.hash = hash; } }, name);
@@ -1804,7 +1942,7 @@
         h('h1', {}, '눈 훈련 노트'),
         h('div', { class: 'sub' }, sub)),
       h('div', { class: 'row' },
-        h('nav', { class: 'tabs', 'aria-label': '화면 이동' }, tab('list', '카드', 'list'), tab('series', '시리즈', 'series'), tab('diary', '일기', 'diary'), tab('backup', '백업', 'backup')),
+        h('nav', { class: 'tabs', 'aria-label': '화면 이동' }, tab('list', '카드', 'list'), tab('series', '시리즈', 'series'), tab('diary', '일기', 'diary'), tab('look', '돌아보기', 'look'), tab('backup', '백업', 'backup')),
         action || null));
   }
 
@@ -1816,6 +1954,7 @@
     diaryPaste = null;
     if (name === 'diary') return showDiary();
     if (name === 'backup') return showBackup();
+    if (name === 'look') return showLook();
     if (name === 'series') return showSeriesList();
     if (name.startsWith('series-')) return showSeries(name.slice(7));
     if (name === 'new') return showCard(null);
