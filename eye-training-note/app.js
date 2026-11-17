@@ -587,9 +587,14 @@
       control = h('div', { class: 'rows' }, data[f.k].map((row, i) =>
         h('div', { class: 'rowitem' },
           h('span', { class: 'rowlabel mono' }, f.rowLabels[i]),
-          h('div', { class: 'rowcells' + (f.cols.some((col) => col.type === 'num') ? ' inline' : '') }, f.cols.map((col) => {
+          h('div', { class: 'rowcells' + (f.cols.some((col) => col.type === 'num') ? ' inline' : '') + (f.cols.some((col) => col.type === 'choice') ? ' joined' : '') }, f.cols.map((col) => {
             const al = `${f.rowLabels[i]} ${col.label}`;
-            if (col.type === 'choice') return choice(col.options, () => row[col.k], (v) => { row[col.k] = v; }, al);
+            if (col.type === 'choice') {
+              const bar = choice(col.options, () => row[col.k], (v) => { row[col.k] = v; }, al);
+              bar.classList.add('segbar');
+              bar.style.setProperty('--n', col.options.length);
+              return bar;
+            }
             if (col.type === 'num') return numInput(() => row[col.k], (v) => { row[col.k] = v; }, col.unit, { 'aria-label': al });
             return textInput(() => row[col.k], (v) => { row[col.k] = v; }, { placeholder: col.label, 'aria-label': al, id: `${dom}-${i + 1}-${col.k}` });
           })))));

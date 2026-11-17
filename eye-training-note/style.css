@@ -385,3 +385,14 @@ body { letter-spacing: -0.01em; }
 .cmpRow.diff .cmpCell { font-weight: 600; }
 .cmpTag { background: var(--mark); color: var(--mark-ink); border-radius: 4px; padding: 0 5px; font-weight: 600; }
 .sec.step:not(.locked) > .stepbody { padding-top: 16px; }
+
+/* 눈이 간 곳 + 이유: 글 칸과 이유 막대를 한 덩어리로 붙인다 */
+.rowcells.joined { gap: 0; }
+.rowcells.joined > .text { border-radius: 7px 7px 0 0; }
+.segbar { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 0; border: 1.5px solid var(--ink); border-top: 0; border-radius: 0 0 7px 7px; overflow: hidden; flex-wrap: nowrap; }
+.segbar .btn { border: 0; border-right: 1px solid var(--line); border-radius: 0; box-shadow: none; padding: 0 2px; min-height: 34px; font-size: var(--fs-xs); font-weight: 500; white-space: nowrap; }
+.segbar .btn:last-child { border-right: 0; }
+.segbar .btn:active { transform: none; }
+.segbar .btn.on { box-shadow: none; }
+.rows:has(.joined) { gap: 10px; }
+.rows:has(.joined) .rowlabel { padding-top: 11px; }
