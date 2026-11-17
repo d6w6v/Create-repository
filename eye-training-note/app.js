@@ -1827,7 +1827,7 @@
         ? h('div', { class: 'bars', role: 'list', 'aria-label': `${title} 막대 그래프` }, top.map(([k, n]) =>
             h('div', { class: 'barrow', role: 'listitem', title: `${k}: ${n}${unit}` },
               h('span', { class: 'barname' }, k),
-              h('span', { class: 'bartrack' }, h('span', { class: 'bar', style: `width:${Math.max(4, (n / max) * 100)}%` })),
+              h('span', { class: 'bartrack' }, h('span', { class: 'barfill', style: `width:${Math.max(4, (n / max) * 100)}%` })),
               h('span', { class: 'barval' }, n))))
         : h('p', { class: 'note barsempty' }, '아직 자료가 없어요. 이 칸을 채운 카드가 생기면 여기에 쌓여요.'),
       rows.length > 8 ? h('p', { class: 'note' }, `외 ${rows.length - 8}가지`) : null);
@@ -1878,7 +1878,7 @@
     };
     const ROAD = [['cuts', '분해한 컷', '끝까지 쓴 카드', '장'], ['reshoots', '재현 촬영', '재현 사진을 올린 카드', '번'], ['shots', '샷리스트', '만든 샷리스트', '개'], ['streak', '세 줄 일기', '연속으로 쓴 날', '일']];
     const road = h('div', { class: 'road' }, ROAD.map(([k, name, sub, unit]) => {
-      const fill = h('span', { class: 'bar' });
+      const fill = h('span', { class: 'barfill' });
       const meter = h('span', { class: 'bartrack', role: 'progressbar', 'aria-valuemin': 0, 'aria-label': `${name} 진행도` }, fill);
       const goalIn = h('input', { class: 'text mono num', id: 'goal-' + k, type: 'number', min: 1, inputMode: 'numeric', value: goals[k], 'aria-label': `${name} 목표`,
         oninput: () => { goals[k] = Math.max(1, parseInt(goalIn.value, 10) || 1); draw(); touchL(); } });
