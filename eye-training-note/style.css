@@ -901,3 +901,10 @@ html[data-skin="school"] .wsbody > .field { padding: 0; }
 #hit-rate { margin: 0; }
 #hit-rate strong { font-size: 1.5rem; }
 html[data-skin="school"] .core .label { color: #fff; opacity: 0.8; font-weight: 500; }
+
+/* ── 게임: 등급 막대, 업적, 지우기 확인 (기존 글씨와 딱지 그대로) ── */
+.player { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; }
+.playerlv { font-size: 1.125rem; }
+.badges li { display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
+.badges li.not strong, .badges li.not .note { opacity: 0.55; }
+.delbox { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }

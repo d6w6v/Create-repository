@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '26 · 게임판';
+  const APP_VERSION = '27 · 레벨판';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -572,9 +572,12 @@
           h('div', { class: 'row' },
             ms.done[tid]
               ? h('span', { class: 'note' }, `해냈어요. 미션 연속 ${missionStreak(ms.done)}일째예요.`)
-              : h('button', { class: 'btn small', type: 'button', id: 'mission-done', onclick: async () => { ms.done[tid] = Date.now(); await store.put('meta', ms); drawMission(); } }, '해냈어요'))));
+              : h('button', { class: 'btn small', type: 'button', id: 'mission-done', onclick: async () => { ms.done[tid] = Date.now(); await store.put('meta', ms); toast('미션 완료 · +25 XP'); showList(); } }, '해냈어요  +25 XP'))));
       drawMission();
-      wrap.append(box);
+      const g = await gameState();
+      let was = 0; try { was = Number(localStorage.getItem('eye-level') || 0); localStorage.setItem('eye-level', String(g.lv)); } catch (e) { /* 기억 못 해도 진행 */ }
+      if (g.lv > was && cards.length) wrap.append(h('div', { class: 'banner', id: 'levelup' }, `등급이 올랐어요. Lv.${g.lv + 1} ${g.title}`));
+      wrap.append(playerBar(g), box);
     }
     if (new Date().getDay() === 0 && cards.length) {
       const wkNote = await store.get('meta', 'week-' + dstr(weekStart(new Date())));
@@ -731,7 +734,8 @@
     wrap.append(h('div', { class: 'bar' },
       h('div', { class: 'row' },
         h('button', { class: 'btn quiet', onclick: () => { location.hash = 'list'; } }, '← 목록'),
-        curPersisted ? h('button', { class: 'btn quiet', id: 'to-view', onclick: () => { location.hash = 'view-' + c.id; } }, '한 장으로 보기') : null),
+        curPersisted ? h('button', { class: 'btn quiet', id: 'to-view', onclick: () => { location.hash = 'view-' + c.id; } }, '한 장으로 보기') : null,
+        curPersisted ? confirmDel('카드 지우기', '이 카드와 이미지를 지울까요? 되돌릴 수 없어요.', removeCard, 'btn quiet') : null),
       h('div', { class: 'slate mono' }, h('strong', {}, `No.${pad(c.no, 3)}`), h('span', {}, typeName(c)), savedLabel)));
 
     /* 왼쪽: 이미지 */
@@ -775,6 +779,7 @@
       siblings: videoKey(c) ? (await store.all('cards')).filter((x) => x.id !== c.id && videoKey(x) === videoKey(c)).sort((a, b) => tcSec(a) - tcSec(b)) : [],
       hasShots: !!(await store.get('shotlists', c.id)),
       origSrc: await cardImage(c),
+      otherTerms: (() => { const t = new Set(); return store.all('cards').then((all) => { all.filter((x) => x.id !== c.id).forEach((x) => cardTerms(x).forEach((v) => t.add(v))); return t; }); })(),
       reImg: c.reshoot && c.reshoot.has ? ((await store.get('images', c.id + '-re')) || {}).data || '' : '',
     }));
     wrap.append(body);
@@ -1016,7 +1021,9 @@
   }
 
   function buildForm(c, ctx) {
-    const { mySeries = [], pass2 = null, origSrc = '', reImg = '', siblings = [], hasShots = false } = ctx || {};
+    const { mySeries = [], pass2 = null, origSrc = '', reImg = '', siblings = [], hasShots = false, otherTerms = null } = ctx || {};
+    let knownTerms = new Set(); let myTerms = cardTerms(c); let doneBefore = null;
+    if (otherTerms && otherTerms.then) otherTerms.then((t) => { knownTerms = t; });
     const form = h('div', { class: 'form' });
     let refresh = () => {};
     const changed = () => { refresh(); touch(); };
@@ -1177,7 +1184,8 @@
         agBadge.textContent = '2차 있음';
         agBody.replaceChildren(h('div', { class: 'seg' },
           h('button', { class: 'btn solid', type: 'button', id: 'go-compare', onclick: () => { location.hash = 'compare-' + c.id; } }, '1차와 2차 나란히 보기'),
-          h('button', { class: 'btn', type: 'button', onclick: () => { location.hash = 'again-' + c.id; } }, '2차 이어 쓰기')));
+          h('button', { class: 'btn', type: 'button', onclick: () => { location.hash = 'again-' + c.id; } }, '2차 이어 쓰기'),
+          confirmDel('2차 지우기', '2차로 쓴 내용을 지울까요? 1차는 그대로 남아요.', () => { delete c.second; touch(); drawAgain(true); })));
         return;
       }
       const left = Math.ceil((doneTime(c) + 3 * DAY - Date.now()) / DAY);
@@ -1232,7 +1240,8 @@
           h('figure', {}, img ? h('img', { src: img, alt: '재현 사진' }) : null, h('figcaption', { class: 'mono label' }, '재현'))),
         holder,
         h('div', { class: 'field' }, h('label', { class: 'label', for: 'rs-missed' }, '내가 못 봤던 것 1개'), missed),
-        h('div', {}, h('button', { class: 'btn small quiet', type: 'button', onclick: () => input.click() }, '재현 사진 바꾸기')));
+        h('div', { class: 'seg' }, h('button', { class: 'btn small quiet', type: 'button', onclick: () => input.click() }, '재현 사진 바꾸기'),
+          confirmDel('재현 기록 지우기', '재현 사진과 적은 내용을 지울까요?', async () => { await store.del('images', c.id + '-re'); rs.has = false; rs.diffs = ['', '', '']; rs.missed = ''; touch(); drawReshoot(''); })));
     }
     const rsSec = h('section', { class: 'sec step', id: 'reshoot' }, h('header', {}, h('h2', {}, '재현 촬영 기록'), rsBadge), rsBody);
     if (!pass2) drawReshoot(reImg);
@@ -1330,6 +1339,17 @@
           document.getElementById('fld-' + fid(st, f).replace('.', '-'))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } }, h('span', { class: 'mono' }, pad(stepNo(st))), ` ${st.title} · ${f.label}`))));
       const allDone = !blocked;
+      if (!pass2) { // 게임: 끝낸 단계와 새로 얻은 용어를 알려 준다
+        const doneNow = new Set(ui.filter((u) => !u.locked && stepDone(c, u.st)).map((u) => u.st.id));
+        const nowTerms = cardTerms(c);
+        const fresh = [...nowTerms].filter((t) => !myTerms.has(t) && !knownTerms.has(t));
+        if (doneBefore) {
+          const newly = [...doneNow].filter((id) => !doneBefore.has(id));
+          if (fresh.length) toast(`새 용어 획득: ${fresh.join(', ')} · +${fresh.length * 15} XP`);
+          else if (newly.length) toast(allDone ? `카드 완주 · +${STEP_XP[c.mode] || 15} XP` : `${stepNo(STEPS.find((x) => x.id === newly[0]))}단계 완료 · +${STEP_XP[c.mode] || 15} XP`);
+        }
+        doneBefore = doneNow; myTerms = nowTerms;
+      }
       { // 예측 게임: 예측을 고르기 전에는 가려 보기를 잠그고, 가려 보기 시작하면 예측을 잠근다
         const s8 = c.steps.s8 || {};
         const started = ERASE.some((n) => (s8.erase || {})[n] != null);
@@ -1662,7 +1682,8 @@
         h('div', { class: 'dToday' },
           h('div', {}, h('img', { class: 'dImg', src: todayE.img, alt: '오늘의 이미지' }),
             h('div', { class: 'under' }, status,
-              h('button', { class: 'btn quiet small', type: 'button', onclick: () => { todayE.img = ''; drawToday(); } }, '이미지 바꾸기'))),
+              h('button', { class: 'btn quiet small', type: 'button', onclick: () => { todayE.img = ''; drawToday(); } }, '이미지 바꾸기'),
+              confirmDel('오늘 일기 지우기', '오늘 쓴 일기를 지울까요?', async () => { clearTimeout(timer); timer = null; await store.del('diary', tid); showDiary(); }))),
           h('div', { class: 'stepbody' }, fields)));
     }
 
@@ -1709,7 +1730,8 @@
         ? h('div', { class: 'rows' }, past.map((e) => h('article', { class: 'dEntry' },
             e.img ? h('img', { src: e.img, alt: '', loading: 'lazy' }) : h('div', {}),
             h('div', {},
-              h('div', { class: 'mono label' }, e.id + (entryDone(e) ? '' : ' · 다 못 씀')),
+              h('div', { class: 'fieldtop' }, h('span', { class: 'mono label' }, e.id + (entryDone(e) ? '' : ' · 다 못 씀')),
+                confirmDel('지우기', '이 날 일기를 지울까요?', async () => { await store.del('diary', e.id); showDiary(); })),
               LINES.map(([k, label]) => has(e.lines[k]) ? h('p', {}, h('span', { class: 'label' }, label + '  '), e.lines[k]) : null)))))
         : h('p', { class: 'note' }, '아직 지난 일기가 없어요. 오늘 것부터 시작해요.'));
 
@@ -1920,6 +1942,7 @@
       h('div', { class: 'bar noprint' },
         h('button', { class: 'btn quiet', onclick: () => { location.hash = 'card-' + c.id; } }, '← 카드로 돌아가기'),
         h('div', { class: 'row' }, status,
+          persisted ? confirmDel('샷리스트 지우기', '이 샷리스트를 지울까요?', async () => { clearTimeout(timer); timer = null; flushPage = null; await store.del('shotlists', cardId); toast('샷리스트를 지웠어요.'); location.hash = 'card-' + cardId; }) : null,
           PREVIEW ? null : h('button', { class: 'btn solid', id: 'shots-print', onclick: () => window.print() }, 'PDF 한 장으로 뽑기'))),
       h('div', { class: 'editor noprint' },
         h('div', { class: 'stage' }, h('div', { class: 'frame' }, src ? h('img', { src, alt: '레퍼런스 이미지' }) : h('div', { class: 'linkfail' }, '이미지 없음')),
@@ -2266,6 +2289,82 @@
     return { tried, hit };
   }
 
+  /* 두 번 눌러야 지워지는 지우기 버튼 */
+  function confirmDel(label, question, onYes, cls) {
+    const box = h('span', { class: 'delbox' });
+    const idle = () => box.replaceChildren(h('button', { class: cls || 'btn small quiet', type: 'button', onclick: ask }, label));
+    function ask() {
+      box.replaceChildren(h('span', { class: 'note' }, question + ' '),
+        h('button', { class: 'btn small solid', type: 'button', onclick: onYes }, '네, 지워요'),
+        h('button', { class: 'btn small', type: 'button', onclick: idle }, '아니요'));
+    }
+    idle();
+    return box;
+  }
+
+  /* ───────── 게임: 경험치, 레벨, 업적 ───────── */
+  const LEVELS = [[0, '구경꾼'], [100, '현장 막내'], [250, '그립'], [450, '조명팀'], [700, '포커스 풀러'], [1000, '카메라 오퍼레이터'], [1400, '촬영감독'], [1900, '조감독'], [2500, '디렉터'], [3300, 'DOPE EYE']];
+  const STEP_XP = { quick: 10, full: 15, deep: 25 };
+  function cardTerms(c) {
+    const out = new Set();
+    for (const st of STEPS) for (const f of st.fields) {
+      if (!DEX_KEYS.includes(f.k)) continue;
+      for (const v of [].concat((c.steps[st.id] || {})[f.k] || [])) if (!DEX_SKIP.has(v)) out.add(v);
+    }
+    return out;
+  }
+  async function gameState() {
+    const cards = await store.all('cards');
+    const diary = await store.all('diary');
+    const shotlists = await store.all('shotlists');
+    const ms = (await store.get('meta', 'missions')) || { done: {} };
+    const study = await loadStudy();
+    const gs = guessStats(cards);
+    const terms = new Set(); cards.forEach((c) => cardTerms(c).forEach((t) => terms.add(t)));
+    const stepsDone = (c) => { const vs = visibleSteps(c); let n = 0; for (const st of vs) { if (stepDone(c, st)) n++; else break; } return n; };
+    const parts = [
+      ['단계 완료', cards.reduce((a, c) => a + stepsDone(c) * (STEP_XP[c.mode] || 15), 0)],
+      ['용어 획득', terms.size * 15],
+      ['예측 적중', gs.hit * 30],
+      ['오늘의 미션', Object.keys(ms.done).length * 25],
+      ['세 줄 일기', diary.filter(entryDone).length * 10],
+      ['재현 촬영', cards.filter((c) => c.reshoot && c.reshoot.has).length * 50],
+      ['다시 쓰기', cards.filter((c) => c.second && c.second.newSeen.some(has)).length * 40],
+      ['샷리스트', shotlists.length * 20],
+      ['확인 문제', Object.keys(study.quiz).length * 5],
+    ];
+    const xp = parts.reduce((a, [, n]) => a + n, 0);
+    let lv = 0; while (lv + 1 < LEVELS.length && xp >= LEVELS[lv + 1][0]) lv++;
+    const done = cards.filter(cardDone);
+    const badges = [
+      ['첫 컷', '카드 한 장을 끝까지 쓰기', done.length >= 1],
+      ['열 컷', '카드 열 장을 끝까지 쓰기', done.length >= 10],
+      ['깊게 판 사람', '깊게 파기로 한 장 완주하기', done.some((c) => c.mode === 'deep')],
+      ['모르는 게 없다', '"모르겠음" 없이 전체 버전 한 장 완주하기', done.some((c) => c.mode !== 'quick' && !c.unknown.length)],
+      ['족집게', '지우기 테스트 예측 다섯 번 적중', gs.hit >= 5],
+      ['수집가 25', '용어 25개 획득', terms.size >= 25],
+      ['수집가 75', '용어 75개 획득', terms.size >= 75],
+      ['따라 찍기', '재현 촬영 한 번 기록하기', cards.some((c) => c.reshoot && c.reshoot.has)],
+      ['다시 본 눈', '3일 뒤 다시 쓰기를 끝내고 새로 보인 것 적기', cards.some((c) => c.second && c.second.newSeen.some(has))],
+      ['일주일 개근', '세 줄 일기 7일 연속', streakOf(diary) >= 7],
+      ['미션 일주일', '오늘의 미션 7일 연속', missionStreak(ms.done) >= 7],
+      ['한 편 뜯기', '한 뮤직비디오에서 다섯 컷 분석하기', (() => { const m = new Map(); cards.forEach((c) => { const k = videoKey(c); if (k) m.set(k, (m.get(k) || 0) + 1); }); return [...m.values()].some((n) => n >= 5); })()],
+      ['콘티 작가', '샷리스트 한 장 만들기', shotlists.length >= 1],
+      ['우등생', '교과서 확인 문제를 전부 맞히기', Object.keys(study.quiz).length >= BOOK.reduce((n, ch) => n + ch.quiz.length, 0)],
+    ];
+    return { xp, lv, title: LEVELS[lv][1], floor: LEVELS[lv][0], next: LEVELS[lv + 1] || null, parts, badges, terms };
+  }
+  function playerBar(g) {
+    const span = g.next ? g.next[0] - g.floor : 1;
+    const pct = g.next ? Math.min(100, ((g.xp - g.floor) / span) * 100) : 100;
+    return h('div', { class: 'player', id: 'player' },
+      h('div', { class: 'fieldtop' },
+        h('strong', { class: 'playerlv' }, `Lv.${g.lv + 1} ${g.title}`),
+        h('span', { class: 'mono label' }, g.next ? `${g.xp} XP · 다음 "${g.next[1]}"까지 ${g.next[0] - g.xp}` : `${g.xp} XP · 최고 등급`)),
+      h('span', { class: 'bartrack', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(pct), 'aria-label': '다음 등급까지' },
+        h('span', { class: 'barfill', style: `width:${pct}%` })));
+  }
+
   /* ───────── 돌아보기: 로드맵 카운터 + 주간 회고 + 취향 지도 ───────── */
   function tally(items) {
     const m = new Map();
@@ -2383,6 +2482,20 @@
         past.length ? h('div', { class: 'field' }, h('span', { class: 'label' }, '지난 주들에 적은 것'),
           h('ul', { class: 'plain' }, past.slice(0, 8).map((m) => h('li', {}, h('span', { class: 'label mono' }, m.id.slice(5) + '  '), m.change)))) : null));
 
+    /* 등급과 업적 */
+    const g = await gameState();
+    const got = g.badges.filter((b) => b[2]).length;
+    const playerSec = h('section', { class: 'sec', id: 'rank' },
+      h('header', {}, h('h2', {}, '등급과 업적'), h('span', { class: 'chip-state' + (got === g.badges.length ? ' done' : '') }, `업적 ${got}/${g.badges.length}`)),
+      h('div', { class: 'stepbody', style: 'padding-top:14px' },
+        playerBar(g),
+        h('div', { class: 'field' }, h('span', { class: 'label' }, '경험치를 얻은 곳'),
+          h('ul', { class: 'plain' }, g.parts.filter(([, n]) => n).map(([name, n]) => h('li', {}, name, h('span', { class: 'label mono' }, `  ${n} XP`))),
+            g.xp ? null : h('li', {}, '아직 없어요. 카드의 한 단계를 끝내면 쌓이기 시작해요.'))),
+        h('div', { class: 'field' }, h('span', { class: 'label' }, '업적'),
+          h('ul', { class: 'plain badges' }, g.badges.map(([name, how, ok]) => h('li', { class: ok ? 'got' : 'not' },
+            h('span', { class: 'chip-state' + (ok ? ' done' : ' dexoff') }, ok ? '달성' : '잠김'), h('strong', {}, ' ' + name), h('span', { class: 'note' }, '  ' + how)))))));
+
     /* 예측 적중률과 용어 도감 */
     const gs = guessStats(cards);
     const dex = dexData(cards);
@@ -2409,6 +2522,7 @@
       h('div', { class: 'look' },
         h('div', { class: 'fieldtop' }, h('h2', { class: 'lookh' }, '로드맵'), status), road,
         week,
+        playerSec,
         gameSec,
         h('div', { class: 'fieldtop' }, h('h2', { class: 'lookh' }, '취향 지도'), h('span', { class: 'label' }, `카드 ${cards.length}장 기준`)),
         cards.length < 3 ? h('p', { class: 'note' }, '카드가 몇 장 더 쌓여야 무늬가 보여요. 지금은 있는 만큼만 보여줘요.') : null,
