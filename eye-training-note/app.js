@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '29 · 모션';
+  const APP_VERSION = '30 · 진동';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -76,7 +76,24 @@
     document.body.append(box);
     setTimeout(() => box.remove(), 1400);
   }
-  function celebrate(msg, n) { toast(msg); burst(n); }
+  /* 진동: 안드로이드는 진동 기능으로, 아이폰은 스위치를 넘길 때 나는 톡 하는 느낌을 빌려서 */
+  function buzzOn() { try { return localStorage.getItem('eye-buzz') !== 'off'; } catch (e) { return true; } }
+  function tick() {
+    const label = document.createElement('label');
+    label.style.display = 'none'; label.setAttribute('aria-hidden', 'true');
+    const input = document.createElement('input');
+    input.type = 'checkbox'; input.setAttribute('switch', '');
+    label.append(input); document.head.append(label);
+    label.click(); label.remove();
+  }
+  function buzz(times) {
+    if (!buzzOn()) return;
+    try {
+      if (navigator.vibrate) { navigator.vibrate(Array.from({ length: times * 2 - 1 }, (_, i) => (i % 2 ? 50 : 30))); return; }
+      for (let i = 0; i < times; i++) setTimeout(tick, i * 110);
+    } catch (e) { /* 진동이 안 되는 기기에서는 조용히 넘어간다 */ }
+  }
+  function celebrate(msg, n) { toast(msg); burst(n); buzz(n >= 50 ? 4 : n && n <= 12 ? 1 : 2); }
   function countUp(el, from, to, fmt) {
     if (from === to || matchMedia('(prefers-reduced-motion: reduce)').matches) { el.textContent = fmt(to); return; }
     const t0 = performance.now(), dur = 700;
@@ -2326,6 +2343,13 @@
             h('div', { class: 'seg', role: 'group', 'aria-label': '디자인 고르기' }, SKINS.map(([key, name]) =>
               h('button', { class: 'btn' + ((document.documentElement.dataset.skin || '') === key ? ' on' : ''), type: 'button', id: 'skin-' + (key || 'clean'),
                 onclick: () => { setSkin(key); showBackup(); } }, name))))),
+        h('section', { class: 'sec', id: 'buzz' }, h('header', {}, h('h2', {}, '진동')),
+          h('div', { class: 'stepbody', style: 'padding-top:18px' },
+            h('p', { class: 'note' }, '예측을 맞히거나 미션을 끝냈을 때 폰이 짧게 떨려요. 컴퓨터에서는 아무 일도 일어나지 않아요.'),
+            h('div', { class: 'seg', role: 'group', 'aria-label': '진동 켜고 끄기' },
+              h('button', { class: 'btn' + (buzzOn() ? ' on' : ''), type: 'button', id: 'buzz-on', onclick: () => { try { localStorage.setItem('eye-buzz', 'on'); } catch (e) { /* 기억 못 해도 진행 */ } buzz(2); showBackup(); } }, '켜기'),
+              h('button', { class: 'btn' + (buzzOn() ? '' : ' on'), type: 'button', id: 'buzz-off', onclick: () => { try { localStorage.setItem('eye-buzz', 'off'); } catch (e) { /* 기억 못 해도 진행 */ } showBackup(); } }, '끄기'),
+              h('button', { class: 'btn quiet', type: 'button', id: 'buzz-test', onclick: () => buzz(2) }, '지금 떨어 보기')))),
         h('section', { class: 'sec' }, h('header', {}, h('h2', {}, '내보내기')),
           h('p', { class: 'note' }, '카드, 이미지, 일기, 시리즈를 전부 파일 하나에 담아요. 기록은 이 기기의 브라우저 안에만 있어서, 이 파일이 유일한 보험이에요. 일주일에 한 번을 추천해요.'),
           PREVIEW ? h('div', { class: 'nudge' }, '지금 보고 있는 미리보기 주소에서는 파일 저장이 막혀 있어요. 정식 주소에서는 이 버튼이 눌려요.') : null,
