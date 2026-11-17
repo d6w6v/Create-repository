@@ -3,12 +3,12 @@
   'use strict';
   document.documentElement.lang = 'ko';
   /* 디자인 시안 고르기 (이 기기에만 기억) */
-  const SKINS = [['', '깔끔'], ['editorial', '매거진'], ['studio', '스튜디오'], ['pop', '팝']];
+  const SKINS = [['school', '교재'], ['', '깔끔'], ['editorial', '매거진'], ['studio', '스튜디오'], ['pop', '팝']];
   function setSkin(name) {
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  try { setSkin(new URLSearchParams(location.search).get('skin') ?? localStorage.getItem('eye-skin') ?? ''); } catch (e) { /* 기본 모양 */ }
+  try { setSkin(new URLSearchParams(location.search).get('skin') ?? localStorage.getItem('eye-skin') ?? 'school'); } catch (e) { /* 기본 모양 */ }
   const PREVIEW = !!window.EYE_PREVIEW; // 미리보기 주소에서는 파일 저장과 인쇄가 막혀 있다
 
   /* 화면 조각을 바꿔 끼울 때 빈 것(null)은 건너뛴다 */
@@ -195,9 +195,111 @@
       A('guess', '추정인 것 (확인 불가)'),
       A('unsure', '모르겠는 것 (다음에 볼 것)') ] },
   ];
+  /* ───────── 교재: 용어 설명과, 깊게 파기에서만 열리는 촘촘한 칸들 ───────── */
+  const HELP = {
+    's1.feel': '첫 반응은 분석이 아니라 기록이에요. 3초 안에 든 느낌을 그대로 적어요. 끝까지 쓴 뒤, 분석이 이 느낌을 설명하는지 돌아와서 확인해요.',
+    's1.words': '설명하는 말 말고 떠오른 말이에요. 사물 이름, 온도, 소리, 사람 이름 무엇이든 돼요.',
+    's2.gaze': '시선 유도. 눈은 보통 가장 밝은 곳, 대비가 센 곳, 얼굴(특히 눈), 선이 모이는 곳으로 먼저 가요. 이유는 가장 큰 것 하나만 골라요.',
+    's2.subjectPct': '눈대중이면 충분해요. 화면을 가로세로 3등분한 9칸 중 몇 칸을 차지하는지 세면 쉬워요. 한 칸이 약 11%예요.',
+    's2.emptyPct': '빈 공간(네거티브 스페이스)은 주인공도 소품도 아닌 면적이에요. 하늘, 벽, 어둠, 바닥 같은 곳이에요.',
+    's2.camHeight': '지평선, 또는 바닥과 벽이 만나는 선의 위치로 알 수 있어요. 그 선이 인물의 어디를 지나가는지 봐요. 허리를 지나면 카메라가 허리 높이예요.',
+    's2.angle': '카메라가 기울어진 방향이에요. 턱 밑이 보이면 로우(인물이 커 보임), 정수리가 보이면 하이(작아 보임), 둘 다 아니면 아이레벨이에요.',
+    's2.lens': '광각은 가까운 것이 과장되게 크고 배경이 넓게 담겨요. 망원은 앞뒤가 납작하게 붙고 배경이 크게 흐려져요. 얼굴과 귀의 크기 차이를 보면 알 수 있어요.',
+    's2.comp': '3분할은 주인공이 화면 1/3 선 위에 있는 것, 대칭은 좌우가 거울인 것, 대각선은 주요 선이 모서리를 잇는 것, 여백은 빈 공간이 주인공보다 큰 것이에요.',
+    's2.crop': '프레임 밖으로 잘려 나간 것이에요. 머리 꼭대기, 손끝, 하늘처럼 "있을 법한데 없는 것"을 찾아요.',
+    's3.lights': '눈동자에 비친 반사광(캐치라이트)의 개수와 그림자의 개수를 세면 광원 수를 알 수 있어요. 크게 보기로 눈을 확대해 보세요.',
+    's3.dir': '그림자는 늘 빛의 반대편에 생겨요. 코 그림자가 떨어지는 방향이 주광의 반대예요. 앞사선은 얼굴 앞 45도, 뒤사선은 등 뒤 45도에서 윤곽만 밝히는 빛이에요.',
+    's3.side': '인물이 아니라 화면 기준이에요. 화면의 왼쪽에서 들어오면 왼쪽이에요.',
+    's3.quality': '그림자 가장자리가 또렷하면 딱딱한 빛(작고 센 광원), 서서히 번지면 부드러운 빛(크거나 한 번 퍼뜨린 광원)이에요.',
+    's3.contrast': '얼굴의 밝은 쪽과 어두운 쪽의 차이를 봐요. 어두운 쪽의 형태가 안 보일 정도면 큰 것이에요.',
+    's3.shadow': '그림자가 어디에 떨어지는지, 얼마나 검은지, 가장자리가 어떤지를 적어요. 광원의 위치와 크기를 알려주는 증거예요.',
+    's4.colors': '눈을 가늘게 뜨면 세부가 사라지고 색 덩어리만 남아요. 그 상태에서 넓은 순서대로 세 가지를 적어요. 합이 100이 아니어도 돼요.',
+    's4.temp': '따뜻함은 빨강·주황·노랑 쪽, 차가움은 파랑·청록 쪽이에요. 밝은 곳과 그림자의 온도가 서로 다르면 섞임이에요.',
+    's4.sat': '채도는 색의 진하기예요. 회색을 탄 듯 바랜 색이면 낮음, 원색에 가까우면 높음이에요.',
+    's4.pop': '주변과 가장 다른 색 하나예요. 면적은 작아도 눈이 가장 먼저 가는 색인 경우가 많아요.',
+    's5.materials': '빛을 되쏘는 방식으로 재질을 읽어요. 금속과 젖은 표면은 날카롭게, 피부와 천은 부드럽게, 벽돌과 콘크리트는 거의 되쏘지 않아요.',
+    's5.gloss': '한 화면에 번들거리는 것과 빛을 먹는 것이 같이 있으면 질감 대비가 생겨요. 무엇과 무엇이 맞서는지 적어요.',
+    's5.grain': '입자는 어두운 곳과 중간 밝기에서 잘 보여요. 크게 보기로 확대해서 확인해요.',
+    's5.grade': '보정(그레이딩)은 찍은 뒤 색과 밝기를 만진 것이에요. 검정이 진짜 검정인지 살짝 떠 있는지, 어떤 색 쪽으로 밀었는지를 봐요.',
+    's6.pose': '자세는 대사예요. 어깨가 열렸는지 닫혔는지, 손이 무엇을 쥐었는지, 무게가 어느 발에 있는지를 봐요.',
+    's6.props': '화면에 보이는 물건을 빠짐없이 적어요. 쉼표로 나눠 쓰면 취향 지도에서 하나씩 세어 줘요.',
+    's7.wrong': '규칙을 일부러 어긴 곳을 찾는 칸이에요. 장르의 관습, 구도의 상식, 자연스러운 빛과 색에서 벗어난 것 하나. 실수가 아니라 선택으로 보이는 것이에요.',
+    's8.erase': '손가락이나 종이로 실제로 가려 보세요. 머릿속 상상보다 정확해요. 줄어드는 폭이 큰 것이 이 이미지를 떠받치는 기둥이에요.',
+    's9.other': '비교는 차이를 드러내는 가장 빠른 방법이에요. 비슷한데 덜 끌렸던 이미지를 하나 떠올려 무엇이 닮았는지 먼저 적어요.',
+    's10.story': '누가, 어디서, 무슨 일이 막 일어났거나 일어나려 하는가. 화면에 보이는 단서만으로 써요.',
+    's10.decisions': '결정은 만든 사람이 여러 선택지 중 고른 것, 효과는 그 선택이 보는 사람에게 하는 일, 기각할 대안은 흔히 택했을 다른 방법과 그걸 버릴 이유예요.',
+    's11.final': '크리틱의 마지막 한 문장이에요. "무엇 때문에, 어떤 느낌이 난다"의 꼴로, 화면에서 가리킬 수 있는 말로 써요.',
+    's11.sure': '화면에서 손가락으로 가리킬 수 있으면 확실, 만든 사람 머릿속 이야기면 추정이에요. 이 구분이 크리틱의 기본이에요.',
+  };
+  const D = (f, help) => ({ ...f, deep: true, noWhy: true, help });
+  const EXTRA = {
+    s2: [
+      { type: 'head', label: '프레임 더 깊게', deep: true },
+      D(C('shotSize', '샷 크기', ['익스트림 클로즈업', '클로즈업', '바스트', '미디엄', '풀', '롱']), '화면에 인물이 얼마나 담겼는지예요. 클로즈업은 얼굴, 바스트는 가슴 위, 미디엄은 허리 위, 풀은 전신, 롱은 인물이 풍경 속에 작게 있는 것이에요.'),
+      D(C('ratio', '화면 비율', ['세로', '1:1', '4:3', '16:9', '2.39:1']), '가로와 세로의 비예요. 2.39:1은 극장 영화의 아주 넓은 화면, 4:3은 옛날 TV, 세로는 휴대폰 화면이에요.'),
+      D(C('dof', '심도', ['얕음', '중간', '깊음']), '초점이 맞는 앞뒤 범위예요. 배경이 크게 흐리면 얕음, 앞에서 뒤까지 다 또렷하면 깊음이에요.'),
+      D(T('focus', '초점이 가장 또렷한 곳'), '크게 보기로 확대해서 가장 날카로운 곳을 찾아요. 눈인지, 손인지, 소품인지에 따라 주인공이 달라져요.'),
+      D({ k: 'planes', label: '전경 · 중경 · 후경에 각각 무엇이 있나', type: 'rows', rowLabels: ['전경', '중경', '후경'], cols: [{ k: 'what', label: '무엇', type: 'text' }] }, '화면을 앞·가운데·뒤 세 겹으로 나눠 봐요. 겹이 많을수록 깊이가 생겨요. 한 겹이 비어 있으면 "없음"이라고 써요.'),
+      D({ k: 'lines', label: '주요 선의 방향', type: 'choices', options: ['수평', '수직', '대각', '곡선'] }, '벽 모서리, 팔, 시선, 그림자 가장자리처럼 눈이 따라가는 선이에요. 수평은 안정, 수직은 힘, 대각은 움직임, 곡선은 부드러움을 줘요.'),
+      D(C('balance', '균형', ['대칭', '비대칭', '방사형']), '화면 좌우의 무게예요. 큰 것, 어두운 것, 진한 색일수록 무거워요. 한쪽에 큰 덩어리와 반대쪽에 작은 것 여럿이 맞서면 비대칭 균형이에요.'),
+      D(T('exit', '눈이 화면 밖으로 빠져나가는 곳'), '시선이 한 바퀴 돌고 끝나는 지점이에요. 빠져나갈 곳이 없으면 "갇힌 화면"이라고 써요.'),
+    ],
+    s3: [
+      { type: 'head', label: '빛 더 깊게', deep: true },
+      D({ k: 'roles', label: '빛의 역할 나누기', type: 'rows', rowLabels: ['주광', '보조광', '윤곽광'], cols: [{ k: 'what', label: '어디서 오는 무슨 색 빛인지 (없으면 "없음")', type: 'text' }] }, '주광은 형태를 만드는 가장 센 빛, 보조광은 그림자를 살짝 채우는 빛, 윤곽광은 뒤에서 가장자리를 따는 빛이에요. 세 가지가 다 있을 필요는 없어요.'),
+      D(C('lightRatio', '밝은 쪽과 어두운 쪽의 차이', ['거의 같음', '두세 배', '여덟 배 이상']), '얼굴의 밝은 쪽과 어두운 쪽을 비교해요. 어두운 쪽 표정이 다 보이면 거의 같음, 형태만 보이면 두세 배, 검게 사라지면 여덟 배 이상이에요.'),
+      D(C('motivation', '빛의 출처', ['화면 속에 보임', '화면 밖에 있을 법함', '무대 조명처럼 인위적']), '그 빛이 어디서 오는지 화면이 설명해 주는가예요. 창문이나 등이 보이면 화면 속, 안 보여도 자연스러우면 화면 밖, 설명이 안 되면 인위적이에요.'),
+      D(T('lightColor', '빛의 색과 그림자의 색'), '흰 빛은 드물어요. 밝은 곳이 어떤 색을 띠는지, 그림자가 그 반대 색을 띠는지 봐요.'),
+      D(T('highlight', '반사광의 모양'), '눈동자, 금속, 젖은 표면에 맺힌 반사광의 모양이에요. 둥글면 둥근 광원, 네모면 창이나 네모난 조명이에요.'),
+    ],
+    s4: [
+      { type: 'head', label: '색 더 깊게', deep: true },
+      D(C('harmony', '색 조화', ['단색', '유사색', '보색', '삼색', '무채색에 포인트']), '색상환에서 색들이 놓인 관계예요. 단색은 한 색의 밝기 차이, 유사색은 이웃한 색, 보색은 정반대 색(빨강과 청록 등), 삼색은 세 갈래로 벌어진 색이에요.'),
+      D(C('key', '전체 밝기', ['하이키', '중간', '로우키']), '화면 대부분이 밝으면 하이키, 대부분이 어두우면 로우키예요. 분위기의 뼈대를 정해요.'),
+      D(T('skin', '피부색은 어떻게 처리됐나'), '피부가 자연스러운 색인지, 조명 색에 덮였는지, 주변 색과 분리되는지 봐요.'),
+      D(T('shadowColor', '그림자 속의 색'), '그림자가 그냥 검은지, 파랑이나 초록 같은 색이 들어 있는지 봐요.'),
+      D(T('colorJob', '색이 하는 일'), '색이 주인공을 배경에서 떼어 내는지, 화면을 하나로 묶는지, 무언가를 상징하는지 적어요.'),
+    ],
+    s5: [
+      { type: 'head', label: '질감 더 깊게', deep: true },
+      D(T('lensMark', '렌즈가 남긴 흔적'), '가장자리가 어두워지는 비네팅, 빛이 번지는 플레어, 선이 휘는 왜곡, 흐린 배경의 빛망울(보케) 모양을 찾아요.'),
+      D(T('postMark', '후반 작업의 흔적'), '밝은 곳 주변이 붉게 번지는 할레이션, 뿌옇게 퍼지는 블룸, 가장자리의 색 번짐, 일부러 넣은 먼지나 긁힘을 찾아요.'),
+    ],
+    s6: [
+      { type: 'head', label: '연출 더 깊게', deep: true },
+      D(T('blocking', '인물의 배치 (거리, 높낮이, 겹침)'), '블로킹은 인물을 어디에 세웠는가예요. 둘 사이 거리, 누가 더 높은지, 누가 누구를 가리는지가 관계를 말해요.'),
+      D(T('costume', '의상의 색과 실루엣'), '옷의 색이 배경과 섞이는지 튀는지, 윤곽이 뾰족한지 둥근지, 큰지 붙는지를 봐요.'),
+      D(T('hair', '헤어와 메이크업'), '머리 모양, 광택, 입술과 눈가의 색이에요. 시대와 인물의 성격을 가장 빨리 알려 줘요.'),
+      D(T('place', '배경이 말해 주는 것'), '장소가 인물에 대해 무엇을 알려 주는지 적어요. 계층, 시간대, 직업, 방금 일어난 일 같은 것이에요.'),
+    ],
+    s7: [
+      D(T('genre', '이 장르의 흔한 방식과 무엇이 다른가'), '같은 종류의 이미지 열 장을 떠올려 보고, 그 열 장이 공통으로 하는 것 중 이 이미지가 안 하는 것을 찾아요.'),
+    ],
+    s9: [
+      D(T('lineage', '이 이미지가 기대고 있는 선배 이미지 (추정)'), '모든 이미지는 다른 이미지를 닮아요. 떠오르는 영화, 사진가, 시대, 장르를 적어요. 확인되지 않았으면 추정이라고 써요.'),
+    ],
+    s10: [
+      { type: 'head', label: '의미 읽기', deep: true },
+      D(T('denote', '보이는 것 그대로 (설명 없이)'), '해석을 빼고 화면에 있는 것만 말해요. "여자 둘, 골목, 붉은 빛"처럼요. 이걸 외연이라고 해요.'),
+      D(T('connote', '그것이 암시하는 것'), '위에 적은 것들이 불러오는 뜻이에요. 붉은 빛은 위험일 수도 열기일 수도 있어요. 이걸 내포라고 해요. 한 가지로 정하고 이유를 써요.'),
+      D(T('audience', '누구에게 말을 거는 이미지인가'), '이 이미지를 좋아할 사람과 싫어할 사람을 한 명씩 떠올려 적어요.'),
+    ],
+    s11: [
+      { type: 'head', label: '크리틱 마무리', deep: true },
+      D(T('weak', '이 이미지의 약한 곳 1개'), '좋아하는 이미지에서도 약점을 찾는 게 크리틱이에요. 덜어내면 더 좋아질 것, 또는 어색한 곳 하나.'),
+      D(A('pitch', '30초 발표문 (세 문장)'), '수업에서 이 이미지를 소개한다고 생각하고 써요. 첫 문장은 무엇이 보이는지, 둘째는 핵심 결정, 셋째는 내가 가져갈 것.'),
+    ],
+  };
+  for (const st of STEPS) {
+    for (const f of st.fields) if (f.k && HELP[st.id + '.' + f.k]) f.help = HELP[st.id + '.' + f.k];
+    const extra = EXTRA[st.id];
+    if (!extra) continue;
+    const at = st.fields.findIndex((f) => f.k === 'sum');
+    st.fields.splice(at < 0 ? st.fields.length : at, 0, ...extra);
+  }
   const stepNo = (st) => STEPS.indexOf(st) + 1;
   const visibleSteps = (c) => c.mode === 'quick' ? STEPS.filter((s) => s.quick) : STEPS;
-  const needsWhy = (f) => (f.type === 'choice' || f.type === 'choices') && !f.opt;
+  const needsWhy = (f) => (f.type === 'choice' || f.type === 'choices') && !f.opt && !f.noWhy;
   const MODE_NAME = { quick: '빠른 버전', full: '전체 버전', deep: '깊게 파기' };
   function visibleFields(c, st) {
     if (c.mode !== 'deep') return visibleFieldsBase(c, st).filter((f) => !f.deep);
@@ -745,7 +847,16 @@
     const set = h('fieldset', { class: 'ctl', disabled: isUnknown(c, st, f) }, control, whyBox);
     const holder = h('div', { class: 'field' + (isUnknown(c, st, f) ? ' unk' : ''), id: 'fld-' + id.replace('.', '-') });
     const top = h('div', { class: 'fieldtop' },
-      h('label', { class: 'label', for: dom }, f.label + (f.opt ? ' · 없으면 비워 둬요' : '')));
+      h('label', { class: 'label', for: dom },
+        st.id !== 'video' ? h('span', { class: 'fnum' }, `${stepNo(st)}.${realFields(c, st).indexOf(f) + 1}`) : null,
+        f.label + (f.opt ? ' · 없으면 비워 둬요' : '')));
+    let helpBox = null;
+    if (f.help) {
+      helpBox = h('p', { class: 'help', hidden: true, id: dom + '-help' }, h('span', { class: 'helptag' }, '용어'), f.help);
+      const hb = h('button', { class: 'helpbtn', type: 'button', 'aria-expanded': 'false', 'aria-controls': dom + '-help', 'aria-label': `${f.label} 용어 설명`,
+        onclick: () => { helpBox.hidden = !helpBox.hidden; hb.setAttribute('aria-expanded', String(!helpBox.hidden)); hb.classList.toggle('on', !helpBox.hidden); } }, '?');
+      top.firstChild.append(hb);
+    }
     if (!st.noUnknown && !f.opt) {
       const btn = h('button', { class: 'btn small quiet unkbtn' + (isUnknown(c, st, f) ? ' on' : ''), type: 'button',
         'aria-pressed': String(isUnknown(c, st, f)),
@@ -761,7 +872,7 @@
         } }, '모르겠음');
       top.append(btn);
     }
-    holder.append(top, set);
+    holder.append(top, helpBox, set);
     if (f.type === 'feel') {
       const help = h('div', { class: 'stuck', hidden: true },
         h('p', {}, '느낌을 한 번에 꺼내려 하지 말고, 하나만 골라 답해 봐요.'),
@@ -877,7 +988,7 @@
         h('button', { class: 'btn small' + (c.mode !== 'quick' && c.mode !== 'deep' ? ' on' : ''), type: 'button', id: 'mode-full', onclick: () => setMode('full') }, '전체 버전 (11단계)'),
         h('button', { class: 'btn small' + (c.mode === 'deep' ? ' on' : ''), type: 'button', id: 'mode-deep', onclick: () => setMode('deep') }, '깊게 파기 (근거까지)')),
       c.mode === 'deep'
-        ? h('p', { class: 'note' }, '버튼을 고를 때마다 "왜 그렇게 봤는지" 근거를 한 줄 쓰고, 단계마다 한 줄 결론을 내려요. 오래 걸리지만 눈이 가장 많이 늘어요.')
+        ? h('p', { class: 'note' }, '미술대학 크리틱 수업처럼 써요. 버튼을 고를 때마다 근거를 한 줄 쓰고, 단계마다 더 촘촘한 관찰 칸과 한 줄 결론이 열려요. 칸 옆의 ?를 누르면 용어 설명이 나와요.')
         : null,
       c.mode === 'quick'
         ? h('p', { class: 'note' }, '첫 반응 → 시선 지도 → 지우기 테스트 → 정리만 써요. 나중에 전체 버전으로 이어 쓸 수 있고, 쓴 내용은 그대로 남아요.')

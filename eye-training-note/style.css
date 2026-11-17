@@ -731,3 +731,96 @@ html[data-skin="pop"] {
   background: var(--ink); color: var(--paper); border: 0; border-radius: 10px; padding: 10px 14px; font-size: 0.875rem; font-weight: 600; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); }
 @media (min-width: 900px) { .zoomfab { display: none; } }
 @media print { .zoom { display: none; } }
+
+/* ── 교재 요소: 칸 번호, 용어 설명 ── */
+.fnum { font-variant-numeric: tabular-nums; color: var(--mute); margin-right: 8px; font-size: 0.75rem; }
+.fieldtop .label { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: 0; min-width: 0; }
+.helpbtn { margin-left: 8px; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--mute); background: transparent; color: var(--mute); font-size: 0.75rem; line-height: 1; padding: 0; flex: none; align-self: center; }
+.helpbtn.on, .helpbtn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.help { margin: 0; font-size: 0.875rem; line-height: 1.6; background: var(--panel); border-radius: 8px; padding: 10px 12px; color: var(--ink); }
+.helptag { display: inline-block; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; margin-right: 8px; padding: 0 5px; border: 1px solid currentColor; border-radius: 3px; vertical-align: 1px; }
+
+/* ── 시안 0. 교재: 미술대학 수업 교재. 흰 종이, 검은 글씨, 빨강 하나. 번호와 가는 줄로 촘촘하게 ── */
+html[data-skin="school"]:root {
+  --bg: #ffffff; --paper: #ffffff; --ink: #111111; --mute: #666666; --line: #111111; --panel: #f4f4f2;
+  --mark: #fff3a8; --mark-ink: #2b2400; --ring: rgba(228, 0, 43, 0.18); --red: #e4002b; --r: 0px; color-scheme: light;
+  --grot: "Helvetica Neue", Helvetica, Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --tt: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+html[data-skin="school"] {
+  body { background: #fff; font-family: var(--grot); letter-spacing: -0.005em; }
+  .wrap { max-width: 1240px; }
+  .top { border-bottom: 4px solid var(--ink); padding-bottom: 12px; margin-bottom: 22px; align-items: flex-end; }
+  .top h1 { font-family: var(--grot); font-weight: 800; font-size: 3.2rem; letter-spacing: -0.055em; line-height: 0.95; }
+  .top h1::after { content: ""; display: inline-block; width: 0.26em; height: 0.26em; background: var(--red); margin-left: 0.08em; }
+  .top .sub { font-family: var(--tt); font-size: 0.75rem; letter-spacing: 0.02em; margin-top: 8px; text-transform: none; }
+  .top .sub::before { content: "VISUAL ANALYSIS WORKBOOK  /  "; color: var(--red); }
+  .sec, .roadtile, .dStats > div, .sRow, .onepage { background: none; border: 0; border-top: 4px solid var(--ink); border-radius: 0; box-shadow: none; }
+  .sec { padding: 0 0 20px; }
+  .sec > header { margin: 0; padding: 10px 0; border-bottom: 1px solid var(--ink); align-items: baseline; }
+  .sec h2 { font-weight: 800; font-size: 1.25rem; letter-spacing: -0.03em; display: flex; align-items: baseline; }
+  .stepno { font-family: var(--grot); font-weight: 800; font-size: 2.2rem; letter-spacing: -0.05em; color: var(--red); margin-right: 12px; line-height: 1; }
+  .lookh { font-weight: 800; font-size: 1.8rem; letter-spacing: -0.04em; }
+  .step.locked { border-top: 1px solid #c8c8c8; }
+  .step.locked h2 { font-weight: 500; font-size: 1rem; color: #9a9a9a; }
+  .step.locked .stepno { font-size: 1rem; color: #c0c0c0; }
+  .form:has(.step) { gap: 10px; }
+  .sec.step:not(.locked) > .stepbody { padding-top: 0; }
+  .stepbody { gap: 0; }
+  .stepbody > .field { padding: 12px 0 14px; border-bottom: 1px solid #dcdcdc; gap: 7px; }
+  .stepbody > .field:last-child { border-bottom: 0; }
+  .stepbody > .subhead { margin: 0; padding: 18px 0 6px; border-top: 0; border-bottom: 2px solid var(--ink); font-size: 0.8125rem; font-weight: 800; letter-spacing: 0.02em; }
+  .stepbody > .nudge { margin: 12px 0; }
+  .label { font-size: 0.8125rem; font-weight: 700; color: var(--ink); letter-spacing: 0; }
+  .fnum { font-family: var(--tt); color: var(--red); font-weight: 500; font-size: 0.75rem; min-width: 2.6em; margin-right: 6px; }
+  .mono, .saved, .barval, .zoompct { font-family: var(--tt); font-size: 0.8125rem; letter-spacing: 0; }
+  .note { font-size: 0.8125rem; }
+  .help { background: none; border-radius: 0; padding: 8px 0 8px 12px; border-left: 0; box-shadow: inset 3px 0 0 var(--red); font-size: 0.8125rem; }
+  .helptag { color: var(--red); border-radius: 0; font-family: var(--tt); }
+  .helpbtn { border-radius: 0; border-color: var(--ink); color: var(--ink); font-family: var(--tt); }
+  .btn { border-radius: 0; border: 1px solid var(--ink); background: #fff; font-size: 0.8125rem; font-weight: 600; min-height: 34px; padding: 5px 12px; }
+  .btn:hover { background: var(--ink); color: #fff; }
+  .btn.on, .btn.quiet.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .btn.solid { background: var(--red); border-color: var(--red); color: #fff; }
+  .btn.solid:hover { background: var(--red); opacity: 0.88; }
+  .btn.quiet { background: #fff; border-color: #bdbdbd; color: var(--ink); font-weight: 500; }
+  .btn.small { border-radius: 0; min-height: 30px; padding: 3px 10px; }
+  .tabs { background: none; border: 0; border-radius: 0; padding: 0; gap: 20px; }
+  .tab { background: none; border-radius: 0; padding: 4px 0; min-height: 30px; color: var(--mute); font-weight: 700; font-size: 0.875rem; border-bottom: 3px solid transparent; }
+  .tab.on { background: none; box-shadow: none; color: var(--ink); border-bottom-color: var(--red); }
+  .text { border: 1px solid var(--ink); border-radius: 0; padding: 8px 10px; background: #fff; font-size: 0.9375rem; }
+  .text:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--ring); padding: 8px 10px; }
+  .text.why { border-style: dashed; font-size: 0.875rem; }
+  .searchbar .text { border-radius: 0; padding-left: 10px; }
+  .rowcells.joined > .text { border-radius: 0; }
+  .segbar { border-radius: 0; border: 1px solid var(--ink); border-top: 0; background: #fff; }
+  .segbar .btn { border: 0; border-right: 1px solid var(--ink); min-height: 30px; }
+  .segbar .btn.on, .pinbtn.on { background: var(--red); color: #fff; }
+  .pinbtn { border-radius: 0; border: 1px solid var(--ink); font-family: var(--tt); }
+  .score .btn { border-radius: 0; font-family: var(--tt); font-size: 0.9375rem; min-height: 40px; }
+  .chip-state { background: none; border: 1px solid var(--ink); color: var(--ink); border-radius: 0; font-family: var(--tt); font-size: 0.6875rem; padding: 1px 6px; }
+  .chip-state.done { background: var(--ink); color: #fff; }
+  .tag, .nudge, .due, .banner, .core, .stuck, .mini, .cmpTag, .toast { border-radius: 0; }
+  .tag { background: none; border: 1px solid var(--ink); }
+  .core { background: var(--ink); }
+  .core strong { font-weight: 800; letter-spacing: -0.03em; font-size: 1.6rem; }
+  .feelline { font-weight: 800; letter-spacing: -0.03em; }
+  .tile .pic, .tile .nopic, .stage .frame, .dImg, .cutpic, .cutpic img, .dEntry img, .sStrip img, .pair img, .cutmini img, .sketch img, .pick, .gazemap { border-radius: 0; }
+  .stage .frame { background: var(--panel); }
+  .stage .under .label::before { content: "FIG. 1  /  "; font-family: var(--tt); color: var(--red); }
+  .tile .meta.mono { font-family: var(--tt); font-size: 0.6875rem; }
+  .tile .feel { font-weight: 700; letter-spacing: -0.02em; }
+  .drop, .empty { border-radius: 0; border: 1px dashed var(--ink); }
+  .roadtile, .dStats > div, .sRow { padding: 10px 0; }
+  .roadnum, .dStats strong { font-family: var(--grot); font-weight: 800; font-size: 3rem; letter-spacing: -0.06em; line-height: 1; }
+  .roadnum .label { font-weight: 500; }
+  .bartrack, .barfill, .barrow, .barrow .bartrack, .barrow .barfill { border-radius: 0; }
+  .roadtile .barfill { background: var(--red); }
+  .locked li, ul.plain li, .cmpRow, .unklist li, .dEntry, .cmpHead { border-color: #dcdcdc; }
+  .zoomfab { border-radius: 0; background: var(--red); color: #fff; }
+  .onepage { padding: 16px 0; }
+  .opFinal { font-weight: 800; letter-spacing: -0.03em; }
+  .opStep h3 { font-weight: 800; }
+}
+html[data-skin="school"] .helpbtn.on, html[data-skin="school"] .helpbtn:hover { color: #fff; background: var(--ink); }
+html[data-skin="school"] .segbar .btn { font-size: 0.6875rem; padding: 0 1px; font-weight: 600; }
