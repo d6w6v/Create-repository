@@ -4,6 +4,12 @@
   document.documentElement.lang = 'ko';
   const PREVIEW = !!window.EYE_PREVIEW; // 미리보기 주소에서는 파일 저장과 인쇄가 막혀 있다
 
+  /* 화면 조각을 바꿔 끼울 때 빈 것(null)은 건너뛴다 */
+  const nativeReplace = Element.prototype.replaceChildren;
+  Element.prototype.replaceChildren = function (...kids) {
+    return nativeReplace.apply(this, kids.flat().filter((k) => k != null && k !== false));
+  };
+
   /* ───────── 작은 도구들 ───────── */
   function h(tag, attrs, ...kids) {
     const el = document.createElement(tag);
@@ -42,16 +48,16 @@
   const DB_NAME = 'eye-training-note';
   let db = null;
   let storageOk = true;
-  const mem = { cards: new Map(), images: new Map(), diary: new Map(), meta: new Map(), series: new Map() };
+  const mem = { cards: new Map(), images: new Map(), diary: new Map(), meta: new Map(), series: new Map(), shotlists: new Map() };
 
   function openDB() {
     return new Promise((resolve) => {
       try {
-        const req = indexedDB.open(DB_NAME, 3);
+        const req = indexedDB.open(DB_NAME, 4);
         req.onupgradeneeded = () => {
           const d = req.result;
           if (!d.objectStoreNames.contains('cards')) d.createObjectStore('cards', { keyPath: 'id' });
-          for (const name of ['images', 'diary', 'meta', 'series']) if (!d.objectStoreNames.contains(name)) d.createObjectStore(name, { keyPath: 'id' });
+          for (const name of ['images', 'diary', 'meta', 'series', 'shotlists']) if (!d.objectStoreNames.contains(name)) d.createObjectStore(name, { keyPath: 'id' });
         };
         req.onsuccess = () => { db = req.result; resolve(); };
         req.onerror = () => { storageOk = false; resolve(); };
@@ -77,11 +83,11 @@
   };
 
   /* ───────── 카드 모양 ───────── */
-  function newCard(no) {
+  function newCard(no, type) {
     const now = Date.now();
     return {
       id: now.toString(36) + Math.random().toString(36).slice(2, 6),
-      no, type: 'still', mode: 'full',
+      no, type: type || 'still', mode: 'full',
       createdAt: now, updatedAt: now,
       date: today(), tags: [],
       image: { kind: 'none' }, thumb: '',
@@ -108,7 +114,7 @@
       { k: 'words', label: '떠오른 단어 3개', type: 'multi', n: 3, ph: '단어' },
       { k: 'score', label: '좋음 점수 (1~10)', type: 'scale' } ] },
     { id: 's2', title: '시선과 프레임', quick: true, fields: [
-      { k: 'gaze', label: '눈이 간 순서와 이유', type: 'rows', quick: true, rowLabels: ['①', '②', '③'],
+      { k: 'gaze', label: '눈이 간 순서와 이유', type: 'rows', quick: true, pins: true, rowLabels: ['①', '②', '③'],
         cols: [{ k: 'where', label: '눈이 간 곳', type: 'text' }, { k: 'why', label: '이유', type: 'choice', options: WHY }] },
       T('longest', '눈이 가장 오래 머문 곳', { quick: true }),
       { k: 'subjectPct', label: '주인공이 차지하는 비율 (약)', type: 'num', unit: '%' },
@@ -198,14 +204,14 @@
   function filled(c, st, f) {
     const v = val(c, st, f);
     if (f.type === 'multi') return v.every(has);
-    if (f.type === 'rows') return v.every((r) => f.cols.every((col) => has(r[col.k])));
+    if (f.type === 'rows') return v.every((r) => f.cols.every((col) => has(r[col.k]) || (f.pins && col.k === 'where' && r.x != null)));
     if (f.type === 'erase') return ERASE.every((n) => v[n] != null);
     return has(v);
   }
   function hasAny(c, st, f) {
     const v = val(c, st, f);
     if (f.type === 'multi') return v.some(has);
-    if (f.type === 'rows') return v.some((r) => f.cols.some((col) => has(r[col.k])));
+    if (f.type === 'rows') return v.some((r) => r.x != null || f.cols.some((col) => has(r[col.k])));
     if (f.type === 'erase') return ERASE.some((n) => v[n] != null);
     return has(v);
   }
@@ -239,6 +245,7 @@
     if (f.type === 'erase') return ERASE.filter((n) => v[n] != null).map((n) => `${n} ${v[n]}`).join(', ');
     if (f.type === 'rows') return v.map((r, i) => {
       const parts = f.cols.filter((col) => has(r[col.k])).map((col) => r[col.k] + (col.unit || ''));
+      if (f.pins && r.x != null && !has(r.where)) parts.unshift('이미지에 찍은 곳');
       return parts.length ? `${f.rowLabels[i]} ${parts.join(' — ')}` : '';
     }).filter(Boolean).join('\n');
     return has(v) ? String(v).trim() : '';
@@ -350,14 +357,22 @@
       const search = h('input', { class: 'text', id: 'search', type: 'search', placeholder: '검색: 태그나 내가 쓴 단어 (예: 역광, #90s)', value: listQuery,
         'aria-label': '카드 검색', oninput: () => { listQuery = search.value; draw(); } });
       const terms = () => listQuery.toLowerCase().split(/\s+/).filter(Boolean);
+      const videos = new Map();
+      for (const c of cards) { const k = videoKey(c); if (k) { const v = videos.get(k) || { name: videoName(c), n: 0 }; v.n++; videos.set(k, v); } }
+      if (listVideo && !videos.has(listVideo)) listVideo = '';
+      const vidBox = h('div', { class: 'tags' });
+      const vidRow = h('div', { class: 'field', hidden: true }, h('span', { class: 'label' }, '영상별 묶음 (누르면 그 영상의 컷만 타임코드 순으로)'), vidBox);
       function draw() {
         const ts = terms();
-        const hit = cards.filter((c) => {
+        const hit = (listVideo ? cards.filter((c) => videoKey(c) === listVideo).sort((a, b) => tcSec(a) - tcSec(b)) : cards).filter((c) => {
           const text = cardText(c);
           return ts.every((t) => t.startsWith('#') ? c.tags.some((x) => x.toLowerCase() === t.slice(1)) : text.includes(t));
         });
         sheet.replaceChildren(...hit.map(tile));
-        count.hidden = !ts.length;
+        count.hidden = !ts.length && !listVideo;
+        vidBox.replaceChildren(...[...videos].map(([key, v]) => h('button', { class: 'btn small' + (listVideo === key ? ' on' : ''), type: 'button', 'aria-pressed': String(listVideo === key),
+          onclick: () => { listVideo = listVideo === key ? '' : key; draw(); } }, `${v.name} `, h('span', { class: 'mono' }, `${v.n}컷`))));
+        vidRow.hidden = !videos.size;
         count.textContent = hit.length ? `${hit.length}장 찾았어요.` : '맞는 카드가 없어요. 다른 단어로 찾아보세요.';
         tagBox.replaceChildren(...[...tagCount].sort((a, b) => b[1] - a[1]).map(([t, n]) => {
           const on = ts.includes('#' + t.toLowerCase());
@@ -369,12 +384,13 @@
         }));
       }
       draw();
-      wrap.append(h('div', { class: 'searchbar' }, search, tagBox, count), sheet);
+      wrap.append(h('div', { class: 'searchbar' }, search, tagBox, vidRow, count), sheet);
     }
     app.replaceChildren(wrap);
     window.scrollTo(0, 0);
   }
   let listQuery = '';
+  let listVideo = '';
   function cardText(c) {
     const out = [c.date, c.source.text, ...c.tags];
     (function walk(v) {
@@ -394,7 +410,7 @@
     return h('button', { class: 'tile', onclick: () => { location.hash = 'card-' + c.id; } },
       pic,
       h('div', { class: 'meta mono' },
-        h('span', {}, `No.${pad(c.no, 3)} · ${c.date}`),
+        h('span', {}, c.type === 'video' ? `No.${pad(c.no, 3)} · 영상 ${(c.steps.video || {}).tc || ''}` : `No.${pad(c.no, 3)} · ${c.date}`),
         h('span', {}, c.steps.s1.score != null ? `${c.steps.s1.score}/10` : '')),
       h('div', { class: 'feel' }, feel ? `${feel}한 느낌` : '첫 반응을 아직 안 썼어요'),
       dueAgain(c) ? h('div', { class: 'due' }, '다시 볼 때가 됐어요') : null,
@@ -413,7 +429,12 @@
       cur = found; curPersisted = true;
     } else {
       const all = await store.all('cards');
-      cur = newCard(all.reduce((m, c) => Math.max(m, c.no || 0), 0) + 1);
+      cur = newCard(all.reduce((m, c) => Math.max(m, c.no || 0), 0) + 1, nextCut ? 'video' : 'still');
+      if (nextCut) {
+        cur.steps.video = { title: nextCut.title, url: nextCut.url };
+        cur.tags = [...nextCut.tags]; cur.source = { ...nextCut.source }; cur.trust = nextCut.trust;
+        nextCut = null;
+      }
       curPersisted = false;
     }
     await renderCard();
@@ -473,7 +494,7 @@
       h('div', { class: 'row' },
         h('button', { class: 'btn quiet', onclick: () => { location.hash = 'list'; } }, '← 목록'),
         curPersisted ? h('button', { class: 'btn quiet', id: 'to-view', onclick: () => { location.hash = 'view-' + c.id; } }, '한 장으로 보기') : null),
-      h('div', { class: 'slate mono' }, h('strong', {}, `No.${pad(c.no, 3)}`), h('span', {}, '스틸'), savedLabel)));
+      h('div', { class: 'slate mono' }, h('strong', {}, `No.${pad(c.no, 3)}`), h('span', {}, typeName(c)), savedLabel)));
 
     /* 왼쪽: 이미지 */
     const stage = h('div', { class: 'stage' });
@@ -481,7 +502,10 @@
       const link = h('input', { class: 'text', id: 'img-link', type: 'url', placeholder: '이미지 주소 붙여넣기 (https://…)',
         onkeydown: (e) => { if (e.key === 'Enter') takeLink(link.value); } });
       const drop = h('div', { class: 'drop' },
-        h('p', { class: 'big' }, '분석할 이미지 한 장'),
+        h('div', { class: 'seg', role: 'group', 'aria-label': '카드 종류' },
+          h('button', { class: 'btn small' + (c.type !== 'video' ? ' on' : ''), type: 'button', id: 'type-still', onclick: () => { c.type = 'still'; renderCard(); } }, '스틸'),
+          h('button', { class: 'btn small' + (c.type === 'video' ? ' on' : ''), type: 'button', id: 'type-video', onclick: () => { c.type = 'video'; renderCard(); } }, '영상 (뮤비 한 컷)')),
+        h('p', { class: 'big' }, c.type === 'video' ? '분석할 컷의 스크린샷 한 장' : '분석할 이미지 한 장'),
         picker('사진 고르기', 'btn solid'),
         h('p', {}, '여기로 끌어다 놓거나, 스크린샷을 복사한 뒤 붙여넣기(Ctrl+V / ⌘V) 해도 돼요.'),
         h('div', { class: 'linkrow' }, link,
@@ -509,6 +533,8 @@
     const body = h('div', { class: 'editor' }, stage);
     if (c.image.kind !== 'none') body.append(buildForm(c, {
       mySeries: (await store.all('series')).filter((x) => x.cardIds.includes(c.id)),
+      siblings: videoKey(c) ? (await store.all('cards')).filter((x) => x.id !== c.id && videoKey(x) === videoKey(c)).sort((a, b) => tcSec(a) - tcSec(b)) : [],
+      hasShots: !!(await store.get('shotlists', c.id)),
       origSrc: await cardImage(c),
       reImg: c.reshoot && c.reshoot.has ? ((await store.get('images', c.id + '-re')) || {}).data || '' : '',
     }));
@@ -523,7 +549,8 @@
   }
 
   /* 칸 하나 그리기 */
-  function buildField(c, st, f, changed) {
+  function buildField(c, st, f, changed, ctx) {
+    ctx = ctx || {};
     if (f.type === 'head') return h('h3', { class: 'subhead' }, f.label);
     const id = fid(st, f);
     const data = c.steps[st.id] || (c.steps[st.id] = {});
@@ -584,9 +611,17 @@
       draw();
       control = box;
     } else if (f.type === 'rows') {
-      control = h('div', { class: 'rows' }, data[f.k].map((row, i) =>
-        h('div', { class: 'rowitem' },
-          h('span', { class: 'rowlabel mono' }, f.rowLabels[i]),
+      const rowsData = data[f.k];
+      const usePins = !!(f.pins && ctx.origSrc);
+      let active = Math.max(0, rowsData.findIndex((r) => r.x == null));
+      let drawPins = () => {};
+      const labels = [];
+      const rowsEl = h('div', { class: 'rows' }, rowsData.map((row, i) => {
+        const lab = usePins
+          ? h('button', { class: 'rowlabel pinbtn mono', type: 'button', 'aria-label': `${i + 1}번 핀 찍기`, onclick: () => { active = i; drawPins(); } }, f.rowLabels[i])
+          : h('span', { class: 'rowlabel mono' }, f.rowLabels[i]);
+        labels.push(lab);
+        return h('div', { class: 'rowitem' }, lab,
           h('div', { class: 'rowcells' + (f.cols.some((col) => col.type === 'num') ? ' inline' : '') + (f.cols.some((col) => col.type === 'choice') ? ' joined' : '') }, f.cols.map((col) => {
             const al = `${f.rowLabels[i]} ${col.label}`;
             if (col.type === 'choice') {
@@ -596,8 +631,43 @@
               return bar;
             }
             if (col.type === 'num') return numInput(() => row[col.k], (v) => { row[col.k] = v; }, col.unit, { 'aria-label': al });
-            return textInput(() => row[col.k], (v) => { row[col.k] = v; }, { placeholder: col.label, 'aria-label': al, id: `${dom}-${i + 1}-${col.k}` });
-          })))));
+            return textInput(() => row[col.k], (v) => { row[col.k] = v; },
+              { placeholder: usePins && col.k === 'where' ? '눈이 간 곳 (핀을 찍었으면 안 써도 돼요)' : col.label, 'aria-label': al, id: `${dom}-${i + 1}-${col.k}` });
+          })));
+      }));
+      if (usePins) {
+        const layer = h('div', { class: 'pinlayer' });
+        const img = h('img', { src: ctx.origSrc, alt: '시선 지도: 눌러서 핀 찍기', draggable: false });
+        const map = h('div', { class: 'gazemap', id: dom + '-map' }, img, layer);
+        const hint = h('p', { class: 'note' });
+        const clear = h('button', { class: 'btn small quiet', type: 'button', onclick: () => {
+          rowsData.forEach((r) => { delete r.x; delete r.y; }); active = 0; drawPins(); changed();
+        } }, '핀 모두 지우기');
+        img.onerror = () => { map.remove(); hint.remove(); clear.remove(); };
+        map.addEventListener('click', (e) => {
+          if (set.disabled) return;
+          const r = img.getBoundingClientRect();
+          const clamp = (n) => Math.round(Math.min(1, Math.max(0, n)) * 1000) / 1000;
+          rowsData[active].x = clamp((e.clientX - r.left) / r.width);
+          rowsData[active].y = clamp((e.clientY - r.top) / r.height);
+          const next = rowsData.findIndex((q) => q.x == null);
+          if (next >= 0) active = next;
+          drawPins(); changed();
+        });
+        drawPins = () => {
+          layer.replaceChildren(...pinLayerContent(rowsData, active));
+          labels.forEach((l, i) => { l.classList.toggle('on', i === active); l.classList.toggle('pinned', rowsData[i].x != null); });
+          const left = rowsData.filter((q) => q.x == null).length;
+          hint.textContent = left
+            ? `이미지에서 ${f.rowLabels[active]}번째로 눈이 간 곳을 눌러요. 누른 순서대로 핀이 꽂혀요.`
+            : `핀을 다 찍었어요. 고치려면 아래 번호(①②③)를 누른 뒤 이미지를 다시 눌러요.`;
+          clear.hidden = left === rowsData.length;
+        };
+        drawPins();
+        control = h('div', { class: 'stepbody tight' }, map, h('div', { class: 'fieldtop' }, hint, clear), rowsEl);
+      } else {
+        control = rowsEl;
+      }
     } else if (f.type === 'erase') {
       const core = h('div', { class: 'core', hidden: true });
       const drawCore = () => {
@@ -640,13 +710,24 @@
       top.append(btn);
     }
     holder.append(top, set);
+    if (f.type === 'feel') {
+      const help = h('div', { class: 'stuck', hidden: true },
+        h('p', {}, '느낌을 한 번에 꺼내려 하지 말고, 하나만 골라 답해 봐요.'),
+        h('ul', {}, ['온도는? 만지면 어떨 것 같나', '무게는? 가라앉나, 떠 있나', '속도는? 멈춰 있나, 움직이나', '소리는? 조용한가, 시끄러운가', '촉감은? 손끝에 뭐가 닿나', '거리는? 가까운가, 먼가',
+          '이 이미지에 깔릴 곡은 어떤 소리인가'].map((q) => h('li', {}, q))),
+        h('p', {}, '틀려도 돼요. 아무 단어나 먼저 쓰고, 그다음에 고쳐요.'));
+      const btn = h('button', { class: 'btn small quiet', type: 'button', id: dom + '-stuck', 'aria-expanded': 'false',
+        onclick: () => { help.hidden = !help.hidden; btn.setAttribute('aria-expanded', String(!help.hidden)); } }, '막혔어요');
+      top.append(btn);
+      holder.append(help);
+    }
     if (extra) holder.append(extra);
     if (texts.length) watchVague(texts, holder);
     return holder;
   }
 
   function buildForm(c, ctx) {
-    const { mySeries = [], pass2 = null, origSrc = '', reImg = '' } = ctx || {};
+    const { mySeries = [], pass2 = null, origSrc = '', reImg = '', siblings = [], hasShots = false } = ctx || {};
     const form = h('div', { class: 'form' });
     let refresh = () => {};
     const changed = () => { refresh(); touch(); };
@@ -709,6 +790,28 @@
 
     /* ── 쓰는 방식: 전체 / 빠른 버전 ── */
     const setMode = async (m) => { if (c.mode === m) return; c.mode = m; await saveNow(); await renderCard(); };
+    /* ── 영상 정보 (영상 카드만) ── */
+    if (!pass2 && c.type === 'video') {
+      const vd = c.steps.video || (c.steps.video = {});
+      const open = h('div', { class: 'seg' });
+      const drawOpen = () => open.replaceChildren(
+        /^https?:\/\//i.test((vd.url || '').trim()) ? h('a', { class: 'btn small', href: vd.url.trim(), target: '_blank', rel: 'noopener' }, '영상 열기') : null,
+        h('button', { class: 'btn small', type: 'button', id: 'next-cut', onclick: async () => {
+          await saveNow();
+          nextCut = { title: vd.title || '', url: vd.url || '', tags: c.tags, source: c.source, trust: c.trust };
+          location.hash = 'new';
+        } }, '이 영상에서 다음 컷 분석하기'));
+      drawOpen();
+      const vChanged = () => { drawOpen(); touch(); };
+      form.append(h('section', { class: 'sec', id: 'video-info' },
+        h('header', {}, h('h2', {}, '영상 정보')),
+        VIDEO_STEP.fields.map((f) => buildField(c, VIDEO_STEP, f, vChanged)),
+        open,
+        siblings.length ? h('div', { class: 'field' }, h('span', { class: 'label' }, `같은 영상의 다른 컷 ${siblings.length}개 (타임코드 순)`),
+          h('div', { class: 'cutstrip' }, siblings.map((x) => h('button', { class: 'cutmini', type: 'button', onclick: () => { location.hash = 'card-' + x.id; } },
+            cardSrc(x) ? h('img', { src: cardSrc(x), alt: '', loading: 'lazy' }) : null,
+            h('span', { class: 'mono' }, (x.steps.video || {}).tc || `No.${pad(x.no, 3)}`))))) : null));
+    }
     if (!pass2) form.append(h('div', { class: 'field' },
       h('span', { class: 'label' }, '쓰는 방식'),
       h('div', { class: 'seg', role: 'group', 'aria-label': '쓰는 방식' },
@@ -739,7 +842,7 @@
         u.estimate = h('div', { class: 'nudge' }, '출처를 모르는 이미지예요. 감독의 의도는 "추정"이라고 구분해서 쓰세요.');
         u.body.append(u.estimate);
       }
-      for (const f of visibleFields(c, u.st)) u.body.append(buildField(c, u.st, f, changed));
+      for (const f of visibleFields(c, u.st)) u.body.append(buildField(c, u.st, f, changed, { origSrc }));
       u.built = true;
     }
 
@@ -841,7 +944,12 @@
     if (!pass2) drawReshoot(reImg);
 
     form.append(unkSec, finish);
-    if (!pass2) form.append(rvSec, agSec, rsSec);
+    const shSec = h('section', { class: 'sec step', id: 'shots' },
+      h('header', {}, h('h2', {}, '샷리스트'), h('span', { class: 'chip-state' + (hasShots ? ' done' : '') }, hasShots ? '있음' : '아직 없음')),
+      h('div', { class: 'stepbody' },
+        h('p', { class: 'note' }, '이 카드를 레퍼런스로 5샷짜리 샷리스트를 짜고, PDF 한 장으로 뽑아요.'),
+        h('div', {}, h('button', { class: 'btn', type: 'button', id: 'go-shots', onclick: () => { location.hash = 'shots-' + c.id; } }, hasShots ? '샷리스트 열기' : '5샷 샷리스트 만들기'))));
+    if (!pass2) form.append(rvSec, agSec, rsSec, shSec);
 
     refresh = () => {
       let blocked = false;
@@ -917,11 +1025,12 @@
     const s11 = c.steps.s11 || {};
     const page = h('article', { class: 'onepage' });
     page.append(h('header', { class: 'opHead' },
-      h('div', { class: 'mono' }, `No.${pad(c.no, 3)} · 스틸 · ${c.date}` + (c.mode === 'quick' ? ' · 빠른 버전' : '')),
+      h('div', { class: 'mono' }, `No.${pad(c.no, 3)} · ${typeName(c)} · ${c.date}` + (c.mode === 'quick' ? ' · 빠른 버전' : '')),
       h('div', {}, [c.source.unknown ? '출처 모름' : c.source.text.trim(), trustName ? `신뢰도: ${trustName}` : '', c.tags.map((t) => '#' + t).join(' ')]
         .filter(Boolean).join('  ·  '))));
     const lead = h('div', { class: 'opLead' });
-    if (src) lead.append(h('img', { src, alt: '', onerror: (e) => e.target.remove() }));
+    const gz = (c.steps.s2 || {}).gaze || [];
+    if (src) lead.append(gz.some((r) => r.x != null) ? gazeFigure(src, gz) : h('img', { src, alt: '', onerror: (e) => e.target.remove() }));
     const leadText = h('div', { class: 'opLeadText' });
     if (has(s11.final)) leadText.append(h('p', { class: 'opFinal' }, s11.final.trim()));
     if (core.length) leadText.append(h('p', {}, h('span', { class: 'label' }, '핵심 요소 '), h('strong', {}, core.join(' · '))));
@@ -930,7 +1039,7 @@
 
     const cols = h('div', { class: 'opCols' });
     const unk = [];
-    for (const st of STEPS) {
+    for (const st of allSteps(c)) {
       const rows = [];
       for (const f of st.fields) {
         if (f.type === 'head') continue;
@@ -962,6 +1071,7 @@
     await store.del('cards', id);
     await store.del('images', id);
     await store.del('images', id + '-re');
+    await store.del('shotlists', id);
     for (const x of await store.all('series')) {
       if (x.cardIds.includes(id)) { x.cardIds = x.cardIds.filter((y) => y !== id); delete x.differ[id]; await store.put('series', x); }
     }
@@ -1254,6 +1364,150 @@
     window.scrollTo(0, 0);
   }
 
+  /* ───────── 영상 카드 ───────── */
+  const VIDEO_STEP = { id: 'video', title: '영상 정보', noUnknown: true, fields: [
+    T('title', '영상 제목 (아티스트 - 곡)'),
+    T('url', '영상 링크'),
+    T('tc', '타임코드 (예: 1:23)'),
+    C('section', '곡 구간', ['인트로', '벌스', '후렴', '브릿지', '아웃트로']),
+    { k: 'len', label: '샷 길이', type: 'num', unit: '초' },
+    C('trans', '전환 방식', ['컷', '디졸브', '매치컷', '기타']),
+    C('move', '카메라 움직임', ['고정', '푸시인', '패닝', '핸드헬드', '기타']),
+    C('kind', '샷 종류', ['퍼포먼스', '내러티브']),
+    T('beat', '비트와 컷이 맞는 지점'),
+    T('around', '이 컷 앞뒤에 오는 컷') ] };
+  const allSteps = (c) => (c.type === 'video' ? [VIDEO_STEP, ...STEPS] : STEPS);
+  const typeName = (c) => (c.type === 'video' ? '영상' : '스틸');
+  function videoKey(c) {
+    if (c.type !== 'video') return '';
+    const v = c.steps.video || {};
+    const url = (v.url || '').trim();
+    const yt = url.match(/(?:youtu\.be\/|[?&]v=|\/shorts\/|\/embed\/)([\w-]{6,})/);
+    if (yt) return 'yt:' + yt[1];
+    if (url) return url.replace(/[?#].*$/, '').replace(/\/$/, '').toLowerCase();
+    return has(v.title) ? 'title:' + v.title.trim().toLowerCase() : '';
+  }
+  const videoName = (c) => { const v = c.steps.video || {}; return has(v.title) ? v.title.trim() : (v.url || '').replace(/^https?:\/\/(www\.)?/, '').slice(0, 40) || '제목 없는 영상'; };
+  const tcSec = (c) => String((c.steps.video || {}).tc || '').split(':').reduce((a, x) => a * 60 + (parseFloat(x) || 0), 0);
+  let nextCut = null; // "다음 컷 분석하기"를 눌렀을 때 새 카드에 미리 넣을 것
+
+  /* 이미지 위 시선 핀 (읽기 전용 그림) */
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  function pinLayerContent(gaze, activeIndex) {
+    const pts = gaze.map((r, i) => (r.x != null ? { x: r.x, y: r.y, i } : null)).filter(Boolean);
+    const out = [];
+    if (pts.length > 1) {
+      const svg = document.createElementNS(SVGNS, 'svg');
+      svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none');
+      const line = document.createElementNS(SVGNS, 'polyline');
+      line.setAttribute('points', pts.map((q) => `${q.x * 100},${q.y * 100}`).join(' '));
+      line.setAttribute('fill', 'none'); line.setAttribute('vector-effect', 'non-scaling-stroke');
+      svg.append(line); out.push(svg);
+    }
+    for (const q of pts) out.push(h('span', { class: 'pin mono' + (q.i === activeIndex ? ' on' : ''), style: `left:${q.x * 100}%;top:${q.y * 100}%` }, q.i + 1));
+    return out;
+  }
+  function gazeFigure(src, gaze) {
+    const layer = h('div', { class: 'pinlayer' }, pinLayerContent(gaze, -1));
+    const fig = h('div', { class: 'gazemap static' }, h('img', { src, alt: '', onerror: () => fig.remove() }), layer);
+    return fig;
+  }
+
+  /* ───────── 샷리스트 ───────── */
+  const SHOT_HEIGHT = ['바닥', '허리', '눈높이', '위'];
+  const SHOT_MOVE = ['고정', '푸시인', '패닝', '핸드헬드', '기타'];
+  function pickOne(options, get, set, label) {
+    const box = h('div', { class: 'seg', role: 'group', 'aria-label': label });
+    const draw = () => box.replaceChildren(...options.map((o) =>
+      h('button', { class: 'btn small' + (get() === o ? ' on' : ''), type: 'button', 'aria-pressed': String(get() === o),
+        onclick: () => { set(get() === o ? '' : o); draw(); } }, o)));
+    draw();
+    return box;
+  }
+  async function showShots(cardId) {
+    if (saveTimer) await saveNow();
+    const c = await store.get('cards', cardId);
+    if (!c) { toast('그 카드를 찾을 수 없어요.'); location.hash = 'list'; return; }
+    cur = null; savedLabel = null;
+    let sl = await store.get('shotlists', cardId);
+    let persisted = !!sl;
+    if (!sl) sl = { id: cardId, title: '', shots: Array.from({ length: 5 }, () => ({ sketch: '', note: '', height: '', move: '', len: '' })), createdAt: Date.now() };
+    const src = await cardImage(c);
+    const status = h('span', { class: 'saved mono' }, persisted ? '자동 저장됨' : '쓰기 시작하면 저장돼요');
+    const total = h('strong', { class: 'mono' });
+    const sheet = h('div', { class: 'printonly shotsheet' });
+    let timer = null;
+    const sum = () => sl.shots.reduce((a, s) => a + (parseFloat(s.len) || 0), 0);
+    const save = async () => { clearTimeout(timer); timer = null; await store.put('shotlists', sl); status.textContent = `자동 저장됨 ${clock()}`; };
+    const changed = () => {
+      persisted = true; status.textContent = '저장 중…';
+      total.textContent = `${sum()}초`;
+      drawSheet();
+      clearTimeout(timer); timer = setTimeout(save, 400);
+    };
+    flushPage = async () => { if (timer) await save(); };
+    function drawSheet() {
+      sheet.replaceChildren(
+        h('header', {},
+          h('div', {}, h('h1', {}, sl.title.trim() || '샷리스트'),
+            h('p', { class: 'mono' }, `${today()} · 5 SHOTS · 총 ${sum()}초`),
+            h('p', {}, `레퍼런스: 눈 훈련 노트 No.${pad(c.no, 3)}` + (has(c.steps.s1.feel) ? ` · ${c.steps.s1.feel.trim()}한 느낌` : ''))),
+          src ? h('img', { src, alt: '' }) : null),
+        h('table', {},
+          h('thead', {}, h('tr', {}, ['샷', '스케치', '무슨 장면', '카메라 높이', '움직임', '길이'].map((t) => h('th', {}, t)))),
+          h('tbody', {}, sl.shots.map((s, i) => h('tr', {},
+            h('td', { class: 'mono n' }, i + 1),
+            h('td', { class: 'sk' }, s.sketch ? h('img', { src: s.sketch, alt: '' }) : null),
+            h('td', {}, s.note), h('td', {}, s.height), h('td', {}, s.move),
+            h('td', { class: 'mono' }, has(s.len) ? `${s.len}초` : ''))))));
+    }
+    const title = h('input', { class: 'text sName', id: 'shots-title', value: sl.title, placeholder: '샷리스트 제목 (곡이나 프로젝트 이름)', maxLength: 60,
+      oninput: () => { sl.title = title.value; changed(); } });
+    const shots = sl.shots.map((s, i) => {
+      const pic = h('div', { class: 'sketch' });
+      const input = h('input', { type: 'file', accept: 'image/*', hidden: true, onchange: async () => {
+        const f = input.files[0]; input.value = '';
+        if (!f || !f.type.startsWith('image/')) { toast('사진 파일만 올릴 수 있어요.'); return; }
+        const url = URL.createObjectURL(f);
+        try { s.sketch = shrink(await loadImg(url), 700, 0.85); drawPic(); changed(); }
+        catch (e) { toast('이 파일은 사진으로 읽을 수 없어요.'); }
+        finally { URL.revokeObjectURL(url); }
+      } });
+      const drawPic = () => pic.replaceChildren(input,
+        s.sketch ? h('img', { src: s.sketch, alt: `샷 ${i + 1} 스케치` }) : null,
+        h('button', { class: 'btn small quiet', type: 'button', onclick: () => input.click() }, s.sketch ? '스케치 바꾸기' : '스케치 올리기'));
+      drawPic();
+      const note = h('input', { class: 'text', id: `shot-${i + 1}-note`, value: s.note, placeholder: '무슨 장면인지 한 줄', 'aria-label': `샷 ${i + 1} 장면`,
+        oninput: () => { s.note = note.value; changed(); } });
+      const len = h('input', { class: 'text mono num', id: `shot-${i + 1}-len`, type: 'number', inputMode: 'decimal', min: 0, step: 'any', value: s.len, 'aria-label': `샷 ${i + 1} 길이`,
+        oninput: () => { s.len = len.value; changed(); } });
+      const hBox = pickOne(SHOT_HEIGHT, () => s.height, (v) => { s.height = v; changed(); }, `샷 ${i + 1} 카메라 높이`);
+      const mBox = pickOne(SHOT_MOVE, () => s.move, (v) => { s.move = v; changed(); }, `샷 ${i + 1} 움직임`);
+      return h('section', { class: 'sec' }, h('header', {}, h('h2', {}, h('span', { class: 'mono stepno' }, pad(i + 1)), `샷 ${i + 1}`)),
+        h('div', { class: 'shot' }, pic,
+          h('div', { class: 'stepbody' },
+            h('div', { class: 'field' }, note),
+            h('div', { class: 'field' }, h('span', { class: 'label' }, '카메라 높이'), hBox),
+            h('div', { class: 'field' }, h('span', { class: 'label' }, '움직임'), mBox),
+            h('div', { class: 'field' }, h('span', { class: 'label' }, '길이'), h('span', { class: 'numwrap' }, len, h('span', { class: 'label' }, '초'))))));
+    });
+    total.textContent = `${sum()}초`;
+    drawSheet();
+    app.replaceChildren(h('div', { class: 'wrap' },
+      h('div', { class: 'bar noprint' },
+        h('button', { class: 'btn quiet', onclick: () => { location.hash = 'card-' + c.id; } }, '← 카드로 돌아가기'),
+        h('div', { class: 'row' }, status,
+          PREVIEW ? null : h('button', { class: 'btn solid', id: 'shots-print', onclick: () => window.print() }, 'PDF 한 장으로 뽑기'))),
+      h('div', { class: 'editor noprint' },
+        h('div', { class: 'stage' }, h('div', { class: 'frame' }, src ? h('img', { src, alt: '레퍼런스 이미지' }) : h('div', { class: 'linkfail' }, '이미지 없음')),
+          h('div', { class: 'under' }, h('span', { class: 'label mono' }, `레퍼런스 No.${pad(c.no, 3)}`), h('span', {}, h('span', { class: 'label' }, '총 길이 '), total))),
+        h('div', { class: 'form' }, title,
+          PREVIEW ? h('div', { class: 'nudge' }, '미리보기 주소에서는 PDF 저장이 막혀 있어요. 정식 주소에서는 위에 버튼이 보여요.') : null,
+          shots)),
+      sheet));
+    window.scrollTo(0, 0);
+  }
+
   /* ───────── 재분석(2차)과 재현 촬영 ───────── */
   const DAY = 86400000;
   const cardDone = (c) => progress(c).done;
@@ -1283,7 +1537,7 @@
     const end = h('div', { class: 'finish', hidden: true },
       h('p', { class: 'note' }, '2차를 다 썼어요. 이제 1차와 나란히 놓고 봐요.'),
       h('button', { class: 'btn solid', type: 'button', id: 'to-compare', onclick: () => { location.hash = 'compare-' + c.id; } }, '1차와 2차 나란히 보기'));
-    const form = buildForm(secondView(c), { pass2: (allDone) => { end.hidden = !allDone; } });
+    const form = buildForm(secondView(c), { origSrc: src, pass2: (allDone) => { end.hidden = !allDone; } });
     form.prepend(h('div', { class: 'nudge' }, '1차에 쓴 답은 가려 뒀어요. 처음 보는 이미지처럼 새 눈으로 다시 써요.'));
     form.append(end);
     app.replaceChildren(h('div', { class: 'wrap' },
@@ -1345,13 +1599,13 @@
   }
 
   /* ───────── 백업과 내보내기 ───────── */
-  const STORES = ['cards', 'images', 'diary', 'meta', 'series'];
+  const STORES = ['cards', 'images', 'diary', 'meta', 'series', 'shotlists'];
   const trustLabel = (c) => (TRUST.find(([k]) => k === c.trust) || [])[1] || '';
   function cardMarkdown(c, forAi) {
     const L = [];
     L.push(`# 눈 훈련 노트 No.${pad(c.no, 3)}`, '');
     L.push(`- 날짜: ${c.date}`);
-    L.push(`- 종류: 스틸 · ${c.mode === 'quick' ? '빠른 버전' : '전체 버전'}`);
+    L.push(`- 종류: ${typeName(c)} · ${c.mode === 'quick' ? '빠른 버전' : '전체 버전'}`);
     if (c.tags.length) L.push(`- 태그: ${c.tags.map((t) => '#' + t).join(' ')}`);
     L.push(`- 출처: ${c.source.unknown ? '모름' : (c.source.text.trim() || '(안 씀)')}` + (trustLabel(c) ? ` (신뢰도: ${trustLabel(c)})` : ''));
     if (c.image.kind === 'url') L.push('', `![이미지](${c.image.url})`);
@@ -1360,7 +1614,7 @@
     const core = coreElements(c);
     if (core.length) L.push('', `**이 이미지의 핵심 요소**: ${core.join(' · ')}`);
     const unk = [];
-    for (const st of STEPS) {
+    for (const st of allSteps(c)) {
       const rows = [];
       for (const f of st.fields) {
         if (f.type === 'head') continue;
@@ -1494,7 +1748,7 @@
           usedNo.add(c.no); max = Math.max(max, c.no || 0);
           await store.put('cards', c);
         }
-        for (const s of ['images', 'diary', 'series', 'meta']) for (const rec of (data[s] || [])) await store.put(s, rec);
+        for (const s of ['images', 'diary', 'series', 'meta', 'shotlists']) for (const rec of (data[s] || [])) await store.put(s, rec);
         toast('불러왔어요.');
         location.hash = 'list';
       } catch (e) {
@@ -1557,6 +1811,7 @@
       return showCard(id);
     }
     if (name.startsWith('view-')) return showView(name.slice(5));
+    if (name.startsWith('shots-')) return showShots(name.slice(6));
     if (name.startsWith('again-')) return showAgain(name.slice(6));
     if (name.startsWith('compare-')) return showCompare(name.slice(8));
     return showList();

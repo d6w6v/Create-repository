@@ -396,3 +396,52 @@ body { letter-spacing: -0.01em; }
 .segbar .btn.on { box-shadow: none; }
 .rows:has(.joined) { gap: 10px; }
 .rows:has(.joined) .rowlabel { padding-top: 11px; }
+
+/* ── 7단계 추가: 막혔어요, 시선 핀, 영상 카드, 샷리스트 ── */
+.stuck { border: 1.5px dashed var(--ink); border-radius: 8px; padding: 10px 14px; font-size: var(--fs-s); }
+.stuck p { margin: 0; }
+.stuck ul { margin: 6px 0; padding-left: 1.2em; }
+.stepbody.tight { gap: 10px; }
+.gazemap { position: relative; align-self: flex-start; max-width: 100%; line-height: 0; cursor: crosshair; border: 1.5px solid var(--ink); border-radius: 4px; overflow: hidden; touch-action: manipulation; }
+.gazemap img { display: block; max-width: 100%; max-height: 52vh; }
+.gazemap.static { cursor: default; }
+.pinlayer { position: absolute; inset: 0; pointer-events: none; }
+.pinlayer svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pinlayer polyline { stroke: #fff; stroke-width: 2.5; stroke-dasharray: 6 4; filter: drop-shadow(0 0 1px #000); }
+.pin { position: absolute; transform: translate(-50%, -50%); width: 26px; height: 26px; border-radius: 50%; background: #fff; color: #111; border: 2px solid #111; display: flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; box-shadow: 0 0 0 2px #fff; }
+.pin.on { background: #ffe34d; }
+.pinbtn { border: 1.5px solid var(--ink); border-radius: 50%; background: var(--paper); color: var(--ink); width: 30px; height: 30px; min-width: 30px; padding: 0 !important; margin-top: 6px; display: flex; align-items: center; justify-content: center; }
+.pinbtn.pinned { background: var(--panel); }
+.pinbtn.on { background: var(--ink); color: var(--paper); }
+.fieldtop .note { margin: 0; }
+.cutstrip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.cutmini { flex: none; border: 0; background: none; padding: 0; display: flex; flex-direction: column; gap: 2px; align-items: flex-start; color: var(--ink); }
+.cutmini img { height: 64px; width: auto; display: block; border: 1.5px solid var(--ink); border-radius: 4px; }
+.cutmini span { font-size: 0.62rem; }
+a.btn { text-decoration: none; display: inline-flex; align-items: center; }
+.sec > .seg { margin-top: 2px; }
+.sec#video-info { gap: 18px; padding-top: 0; }
+.sec#video-info > .field:first-of-type { margin-top: 16px; }
+.shot { display: grid; gap: 14px; padding-top: 16px; }
+.shot > * { min-width: 0; }
+@media (min-width: 520px) { .shot { grid-template-columns: 150px minmax(0, 1fr); } }
+.sketch { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.sketch img { display: block; width: 100%; border: 1.5px solid var(--ink); border-radius: 4px; background: var(--panel); }
+.printonly { display: none; }
+@media print {
+  .printonly { display: block; }
+  .shotsheet { color: #000; font-size: 11pt; font-family: var(--font-body); }
+  .shotsheet header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-end; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 12px; }
+  .shotsheet h1 { margin: 0 0 4px; font-size: 22pt; letter-spacing: -0.02em; }
+  .shotsheet header p { margin: 2px 0 0; font-size: 9.5pt; }
+  .shotsheet header img { max-height: 34mm; max-width: 60mm; border: 1px solid #000; }
+  .shotsheet table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .shotsheet th { text-align: left; font-size: 8.5pt; border-bottom: 1px solid #000; padding: 4px 6px; font-weight: 600; }
+  .shotsheet td { border-bottom: 1px solid #999; padding: 6px; vertical-align: top; font-size: 10.5pt; height: 36mm; overflow-wrap: anywhere; }
+  .shotsheet th:nth-child(1) { width: 8%; } .shotsheet th:nth-child(2) { width: 27%; } .shotsheet th:nth-child(3) { width: 31%; }
+  .shotsheet th:nth-child(4), .shotsheet th:nth-child(5) { width: 12%; } .shotsheet th:nth-child(6) { width: 10%; }
+  .shotsheet td.n { font-size: 16pt; }
+  .shotsheet td.sk img { max-width: 100%; max-height: 33mm; display: block; }
+}
+.pin { font-family: var(--font-body); font-weight: 700; text-transform: none; }
+.fieldtop .btn { white-space: nowrap; flex: none; }
