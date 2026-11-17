@@ -522,129 +522,194 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
 .nudge, .due { border-radius: 6px; }
 
 /* ════════════════════════════════════════════════════════════
-   시네마 스킨 — 불 꺼진 상영관. 검은 바탕에 이미지가 스크린처럼 뜨고,
-   70년대 디스코 앨범의 노을빛(자홍→주황→노랑) 한 줄기가 고른 것과 끝낸 것에만 들어온다.
-   배치는 그대로. 한 가지 모습(어두운 화면)으로만 간다.
+   디자인 시안들 — 백업 탭의 "디자인"에서 골라 쓴다. 기본은 위의 깔끔한 모양.
    ════════════════════════════════════════════════════════════ */
-:root, :root:not([data-theme="light"]), :root[data-theme] {
-  --bg: #0b0a0c; --paper: #17161a; --ink: #f6f2ea; --mute: #a59fab; --line: #2e2b33; --panel: #211f25;
-  --mark: rgba(255, 210, 63, 0.14); --mark-ink: #ffd965;
-  --ring: rgba(255, 138, 31, 0.32);
-  --hot: #ff3d81; --warm: #ff8a1f; --gold: #ffd23f; --on-grad: #1a0a00;
-  --grad: linear-gradient(100deg, var(--hot), var(--warm) 55%, var(--gold));
-  --font-display: "Black Han Sans", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-  --font-num: "Anton", "Black Han Sans", Impact, sans-serif;
-  color-scheme: dark;
+
+/* ── 시안 1. 매거진: 사진 잡지 지면. 상자 없이 굵은 줄과 큰 명조 글씨, 흰 종이 ── */
+html[data-skin="editorial"]:root {
+  --bg: #ffffff; --paper: #ffffff; --ink: #111111; --mute: #777777; --line: #111111; --panel: #f3f3f3;
+  --mark: #fff0a6; --mark-ink: #4a3d00; --ring: rgba(0, 0, 0, 0.1); --r: 0px; color-scheme: light;
+  --serif: "Noto Serif KR", "Nanum Myeongjo", "AppleMyungjo", serif; --num: "Playfair Display", "Noto Serif KR", serif;
 }
-body {
-  background:
-    radial-gradient(900px 420px at 12% -8%, rgba(255, 61, 129, 0.17), transparent 62%),
-    radial-gradient(800px 420px at 92% -4%, rgba(255, 138, 31, 0.13), transparent 62%),
-    var(--bg);
-  background-repeat: no-repeat;
-}
-body::after { /* 필름 입자 */
-  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 5; opacity: 0.07; mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* 제목과 숫자: 영화 포스터 글씨 */
-.top { padding-bottom: 18px; margin-bottom: 26px; position: relative; }
-.top::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--grad); border-radius: 0; outline: 0; }
-.top h1 { font-family: var(--font-display); font-weight: 400; font-size: 2.5rem; letter-spacing: -0.01em; line-height: 1.15;
-  background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: 0.1em; }
-.top .sub { color: var(--mute); }
-.sec h2, .lookh { font-family: var(--font-display); font-weight: 400; letter-spacing: 0; }
-.sec h2 { font-size: 1.2rem; }
-.lookh { font-size: 1.7rem; }
-.stepno { font-family: var(--font-num); font-size: 1.25rem; letter-spacing: 0.03em; margin-right: 12px;
-  background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.step.locked .stepno { background: none; color: var(--line); }
-.mono { font-family: var(--font-num); letter-spacing: 0.05em; font-size: 0.95em; font-weight: 400; }
-.saved.mono, .label.mono { font-family: var(--font-body); letter-spacing: 0; font-size: 0.8125rem; }
-.roadnum, .dStats strong.mono { font-family: var(--font-num); font-weight: 400; font-size: 3rem; letter-spacing: 0.01em; line-height: 1;
-  background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.roadnum .label { -webkit-text-fill-color: var(--mute); font-family: var(--font-body); font-size: 0.875rem; letter-spacing: 0; }
-.roadtile.reached .roadnum::after { -webkit-text-fill-color: var(--on-grad); background: var(--gold); font-family: var(--font-body); }
-.sName { font-family: var(--font-display); font-weight: 400; }
-.feelline { font-family: var(--font-display); font-weight: 400; font-size: 1.35rem; }
-.feelline .text { font-family: var(--font-body); font-weight: 600; font-size: 1.15rem; }
-.opFinal { font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; line-height: 1.35; }
-
-/* 카드 */
-.sec, .roadtile, .dStats > div, .sRow, .onepage {
-  background: linear-gradient(180deg, #1b1a1f, var(--paper)); border: 1px solid var(--line); border-radius: 16px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 40px -22px rgba(0, 0, 0, 0.9);
-}
-.sec > header { border-bottom-color: var(--line); }
-.step.locked { background: transparent; box-shadow: none; border-style: dashed; }
-.step.locked h2 { font-family: var(--font-body); font-weight: 500; font-size: 1rem; }
-
-/* 버튼 */
-.btn { background: #201e24; border: 1px solid #38343f; color: var(--ink); }
-.btn:hover { background: #29262e; border-color: var(--warm); }
-.btn.quiet { background: #201e24; border-color: transparent; }
-.btn.solid, .btn.on, .btn.quiet.on { background: var(--grad); border-color: transparent; color: var(--on-grad); font-weight: 700; }
-.btn.solid:hover, .btn.on:hover { background: var(--grad); opacity: 1; filter: brightness(1.08); }
-.btn.solid { box-shadow: 0 8px 26px -8px rgba(255, 90, 60, 0.7); }
-.tabs { background: #1a181d; border: 1px solid var(--line); }
-.tab { color: var(--mute); }
-.tab.on { background: var(--grad); color: var(--on-grad); font-weight: 700; box-shadow: 0 6px 18px -8px rgba(255, 90, 60, 0.8); }
-.chip-state { background: #25222a; color: var(--mute); }
-.chip-state.done { background: var(--grad); color: var(--on-grad); font-weight: 700; }
-.score .btn { font-family: var(--font-num); font-size: 1.15rem; }
-.segbar { background: #131216; border-color: #38343f; }
-.segbar .btn { border-right-color: #2a2730; background: transparent; }
-.segbar .btn:hover { border-color: #2a2730; }
-.segbar .btn.on, .pinbtn.on { background: var(--grad); color: var(--on-grad); border-color: transparent; font-weight: 700; }
-.pinbtn { background: #201e24; border-color: #38343f; color: var(--ink); }
-.pinbtn.pinned { background: #2e2b33; }
-.mini { background: #25222a; color: var(--ink); }
-
-/* 글 쓰는 칸 */
-.text { background: #100f12; border: 1px solid #38343f; color: var(--ink); }
-.text::placeholder { color: #6f6a76; opacity: 1; }
-.text:focus { border-color: var(--warm); box-shadow: 0 0 0 4px var(--ring); }
-.sName { background: transparent; border: 0; border-bottom: 1px solid var(--line); }
-.sName:focus { box-shadow: none; border-color: var(--warm); }
-:focus-visible { outline-color: var(--gold); }
-
-/* 이미지: 스크린처럼 */
-.stage .frame { background: #000; border-radius: 14px; box-shadow: 0 30px 70px -30px rgba(255, 90, 60, 0.35), 0 0 0 1px var(--line); }
-.tile .pic, .tile .nopic { border-radius: 10px; background: #000; box-shadow: 0 14px 30px -18px #000; }
-.tile .pic { transition: transform 0.18s ease, box-shadow 0.18s ease; }
-.tile:hover .pic { opacity: 1; transform: translateY(-4px); box-shadow: 0 22px 40px -18px rgba(255, 90, 60, 0.45); }
-.tile .feel { font-weight: 600; }
-.tile .meta.mono { letter-spacing: 0.06em; color: var(--mute); }
-.pick.on { outline-color: var(--warm); }
-.pickmark { background: var(--grad); color: var(--on-grad); }
-.gazemap { box-shadow: 0 0 0 1px var(--line); }
-.drop, .empty { background: rgba(255, 255, 255, 0.02); border: 1.5px dashed #4a4552; }
-.drop.over { border-color: var(--warm); background: rgba(255, 138, 31, 0.07); }
-.drop .big, .empty strong { font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; }
-
-/* 작은 조각들 */
-.tag { background: #25222a; color: var(--ink); }
-.nudge, .due, .banner, .cmpTag { background: var(--mark); color: var(--mark-ink); box-shadow: inset 0 0 0 1px rgba(255, 210, 63, 0.28); }
-.core { background: var(--grad); color: var(--on-grad); }
-.core .label { color: var(--on-grad); opacity: 0.7; }
-.core strong { font-family: var(--font-display); font-weight: 400; font-size: 1.7rem; }
-.stuck { background: #201e24; }
-.toast { background: var(--ink); color: #0b0a0c; }
-.bartrack { background: #25222a; }
-.barfill { background: var(--grad); }
-.barrow:hover { background: #201e24; }
-.barrow .bartrack { background: transparent; }
-.sheetbox { background: var(--paper); }
-a { color: var(--gold); }
-a.btn { color: var(--ink); }
-@media (prefers-reduced-motion: reduce) { .tile .pic { transition: none; } .tile:hover .pic { transform: none; } }
-
-/* 인쇄할 때는 흰 종이로 */
-@media print {
-  :root, :root:not([data-theme="light"]), :root[data-theme] { --bg: #fff; --paper: #fff; --ink: #000; --mute: #555; --line: #c9c9c9; --panel: #f1f1f1; --mark: #fff0a6; --mark-ink: #4a3d00; }
+html[data-skin="editorial"] {
   body { background: #fff; }
-  body::after { display: none; }
-  .onepage { background: #fff; border: 0; box-shadow: none; }
-  .opFinal { font-size: 14pt; }
+  .top { border-bottom: 3px solid var(--ink); padding-bottom: 16px; margin-bottom: 30px; align-items: flex-end; }
+  .top h1 { font-family: var(--serif); font-weight: 700; font-size: 3rem; letter-spacing: -0.04em; line-height: 1.05; }
+  .top .sub { font-family: var(--num); font-style: italic; font-size: 1.05rem; }
+  .sec, .roadtile, .dStats > div, .sRow, .onepage { background: none; border: 0; border-top: 2px solid var(--ink); border-radius: 0; box-shadow: none; }
+  .sec { padding: 0 0 26px; }
+  .sec > header { margin: 0; padding: 14px 0; border-bottom: 1px solid #cfcfcf; }
+  .sec h2, .lookh { font-family: var(--serif); font-weight: 700; font-size: 1.5rem; letter-spacing: -0.03em; }
+  .lookh { font-size: 2rem; }
+  .stepno, .mono, .roadnum, .dStats strong { font-family: var(--num); font-style: italic; font-weight: 400; letter-spacing: 0; }
+  .stepno { font-size: 1.6rem; color: var(--ink); margin-right: 14px; }
+  .roadnum, .dStats strong.mono { font-size: 3.4rem; line-height: 1; }
+  .roadnum .label { font-style: normal; }
+  .label { text-transform: none; letter-spacing: 0.04em; font-size: 0.75rem; color: var(--mute); }
+  .step.locked { border-top: 1px solid #cfcfcf; }
+  .step.locked h2 { font-size: 1.1rem; font-weight: 400; }
+  .step.locked .stepno { color: #bbb; font-size: 1.2rem; }
+  .roadtile, .dStats > div, .sRow { padding: 14px 0; }
+  .onepage { padding: 20px 0; }
+  .btn { border-radius: 0; border: 1px solid var(--ink); background: #fff; font-size: 0.875rem; }
+  .btn:hover { background: var(--ink); color: #fff; }
+  .btn.solid, .btn.on, .btn.quiet.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .btn.quiet { background: #fff; border-color: #cfcfcf; }
+  .btn.small { border-radius: 0; }
+  .tabs { background: none; border: 0; border-radius: 0; padding: 0; gap: 18px; }
+  .tab { background: none; border-radius: 0; padding: 6px 0; color: var(--mute); border-bottom: 2px solid transparent; font-family: var(--serif); font-size: 1.05rem; }
+  .tab.on { background: none; box-shadow: none; color: var(--ink); border-bottom-color: var(--ink); }
+  .text { border: 0; border-bottom: 1px solid var(--ink); border-radius: 0; padding: 9px 0; background: transparent; }
+  .text:focus { box-shadow: none; border-bottom-width: 2px; padding: 9px 0 8px; }
+  .searchbar .text { border-radius: 0; padding-left: 0; background: transparent; }
+  .rowcells.joined > .text { border-radius: 0; padding: 9px 0; }
+  .segbar { border-radius: 0; border: 1px solid var(--ink); background: #fff; margin-top: 4px; }
+  .segbar .btn { border-right-color: var(--ink); }
+  .chip-state, .tag, .nudge, .due, .core, .stuck, .banner, .score .btn, .mini, .cmpTag { border-radius: 0; }
+  .chip-state { background: none; border: 1px solid var(--ink); color: var(--ink); }
+  .chip-state.done { background: var(--ink); color: #fff; }
+  .tag { background: none; border: 1px solid var(--ink); }
+  .feelline, .opFinal { font-family: var(--serif); font-weight: 700; }
+  .feelline { font-size: 1.5rem; }
+  .core strong { font-family: var(--serif); font-size: 1.7rem; }
+  .tile .pic, .tile .nopic, .stage .frame, .dImg, .cutpic, .cutpic img, .dEntry img, .sStrip img, .pair img, .cutmini img, .sketch img, .pick, .gazemap { border-radius: 0; }
+  .stage .frame { background: #f3f3f3; }
+  .tile .feel { font-family: var(--serif); font-weight: 700; font-size: 1.05rem; }
+  .drop, .empty { border-radius: 0; border: 1px dashed var(--ink); }
+  .bartrack, .barfill, .barrow, .barrow .bartrack, .barrow .barfill { border-radius: 0; }
+  .locked li, ul.plain li, .cmpRow, .unklist li, .dEntry, .subhead, .cmpHead { border-color: #cfcfcf; }
+}
+
+/* ── 시안 2. 스튜디오: 편집실 모니터. 새까만 바탕에 흰 글씨, 색은 빨간 녹화 점 하나 ── */
+html[data-skin="studio"]:root {
+  --bg: #000000; --paper: #0c0c0c; --ink: #ffffff; --mute: #8c8c8c; --line: #262626; --panel: #1a1a1a;
+  --mark: rgba(255, 214, 10, 0.14); --mark-ink: #ffd60a; --ring: rgba(255, 255, 255, 0.18); --r: 8px; color-scheme: dark;
+  --tc: ui-monospace, "SF Mono", "Menlo", "Consolas", monospace;
+}
+html[data-skin="studio"] {
+  body { background: #000; }
+  .top { border-bottom: 1px solid var(--line); padding-bottom: 16px; }
+  .top h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; display: flex; align-items: center; gap: 12px; }
+  .top h1::before { content: ""; width: 11px; height: 11px; border-radius: 50%; background: #ff3b30; box-shadow: 0 0 12px #ff3b30; flex: none; }
+  .mono, .stepno, .roadnum, .dStats strong, .score .btn, .barval { font-family: var(--tc); letter-spacing: 0; }
+  .stepno { color: #ff3b30; font-size: 0.8125rem; }
+  .step.locked .stepno { color: #444; }
+  .sec, .roadtile, .dStats > div, .sRow, .onepage { background: var(--paper); border: 1px solid var(--line); box-shadow: none; border-radius: 8px; }
+  .sec h2 { font-size: 0.9375rem; font-weight: 600; letter-spacing: 0.01em; }
+  .step.locked { background: transparent; }
+  .label { text-transform: none; font-size: 0.75rem; letter-spacing: 0.03em; }
+  .btn { background: #141414; border: 1px solid #333; color: #fff; border-radius: 6px; }
+  .btn:hover { background: #1f1f1f; border-color: #666; }
+  .btn.solid, .btn.on, .btn.quiet.on { background: #fff; color: #000; border-color: #fff; }
+  .btn.solid:hover, .btn.on:hover { background: #fff; opacity: 0.85; }
+  .btn.quiet { background: #141414; border-color: #262626; }
+  .tabs { background: #0c0c0c; border: 1px solid var(--line); border-radius: 8px; }
+  .tab { border-radius: 5px; }
+  .tab.on { background: #fff; color: #000; box-shadow: none; }
+  .text { background: #000; border: 1px solid #333; border-radius: 6px; color: #fff; }
+  .text::placeholder { color: #5c5c5c; opacity: 1; }
+  .text:focus { border-color: #fff; }
+  .rowcells.joined > .text { border-radius: 6px 6px 0 0; }
+  .segbar { border-color: #333; background: #0c0c0c; border-radius: 0 0 6px 6px; }
+  .segbar .btn { border-right-color: #262626; background: transparent; }
+  .segbar .btn.on, .pinbtn.on { background: #fff; color: #000; }
+  .pinbtn { background: #141414; border-color: #333; color: #fff; }
+  .pinbtn.pinned { background: #2a2a2a; }
+  .chip-state { background: #1a1a1a; color: var(--mute); border-radius: 4px; font-family: var(--tc); font-size: 0.75rem; }
+  .chip-state.done { background: transparent; color: #fff; box-shadow: inset 0 0 0 1px #fff; }
+  .chip-state.done::before { content: "● "; color: #ff3b30; }
+  .tag, .mini, .stuck { background: #1a1a1a; color: #fff; border-radius: 4px; }
+  .core { background: #fff; color: #000; border-radius: 8px; }
+  .core .label { color: #000; }
+  .toast { background: #fff; color: #000; }
+  .stage .frame { background: #000; box-shadow: 0 0 0 1px var(--line); border-radius: 4px; }
+  .tile .pic, .tile .nopic { background: #0c0c0c; border-radius: 4px; }
+  .dImg, .cutpic, .cutpic img, .dEntry img, .sStrip img, .pair img, .cutmini img, .sketch img, .pick, .gazemap { border-radius: 4px; }
+  .roadnum, .dStats strong.mono { font-size: 2.4rem; font-weight: 500; }
+  .roadnum .label { font-family: var(--font-body); }
+  .bartrack { background: #1a1a1a; }
+  .barfill { background: #fff; }
+  .barrow .bartrack { background: transparent; }
+  .barrow:hover { background: #141414; }
+  .drop, .empty { background: #0c0c0c; border-color: #3a3a3a; }
+  .drop.over { border-color: #fff; background: #141414; }
+  .sheetbox { background: #0c0c0c; }
+  a { color: #fff; }
+}
+
+/* ── 시안 3. 팝: 90년대 스티커와 전단지. 굵은 검은 테두리, 딱 떨어지는 그림자, 원색 블록 ── */
+html[data-skin="pop"]:root {
+  --bg: #ffffff; --paper: #ffffff; --ink: #0d0d0d; --mute: #5d5d5d; --line: #0d0d0d; --panel: #f1f1f1;
+  --mark: #fff27a; --mark-ink: #0d0d0d; --ring: rgba(0, 0, 0, 0.15); --r: 16px; color-scheme: light;
+  --y: #ffd400; --p: #ff5fa2; --b: #4d8dff; --g: #22d07a; --o: #ff8a2a;
+  --disp: "Black Han Sans", "Apple SD Gothic Neo", sans-serif;
+}
+html[data-skin="pop"] {
+  body { background: #fff; background-image: radial-gradient(#0d0d0d 1.1px, transparent 1.2px); background-size: 22px 22px; }
+  .top { border: 0; padding-bottom: 6px; }
+  .top h1 { font-family: var(--disp); font-weight: 400; font-size: 2.6rem; letter-spacing: 0; display: inline-block; background: var(--y); border: 3px solid var(--ink); border-radius: 14px; padding: 2px 16px 0; box-shadow: 5px 5px 0 var(--ink); transform: rotate(-1.5deg); }
+  .top .sub { margin-top: 12px; font-weight: 600; background: #fff; display: inline-block; padding: 0 6px; }
+  .sec, .roadtile, .dStats > div, .sRow, .onepage { background: #fff; border: 3px solid var(--ink); border-radius: 16px; box-shadow: 6px 6px 0 var(--ink); margin: 0 6px 6px 0; }
+  .sec > header { border-bottom: 3px solid var(--ink); background: var(--y); }
+  .form > .sec:nth-of-type(5n+2) > header, .charts > .sec:nth-of-type(5n+2) > header { background: var(--p); }
+  .form > .sec:nth-of-type(5n+3) > header, .charts > .sec:nth-of-type(5n+3) > header { background: var(--b); }
+  .form > .sec:nth-of-type(5n+4) > header, .charts > .sec:nth-of-type(5n+4) > header { background: var(--g); }
+  .form > .sec:nth-of-type(5n) > header, .charts > .sec:nth-of-type(5n) > header { background: var(--o); }
+  .sec h2, .lookh { font-family: var(--disp); font-weight: 400; font-size: 1.3rem; letter-spacing: 0; }
+  .lookh { font-size: 1.9rem; background: #fff; padding: 0 6px; }
+  .stepno { font-family: var(--disp); color: var(--ink); font-size: 1.3rem; }
+  .step.locked { box-shadow: none; border-style: dashed; border-width: 2px; background: #fff; }
+  .step.locked > header { background: #fff !important; }
+  .step.locked h2, .step.locked .stepno { color: #9a9a9a; }
+  .roadtile:nth-child(1) { background: var(--y); } .roadtile:nth-child(2) { background: var(--p); } .roadtile:nth-child(3) { background: var(--b); } .roadtile:nth-child(4) { background: var(--g); }
+  .roadnum, .dStats strong { font-family: var(--disp); font-weight: 400; font-size: 2.8rem; }
+  .roadtile .label, .roadtile .note { color: var(--ink); }
+  .btn { border: 2.5px solid var(--ink); border-radius: 10px; background: #fff; font-weight: 700; box-shadow: 3px 3px 0 var(--ink); }
+  .btn:hover { background: var(--y); }
+  .btn:active { transform: translate(3px, 3px); box-shadow: none; }
+  .btn.solid { background: var(--p); color: var(--ink); border-color: var(--ink); }
+  .btn.on, .btn.quiet.on { background: var(--ink); color: var(--y); border-color: var(--ink); }
+  .btn.solid:hover { background: var(--p); opacity: 1; filter: brightness(1.06); }
+  .btn.quiet { background: #fff; border-color: var(--ink); box-shadow: none; border-width: 2px; }
+  .btn.small { border-radius: 8px; box-shadow: 2px 2px 0 var(--ink); }
+  .btn.small.quiet { box-shadow: none; }
+  .tabs { background: #fff; border: 3px solid var(--ink); border-radius: 12px; box-shadow: 4px 4px 0 var(--ink); padding: 3px; }
+  .tab { border-radius: 7px; color: var(--ink); font-weight: 700; }
+  .tab.on { background: var(--ink); color: var(--y); box-shadow: none; }
+  .text { border: 2.5px solid var(--ink); border-radius: 10px; }
+  .text:focus { box-shadow: 4px 4px 0 var(--b); border-color: var(--ink); border-width: 2.5px; }
+  .rowcells.joined > .text { border-radius: 10px 10px 0 0; }
+  .segbar { border: 2.5px solid var(--ink); border-top: 0; border-radius: 0 0 10px 10px; background: #fff; }
+  .segbar .btn { border: 0; border-right: 2px solid var(--ink); box-shadow: none; border-radius: 0; background: transparent; }
+  .segbar .btn.on { background: var(--ink); color: var(--y); }
+  .chip-state { background: #fff; border: 2px solid var(--ink); color: var(--ink); border-radius: 8px; font-weight: 700; }
+  .chip-state.done { background: var(--g); color: var(--ink); }
+  .tag { background: var(--y); border: 2px solid var(--ink); border-radius: 8px; }
+  .nudge, .due, .banner { border: 2px solid var(--ink); border-radius: 8px; font-weight: 700; }
+  .core { background: var(--p); color: var(--ink); border: 3px solid var(--ink); border-radius: 12px; }
+  .core .label { color: var(--ink); opacity: 1; }
+  .core strong { font-family: var(--disp); font-weight: 400; font-size: 1.8rem; }
+  .feelline { font-family: var(--disp); font-weight: 400; font-size: 1.4rem; }
+  .stuck { background: #fff; border: 2px dashed var(--ink); }
+  .stage .frame { background: #fff; border: 3px solid var(--ink); border-radius: 16px; box-shadow: 6px 6px 0 var(--ink); margin: 0 6px 6px 0; }
+  .tile .pic, .tile .nopic { border: 3px solid var(--ink); border-radius: 12px; box-shadow: 5px 5px 0 var(--ink); }
+  .tile:hover .pic { opacity: 1; transform: translate(-2px, -2px); box-shadow: 7px 7px 0 var(--p); }
+  .tile .pic { transition: transform 0.12s, box-shadow 0.12s; }
+  .tile .feel, .tile .meta { background: #fff; padding: 0 4px; }
+  .tile .meta { margin-top: 10px; }
+  .dImg, .cutpic, .dEntry img, .sStrip img, .pair img, .cutmini img, .sketch img, .pick, .gazemap { border: 2.5px solid var(--ink); border-radius: 10px; }
+  .drop, .empty { border: 3px dashed var(--ink); background: #fff; }
+  .bartrack { background: #fff; border: 2px solid var(--ink); height: 14px; }
+  .barfill { background: var(--p); }
+  .barrow .bartrack { border: 0; background: transparent; }
+  .barrow .barfill { border: 2px solid var(--ink); border-radius: 0 6px 6px 0; }
+  .searchbar .text { background: #fff; }
+  .searchbar, .field > .label, .note, .bar .slate, .under, .fieldtop .note { position: relative; }
+  .wrap > .bar .slate, .stage .under { background: #fff; padding: 0 6px; }
+  .mini { border: 2px solid var(--ink); background: #fff; }
+}
+@media print {
+  html[data-skin]:root { --bg: #fff; --paper: #fff; --ink: #000; --mute: #555; --line: #c9c9c9; --panel: #f1f1f1; --mark: #fff0a6; --mark-ink: #4a3d00; }
+  html[data-skin] body { background: #fff; }
+  html[data-skin] .onepage { background: #fff; border: 0; box-shadow: none; }
 }

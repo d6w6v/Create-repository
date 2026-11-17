@@ -2,6 +2,13 @@
 (() => {
   'use strict';
   document.documentElement.lang = 'ko';
+  /* 디자인 시안 고르기 (이 기기에만 기억) */
+  const SKINS = [['', '깔끔'], ['editorial', '매거진'], ['studio', '스튜디오'], ['pop', '팝']];
+  function setSkin(name) {
+    if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
+    try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
+  }
+  try { setSkin(new URLSearchParams(location.search).get('skin') ?? localStorage.getItem('eye-skin') ?? ''); } catch (e) { /* 기본 모양 */ }
   const PREVIEW = !!window.EYE_PREVIEW; // 미리보기 주소에서는 파일 저장과 인쇄가 막혀 있다
 
   /* 화면 조각을 바꿔 끼울 때 빈 것(null)은 건너뛴다 */
@@ -1787,6 +1794,12 @@
 
     app.replaceChildren(h('div', { class: 'wrap' }, topBar('backup', '기록을 파일로 지키기'),
       h('div', { class: 'diary' },
+        h('section', { class: 'sec', id: 'skins' }, h('header', {}, h('h2', {}, '디자인')),
+          h('div', { class: 'stepbody', style: 'padding-top:18px' },
+            h('p', { class: 'note' }, '화면 모양을 골라요. 기록은 그대로고 겉모습만 바뀌어요.'),
+            h('div', { class: 'seg', role: 'group', 'aria-label': '디자인 고르기' }, SKINS.map(([key, name]) =>
+              h('button', { class: 'btn' + ((document.documentElement.dataset.skin || '') === key ? ' on' : ''), type: 'button', id: 'skin-' + (key || 'clean'),
+                onclick: () => { setSkin(key); showBackup(); } }, name))))),
         h('section', { class: 'sec' }, h('header', {}, h('h2', {}, '내보내기')),
           h('p', { class: 'note' }, '카드, 이미지, 일기, 시리즈를 전부 파일 하나에 담아요. 기록은 이 기기의 브라우저 안에만 있어서, 이 파일이 유일한 보험이에요. 일주일에 한 번을 추천해요.'),
           PREVIEW ? h('div', { class: 'nudge' }, '지금 보고 있는 미리보기 주소에서는 파일 저장이 막혀 있어요. 정식 주소에서는 이 버튼이 눌려요.') : null,
