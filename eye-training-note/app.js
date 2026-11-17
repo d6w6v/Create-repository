@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '30 · 진동';
+  const APP_VERSION = '31 · 내 촬영장';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -88,6 +88,7 @@
   }
   function buzz(times) {
     if (!buzzOn()) return;
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return; // 아직 화면을 한 번도 안 눌렀으면 떨 수 없다
     try {
       if (navigator.vibrate) { navigator.vibrate(Array.from({ length: times * 2 - 1 }, (_, i) => (i % 2 ? 50 : 30))); return; }
       for (let i = 0; i < times; i++) setTimeout(tick, i * 110);
@@ -640,7 +641,10 @@
           h('div', { class: 'row' }, bCard
             ? h('button', { class: 'btn small', type: 'button', id: 'boss-open', onclick: () => { location.hash = 'card-' + bCard.id; } }, beaten ? `격파한 카드 보기 (No.${pad(bCard.no, 3)})` : `이어서 싸우기 (No.${pad(bCard.no, 3)})`)
             : h('button', { class: 'btn small', type: 'button', id: 'boss-new', onclick: () => { pendingBoss = true; location.hash = 'new'; } }, '새 카드로 도전'))));
-      wrap.append(playerBar(g), box, bossBox);
+      const scene = setScene(g);
+      let hadGear = scene.count; try { hadGear = Number(localStorage.getItem('eye-gear') ?? scene.count); localStorage.setItem('eye-gear', String(scene.count)); } catch (e) { /* 기억 못 해도 진행 */ }
+      if (scene.count > hadGear) celebrate(`새 장비가 들어왔어요: ${scene.newest}`, 30);
+      wrap.append(scene.fig, playerBar(g), box, bossBox);
     }
     if (new Date().getDay() === 0 && cards.length) {
       const wkNote = await store.get('meta', 'week-' + dstr(weekStart(new Date())));
@@ -2460,6 +2464,62 @@
   function bossHp(c) { const vs = STEPS; let n = 0; for (const st of vs) { if (stepDone(c, st)) n++; else break; } return { left: vs.length - n, total: vs.length }; }
   let pendingBoss = false; // "새 카드로 도전"을 눌렀을 때 다음 새 카드에 보스 표시를 한다
 
+  /* ───────── 키우기: 내 촬영장. 연습한 날이 쌓일수록 장비가 하나씩 들어온다 ───────── */
+  const zig = Array.from({ length: 40 }, (_, i) => `${20 + i * 20} ${i % 2 ? 22 : 32}`).join('L');
+  const GEAR = [ // [필요한 날 수, 이름, 그림, 불이 켜졌을 때 더 그릴 것, 뒤에 깔리는가]
+    [1, '바닥 표시', '<path class="rd" d="M370 232l20 10M390 232l-20 10"/>'],
+    [2, '삼각대', '<path d="M240 150L222 226M240 150V226M240 150L258 226"/>'],
+    [3, '카메라', '<rect class="fl" x="218" y="126" width="46" height="26"/><rect class="fl" x="264" y="132" width="16" height="14"/><rect class="fl" x="226" y="116" width="18" height="10"/>'],
+    [4, '주광', '<path d="M540 226V104M526 226h28"/><path class="fl" d="M540 92l-34 10 6 22 34-12z"/>', '<path class="rd ray" d="M504 116L436 146M508 124L444 168M500 108L428 124"/>'],
+    [5, '애플박스', '<rect class="fl" x="398" y="206" width="46" height="20"/><path d="M412 216h18"/>'],
+    [6, '반사판', '<path d="M115 226V178M103 226h24"/><ellipse class="fl" cx="115" cy="148" rx="24" ry="30"/>'],
+    [7, '배경지', '<path d="M300 226V46M460 226V46"/><rect class="fl" x="306" y="50" width="148" height="176"/><rect class="fl" x="296" y="40" width="168" height="10"/>', '', true],
+    [9, '감독 의자', '<path d="M697 226l36-50M733 226l-36-50M695 176h40M699 176v-34M731 176v-34"/><rect class="fl" x="697" y="140" width="36" height="12"/>'],
+    [11, '슬레이트', '<g transform="rotate(-12 610 212)"><rect class="fl" x="592" y="198" width="38" height="28"/><path d="M592 206h38"/><path class="rd" d="M596 198l6 8M606 198l6 8M616 198l6 8"/></g>'],
+    [13, '모니터', '<path d="M50 226V170M38 226h24"/><rect class="fl" x="24" y="132" width="52" height="38"/>', '<circle class="rdf" cx="68" cy="140" r="3.5"/><path class="rd" d="M32 160l10-12 8 8 8-14 10 18"/>'],
+    [15, '보조광', '<path d="M175 226V130M163 226h24"/><rect class="fl" x="160" y="104" width="30" height="26"/>', '<path class="rd ray soft" d="M192 118L300 150M192 126L296 176"/>'],
+    [18, '붐 마이크', '<path d="M580 226V120M568 226h24M580 124L396 66"/><rect class="fl" x="374" y="56" width="26" height="11" transform="rotate(17 387 61)"/>'],
+    [21, '달리 레일', '<path d="M196 230H300M196 236H300M206 230v6M226 230v6M246 230v6M266 230v6M286 230v6"/>'],
+    [24, '헤이즈 머신', '<rect class="fl" x="468" y="212" width="26" height="14"/>', '<path class="haze" d="M460 206q-12-8-26-2M450 194q-16-8-32 0M462 184q-12-10-30-4M440 174q-12-8-26 0"/>'],
+    [27, '윤곽광', '<path d="M505 226V74M493 226h24"/><path class="fl" d="M505 62l-28 6 4 20 28-8z"/>', '<path class="rd ray" d="M476 78L416 96M478 86L420 112"/>'],
+    [30, '소품 테이블', '<path d="M640 226V188M684 226V188"/><rect class="fl" x="634" y="180" width="56" height="8"/><circle class="fl" cx="650" cy="172" r="8"/><rect class="fl" x="668" y="160" width="12" height="20"/>'],
+    [35, '의상 행거', '<path d="M770 226V120M806 226V120M764 120h48"/><path d="M779 120v10l-7 30h14l-7-30M797 120v10l-7 38h14l-7-38"/>'],
+    [40, '조명 트러스', `<path d="M20 22H800M20 32H800M20 32L${zig}"/><path d="M340 32v12M420 32v12"/><path class="fl" d="M330 44h20l6 14h-32zM410 44h20l6 14h-32z"/>`, '<path class="rd ray soft" d="M332 62l-10 30M348 62l10 30M412 62l-10 30M428 62l10 30"/>', true],
+    [50, '네온 사인', '<text class="neon" x="380" y="96" text-anchor="middle">DOPEYE</text>', '<text class="neon lit" x="380" y="96" text-anchor="middle">DOPEYE</text>'],
+    [60, '감독', '<circle class="fl" cx="196" cy="148" r="10"/><path d="M196 158V202M196 202L186 226M196 202L206 226M196 170L218 150"/>'],
+  ];
+  function activeDays(d) { // 무엇이든 한 날을 모은다
+    const days = new Set();
+    const add = (t) => { if (t) days.add(dstr(new Date(t))); };
+    for (const c of d.cards) { add(c.createdAt); add(c.updatedAt); add(c.doneAt); add(c.guessAt); if (c.second) add(c.second.startedAt); }
+    for (const e of d.diary) if (entryDone(e)) days.add(e.id);
+    Object.keys(d.missions.done || {}).forEach((k) => days.add(k));
+    Object.values(d.study.read || {}).forEach(add); Object.values(d.study.quiz || {}).forEach(add);
+    d.shotlists.forEach((x) => add(x.createdAt));
+    return days;
+  }
+  function setScene(g) {
+    const n = g.days.size;
+    const today = dstr(new Date()); const y = new Date(); y.setDate(y.getDate() - 1);
+    const lit = g.days.has(today) || g.days.has(dstr(y));
+    const have = GEAR.filter(([need]) => n >= need);
+    const next = GEAR.find(([need]) => n < need);
+    const newest = have.length ? have[have.length - 1][1] : '';
+    const draw = (list) => list.map(([, name, art, on]) => `<g class="gear${name === newest ? ' newgear' : ''}">${art}${lit && on ? on : ''}</g>`).join('');
+    const fig = h('figure', { class: 'fig setfig' + (lit ? ' lit' : ''), id: 'myset' });
+    fig.innerHTML = `<svg viewBox="0 0 820 256" role="img" aria-label="내 촬영장. 장비 ${have.length}개">
+      <g class="ln"><path d="M0 226H820"/>${draw(have.filter((x) => x[4]))}${draw(have.filter((x) => !x[4]))}</g>
+      ${have.length ? '' : '<text x="410" y="140" text-anchor="middle">빈 스튜디오예요. 오늘 한 단계만 써도 첫 장비가 들어와요.</text>'}</svg>`;
+    fig.append(h('figcaption', {},
+      h('span', { class: 'figno' }, `내 촬영장 ${n}일차`),
+      `장비 ${have.length}/${GEAR.length}` + (next ? ` · 다음 장비 "${next[1]}"까지 ${next[0] - n}일` : ' · 촬영장 완성'),
+      h('br', {}),
+      n === 0 ? '연습한 날이 하루 쌓일 때마다 촬영장이 자라요.'
+        : lit ? '조명이 켜져 있어요. 오늘도 한 단계만 쓰면 계속 켜져 있어요.'
+          : '조명이 꺼졌어요. 장비는 그대로 있어요. 오늘 한 단계만 써도 다시 켜져요.'));
+    return { fig, count: have.length, newest };
+  }
+
   /* ───────── 게임: 경험치, 레벨, 업적 ───────── */
   const LEVELS = [[0, '구경꾼'], [100, '현장 막내'], [250, '그립'], [450, '조명팀'], [700, '포커스 풀러'], [1000, '카메라 오퍼레이터'], [1400, '촬영감독'], [1900, '조감독'], [2500, '디렉터'], [3300, 'DOPE EYE']];
   const STEP_XP = { quick: 10, full: 15, deep: 25 };
@@ -2522,7 +2582,8 @@
       ['보스 세 마리', '보스를 세 번 격파하기', bossWins >= 3],
       ['우등생', '교과서 확인 문제를 전부 맞히기', Object.keys(study.quiz).length >= BOOK.reduce((n, ch) => n + ch.quiz.length, 0)],
     ];
-    return { xp, lv, title: LEVELS[lv][1], floor: LEVELS[lv][0], next: LEVELS[lv + 1] || null, parts, badges, terms, combo, bestAttack, attacks: attacks.length, bossWins, cards };
+    const days = activeDays({ cards, diary, shotlists, missions: ms, study });
+    return { days, xp, lv, title: LEVELS[lv][1], floor: LEVELS[lv][0], next: LEVELS[lv + 1] || null, parts, badges, terms, combo, bestAttack, attacks: attacks.length, bossWins, cards };
   }
   function playerBar(g) {
     const span = g.next ? g.next[0] - g.floor : 1;

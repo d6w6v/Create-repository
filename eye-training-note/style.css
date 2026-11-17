@@ -956,3 +956,26 @@ html[data-skin="school"] .core .label { color: #fff; opacity: 0.8; font-weight: 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ── 내 촬영장 (교과서 그림과 같은 선 그림) ── */
+.setfig { margin: 0 0 18px; padding: 14px 14px 12px; }
+.setfig svg { max-width: none; width: 100%; font-size: 12px; }
+.setfig .ln { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.setfig .fl { fill: var(--paper); }
+.setfig .rd { stroke: var(--red, currentColor); }
+.setfig .rdf { fill: var(--red, currentColor); stroke: none; }
+.setfig .ray { stroke-width: 1.4; stroke-dasharray: 5 5; }
+.setfig .ray.soft { stroke-dasharray: 2 6; opacity: 0.8; }
+.setfig .haze { stroke: var(--mute); stroke-width: 1.4; }
+.setfig .neon { fill: none; stroke: currentColor; stroke-width: 1.2; font-size: 26px; font-weight: 800; letter-spacing: 2px; }
+.setfig .neon.lit { stroke: var(--red, currentColor); fill: var(--red, currentColor); stroke-width: 0.6; }
+.setfig svg text { stroke: none; }
+.setfig svg text.neon { stroke: currentColor; }
+.setfig svg text.neon.lit { stroke: var(--red, currentColor); }
+.setfig:not(.lit) .gear { opacity: 0.55; }
+@keyframes gearIn { 0% { opacity: 0; transform: translateY(-26px); } 60% { opacity: 1; transform: translateY(4px); } 100% { opacity: 1; transform: none; } }
+@keyframes flicker { 0%, 100% { opacity: 1; } 46% { opacity: 1; } 48% { opacity: 0.35; } 50% { opacity: 1; } 76% { opacity: 0.6; } 78% { opacity: 1; } }
+@keyframes drift { from { transform: translateX(0); opacity: 0.9; } to { transform: translateX(-14px); opacity: 0.25; } }
+.setfig .newgear { animation: gearIn 0.7s cubic-bezier(0.3, 0.8, 0.4, 1.2) 0.25s both; }
+.setfig .ray, .setfig .neon.lit, .setfig .rdf { animation: flicker 4s linear infinite; }
+.setfig .haze { animation: drift 3.2s ease-in-out infinite alternate; }
