@@ -126,7 +126,8 @@
       T('crop', '잘라낸 것(크롭)이 있다면 무엇을 뺐나', { opt: true }) ] },
     { id: 's3', title: '빛', fields: [
       { k: 'lights', label: '광원 개수', type: 'num', unit: '개' },
-      C('dir', '방향', ['정면', '측면', '역광', '위', '아래']),
+      { k: 'dir', label: '방향 (광원이 여러 개면 여러 개 골라요)', type: 'choices', options: ['정면', '앞사선', '측면', '뒤사선', '역광', '위', '아래'] },
+      { k: 'side', label: '빛이 오는 쪽', type: 'choices', options: ['왼쪽', '가운데', '오른쪽'] },
       C('quality', '질감', ['부드러움', '딱딱함']),
       C('contrast', '명암 대비', ['큼', '작음']),
       T('shadow', '그림자 위치와 진하기'),
@@ -191,6 +192,7 @@
   const isUnknown = (c, st, f) => c.unknown.includes(fid(st, f));
   function val(c, st, f) {
     const d = c.steps[st.id] || (c.steps[st.id] = {});
+    if (f.type === 'choices' && !Array.isArray(d[f.k])) d[f.k] = has(d[f.k]) ? [d[f.k]] : [];
     if (d[f.k] === undefined) {
       if (f.type === 'multi') d[f.k] = Array(f.n).fill('');
       else if (f.type === 'rows') d[f.k] = f.rowLabels.map(() => Object.fromEntries(f.cols.map((col) => [col.k, ''])));
@@ -203,6 +205,7 @@
   const has = (x) => x != null && String(x).trim() !== '';
   function filled(c, st, f) {
     const v = val(c, st, f);
+    if (f.type === 'choices') return v.length > 0;
     if (f.type === 'multi') return v.every(has);
     if (f.type === 'rows') return v.every((r) => f.cols.every((col) => has(r[col.k]) || (f.pins && col.k === 'where' && r.x != null)));
     if (f.type === 'erase') return ERASE.every((n) => v[n] != null);
@@ -210,6 +213,7 @@
   }
   function hasAny(c, st, f) {
     const v = val(c, st, f);
+    if (f.type === 'choices') return v.length > 0;
     if (f.type === 'multi') return v.some(has);
     if (f.type === 'rows') return v.some((r) => r.x != null || f.cols.some((col) => has(r[col.k])));
     if (f.type === 'erase') return ERASE.some((n) => v[n] != null);
@@ -239,6 +243,7 @@
   function fmt(c, st, f) {
     const v = val(c, st, f);
     if (f.type === 'feel') return has(v) ? `이건 ${v}한 느낌` : '';
+    if (f.type === 'choices') return v.join(', ');
     if (f.type === 'multi') return v.filter(has).join(' / ');
     if (f.type === 'scale') return v != null ? `${v}/10` : '';
     if (f.type === 'num') return has(v) ? `${v}${f.unit}` : '';
@@ -597,6 +602,15 @@
       control = ta;
     } else if (f.type === 'num') {
       control = numInput(() => data[f.k], (v) => { data[f.k] = v; }, f.unit, { id: dom });
+    } else if (f.type === 'choices') {
+      const box = h('div', { class: 'seg', role: 'group', 'aria-label': f.label });
+      const draw = () => box.replaceChildren(...f.options.map((o) => {
+        const on = data[f.k].includes(o);
+        return h('button', { class: 'btn small' + (on ? ' on' : ''), type: 'button', 'aria-pressed': String(on),
+          onclick: () => { data[f.k] = on ? data[f.k].filter((x) => x !== o) : f.options.filter((x) => x === o || data[f.k].includes(x)); draw(); changed(); } }, o);
+      }));
+      draw();
+      control = box;
     } else if (f.type === 'choice') {
       control = choice(f.options, () => data[f.k], (v) => { data[f.k] = v; }, f.label);
     } else if (f.type === 'multi') {
