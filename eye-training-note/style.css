@@ -504,3 +504,19 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
   body { background: #fff; }
   .onepage { border: 0; box-shadow: none; padding: 0; border-radius: 0; }
 }
+
+/* 알약 모양 없이: 둥근 정도를 작게 통일 */
+.btn { border-radius: 8px; }
+.btn.small { border-radius: 7px; }
+.chip-state, .tag { border-radius: 6px; }
+.tag { padding: 3px 4px 3px 10px; }
+.searchbar .text { border-radius: 10px; padding-left: 13px; }
+.text { border-radius: 10px; }
+.rowcells.joined > .text { border-radius: 10px 10px 0 0; }
+.segbar { border-radius: 0 0 10px 10px; }
+.score .btn { border-radius: 8px; }
+.tabs { border-radius: 10px; }
+.tab { border-radius: 7px; }
+.bartrack, .barfill { border-radius: 3px; }
+.barrow .bartrack, .barrow .barfill { border-radius: 0 3px 3px 0; }
+.nudge, .due { border-radius: 6px; }
