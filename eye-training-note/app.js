@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '31 · 내 촬영장';
+  const APP_VERSION = '32 · 촬영장 새 그림';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -2465,28 +2465,30 @@
   let pendingBoss = false; // "새 카드로 도전"을 눌렀을 때 다음 새 카드에 보스 표시를 한다
 
   /* ───────── 키우기: 내 촬영장. 연습한 날이 쌓일수록 장비가 하나씩 들어온다 ───────── */
-  const zig = Array.from({ length: 40 }, (_, i) => `${20 + i * 20} ${i % 2 ? 22 : 32}`).join('L');
-  const GEAR = [ // [필요한 날 수, 이름, 그림, 불이 켜졌을 때 더 그릴 것, 뒤에 깔리는가]
-    [1, '바닥 표시', '<path class="rd" d="M370 232l20 10M390 232l-20 10"/>'],
-    [2, '삼각대', '<path d="M240 150L222 226M240 150V226M240 150L258 226"/>'],
-    [3, '카메라', '<rect class="fl" x="218" y="126" width="46" height="26"/><rect class="fl" x="264" y="132" width="16" height="14"/><rect class="fl" x="226" y="116" width="18" height="10"/>'],
-    [4, '주광', '<path d="M540 226V104M526 226h28"/><path class="fl" d="M540 92l-34 10 6 22 34-12z"/>', '<path class="rd ray" d="M504 116L436 146M508 124L444 168M500 108L428 124"/>'],
-    [5, '애플박스', '<rect class="fl" x="398" y="206" width="46" height="20"/><path d="M412 216h18"/>'],
-    [6, '반사판', '<path d="M115 226V178M103 226h24"/><ellipse class="fl" cx="115" cy="148" rx="24" ry="30"/>'],
-    [7, '배경지', '<path d="M300 226V46M460 226V46"/><rect class="fl" x="306" y="50" width="148" height="176"/><rect class="fl" x="296" y="40" width="168" height="10"/>', '', true],
-    [9, '감독 의자', '<path d="M697 226l36-50M733 226l-36-50M695 176h40M699 176v-34M731 176v-34"/><rect class="fl" x="697" y="140" width="36" height="12"/>'],
-    [11, '슬레이트', '<g transform="rotate(-12 610 212)"><rect class="fl" x="592" y="198" width="38" height="28"/><path d="M592 206h38"/><path class="rd" d="M596 198l6 8M606 198l6 8M616 198l6 8"/></g>'],
-    [13, '모니터', '<path d="M50 226V170M38 226h24"/><rect class="fl" x="24" y="132" width="52" height="38"/>', '<circle class="rdf" cx="68" cy="140" r="3.5"/><path class="rd" d="M32 160l10-12 8 8 8-14 10 18"/>'],
-    [15, '보조광', '<path d="M175 226V130M163 226h24"/><rect class="fl" x="160" y="104" width="30" height="26"/>', '<path class="rd ray soft" d="M192 118L300 150M192 126L296 176"/>'],
-    [18, '붐 마이크', '<path d="M580 226V120M568 226h24M580 124L396 66"/><rect class="fl" x="374" y="56" width="26" height="11" transform="rotate(17 387 61)"/>'],
-    [21, '달리 레일', '<path d="M196 230H300M196 236H300M206 230v6M226 230v6M246 230v6M266 230v6M286 230v6"/>'],
-    [24, '헤이즈 머신', '<rect class="fl" x="468" y="212" width="26" height="14"/>', '<path class="haze" d="M460 206q-12-8-26-2M450 194q-16-8-32 0M462 184q-12-10-30-4M440 174q-12-8-26 0"/>'],
-    [27, '윤곽광', '<path d="M505 226V74M493 226h24"/><path class="fl" d="M505 62l-28 6 4 20 28-8z"/>', '<path class="rd ray" d="M476 78L416 96M478 86L420 112"/>'],
-    [30, '소품 테이블', '<path d="M640 226V188M684 226V188"/><rect class="fl" x="634" y="180" width="56" height="8"/><circle class="fl" cx="650" cy="172" r="8"/><rect class="fl" x="668" y="160" width="12" height="20"/>'],
-    [35, '의상 행거', '<path d="M770 226V120M806 226V120M764 120h48"/><path d="M779 120v10l-7 30h14l-7-30M797 120v10l-7 38h14l-7-38"/>'],
-    [40, '조명 트러스', `<path d="M20 22H800M20 32H800M20 32L${zig}"/><path d="M340 32v12M420 32v12"/><path class="fl" d="M330 44h20l6 14h-32zM410 44h20l6 14h-32z"/>`, '<path class="rd ray soft" d="M332 62l-10 30M348 62l10 30M412 62l-10 30M428 62l10 30"/>', true],
-    [50, '네온 사인', '<text class="neon" x="380" y="96" text-anchor="middle">DOPEYE</text>', '<text class="neon lit" x="380" y="96" text-anchor="middle">DOPEYE</text>'],
-    [60, '감독', '<circle class="fl" cx="196" cy="148" r="10"/><path d="M196 158V202M196 202L186 226M196 202L206 226M196 170L218 150"/>'],
+  const sh = (x, w) => `<ellipse class="sh" cx="${x}" cy="275" rx="${w}" ry="5"/>`;
+  const stand = (x, top) => `${sh(x, 26)}<path class="st5" d="M${x} 270V${top}"/><path class="st4" d="M${x - 20} 270L${x} 250L${x + 20} 270"/><rect class="ink" x="${x - 4}" y="${top + 26}" width="8" height="10" rx="2"/>`;
+  const zig = Array.from({ length: 50 }, (_, i) => `${20 + i * 20} ${i % 2 ? 14 : 30}`).join('L');
+  const GEAR = [ // [필요한 날 수, 이름, 들어오는 움직임, 그림, 불이 켜졌을 때 더 그릴 것, 뒤에 깔리는가]
+    [1, '바닥 표시', 'pop', '<rect class="red" x="436" y="279" width="30" height="5" rx="1"/><rect class="red" x="448.5" y="279" width="5" height="17" rx="1"/>'],
+    [2, '삼각대', 'rise', `${sh(280, 36)}<path class="st6" d="M280 196L252 270M280 196V270M280 196L308 270"/><path class="st3" d="M263 242H297"/><rect class="ink" x="268" y="182" width="24" height="16" rx="3"/><path class="st3" d="M290 191L320 206"/>`],
+    [3, '카메라', 'drop', '<rect class="ink" x="244" y="146" width="66" height="36" rx="5"/><rect class="ink" x="310" y="153" width="24" height="22" rx="2"/><path class="ink" d="M334 148h13l7-5v46l-7-5h-13z"/><path class="st4" d="M256 146v-10h40v10"/><rect class="ink" x="229" y="154" width="15" height="14" rx="2"/><path class="hl" d="M253 157h28M253 163h16"/>', '<circle class="tally" cx="301" cy="155" r="3.5"/>'],
+    [4, '주광', 'rise', `${stand(660, 118)}<g transform="rotate(-24 660 112)"><rect class="ink" x="648" y="99" width="26" height="26" rx="3"/><path class="pap" d="M650 97L598 76V148L650 127Z"/><path class="thin" d="M624 87v50M598 112h52"/></g>`, '<path class="cone" d="M586 103L617 173L524 270L388 206Z"/>'],
+    [5, '애플박스', 'pop', `${sh(515, 34)}<rect class="ink" x="486" y="250" width="58" height="20" rx="2"/><rect class="pap" x="505" y="257" width="20" height="5" rx="2.5"/>`],
+    [6, '반사판', 'rise', `${stand(118, 180)}<ellipse class="pap" cx="118" cy="140" rx="30" ry="42" transform="rotate(12 118 140)"/><ellipse class="thin" cx="118" cy="140" rx="23" ry="34" transform="rotate(12 118 140)"/>`],
+    [7, '배경지', 'unroll', '<path class="st4" d="M356 270V44M544 270V44"/><path class="cyc" d="M364 46H536V236Q536 268 582 270H318Q364 268 364 236Z"/><path class="cycsh" d="M364 206H536V236Q536 268 582 270H318Q364 268 364 236Z"/><rect class="ink" x="346" y="36" width="208" height="11" rx="5.5"/>', '', true],
+    [9, '감독 의자', 'slideR', `${sh(905, 30)}<path class="st5" d="M885 270L925 214M925 270L885 214"/><rect class="ink" x="880" y="208" width="50" height="7" rx="2"/><path class="st4" d="M884 210V168M926 210V168"/><rect class="ink" x="882" y="166" width="46" height="18" rx="2"/><rect class="red" x="882" y="173" width="46" height="4"/>`],
+    [11, '슬레이트', 'pop', '<g transform="rotate(-8 752 256)"><rect class="pap" x="730" y="240" width="46" height="30" rx="2"/><path class="thin" d="M730 250h46M730 260h46M746 250v20"/><g transform="rotate(-16 730 240)"><rect class="ink" x="730" y="229" width="46" height="10" rx="1"/><path class="hlw" d="M738 230l-5 8M750 230l-5 8M762 230l-5 8M774 230l-5 8"/></g></g>'],
+    [13, '모니터', 'slideL', `${sh(58, 26)}<path class="st5" d="M58 270V196"/><path class="st4" d="M38 270h40"/><rect class="ink" x="18" y="138" width="80" height="60" rx="6"/><rect class="scr" x="25" y="145" width="66" height="46" rx="2"/>`, '<rect class="scron" x="25" y="145" width="66" height="46" rx="2"/><path class="wave" d="M31 183l8-14 7 8 8-20 8 13 7-6 7 13"/><circle class="tally" cx="83" cy="153" r="3"/>'],
+    [15, '보조광', 'rise', `${stand(180, 152)}<rect class="ink" x="158" y="110" width="44" height="44" rx="5"/><rect class="pap" x="164" y="116" width="32" height="32" rx="2"/><path class="thin" d="M174.6 116v32M185.3 116v32M164 126.6h32M164 137.3h32"/>`, '<path class="cone soft" d="M202 116V148L392 250V128Z"/>'],
+    [18, '붐 마이크', 'rise', `${stand(694, 116)}<path class="st4" d="M700 122L486 66"/><rect class="ink" x="696" y="114" width="20" height="13" rx="2"/><ellipse class="ink" cx="470" cy="62" rx="26" ry="9.5" transform="rotate(14 470 62)"/>`],
+    [21, '달리 레일', 'slideL', '<path class="st3" d="M212 277H348M212 285H348"/><path class="st3" d="M224 277v8M248 277v8M272 277v8M296 277v8M320 277v8M344 277v8"/><circle class="ink" cx="252" cy="271" r="5.5"/><circle class="ink" cx="308" cy="271" r="5.5"/>'],
+    [24, '헤이즈 머신', 'pop', `${sh(576, 24)}<rect class="ink" x="560" y="252" width="34" height="18" rx="3"/><rect class="ink" x="551" y="257" width="11" height="8" rx="2"/>`, '<g class="hz"><ellipse cx="522" cy="246" rx="34" ry="10"/><ellipse cx="476" cy="230" rx="42" ry="12"/><ellipse cx="428" cy="244" rx="36" ry="10"/><ellipse cx="500" cy="212" rx="30" ry="9"/><ellipse cx="404" cy="222" rx="26" ry="8"/></g>'],
+    [27, '윤곽광', 'rise', `${stand(614, 78)}<g transform="rotate(22 614 72)"><rect class="ink" x="586" y="57" width="34" height="30" rx="6"/><path class="ink" d="M586 58l-11-7v42l11-7z"/></g>`, '<path class="cone" d="M574 60L586 100L474 196L426 112Z"/>'],
+    [30, '소품 테이블', 'slideR', `${sh(832, 40)}<rect class="ink" x="796" y="222" width="72" height="7" rx="2"/><path class="st4" d="M805 229V270M859 229V270"/><path class="st3" d="M813 196q19-17 38 0"/><rect class="ink" x="806" y="196" width="52" height="26" rx="4"/><circle class="pap" cx="819" cy="210" r="7"/><circle class="pap" cx="845" cy="210" r="7"/><rect class="pap" x="827" y="200" width="10" height="5" rx="1"/>`],
+    [35, '의상 행거', 'slideR', `${sh(977, 30)}<path class="st4" d="M956 270V150M998 270V150M950 150h54"/><path class="st3" d="M950 270h12M992 270h12"/><path class="ink" d="M961 156h15l4 54h-23z"/><path class="red" d="M980 156h14l3 42h-20z"/>`],
+    [40, '조명 트러스', 'drop', `<path class="st3" d="M20 14H1000M20 30H1000"/><path class="st2" d="M20 30L${zig}"/><path class="st3" d="M410 30v10M500 30v10"/><path class="ink" d="M397 40h26l5 20h-36zM487 40h26l5 20h-36z"/>`, '<path class="cone soft" d="M392 60H428L462 250H350Z"/><path class="cone soft" d="M482 60H518L556 250H444Z"/>', true],
+    [50, '네온 사인', 'fade', '<text class="neon" x="450" y="120" text-anchor="middle">DOPEYE</text>', '<text class="neon lit" x="450" y="120" text-anchor="middle">DOPEYE</text>'],
+    [60, '감독', 'slideL', `${sh(222, 22)}<path class="st6" d="M214 218L210 270M230 218L234 270"/><path class="ink" d="M207 168q15-9 30 0l4 54h-38z"/><circle class="ink" cx="222" cy="151" r="11"/><path class="ink" d="M211 145h29v5h-29z"/><path class="st5" d="M235 176L248 166"/>`],
   ];
   function activeDays(d) { // 무엇이든 한 날을 모은다
     const days = new Set();
@@ -2505,18 +2507,28 @@
     const have = GEAR.filter(([need]) => n >= need);
     const next = GEAR.find(([need]) => n < need);
     const newest = have.length ? have[have.length - 1][1] : '';
-    const draw = (list) => list.map(([, name, art, on]) => `<g class="gear${name === newest ? ' newgear' : ''}">${art}${lit && on ? on : ''}</g>`).join('');
+    const order = new Map(have.map((x, i) => [x[1], i]));
+    const gear = (list) => list.map(([, name, kind, art]) => `<g class="gear a-${kind}${name === newest ? ' newest' : ''}" style="--i:${order.get(name)}">${art}</g>`).join('');
+    const lights = lit ? `<g class="lights" style="--n:${have.length}">${have.map((x) => x[4] || '').join('')}</g>` : '';
     const fig = h('figure', { class: 'fig setfig' + (lit ? ' lit' : ''), id: 'myset' });
-    fig.innerHTML = `<svg viewBox="0 0 820 256" role="img" aria-label="내 촬영장. 장비 ${have.length}개">
-      <g class="ln"><path d="M0 226H820"/>${draw(have.filter((x) => x[4]))}${draw(have.filter((x) => !x[4]))}</g>
-      ${have.length ? '' : '<text x="410" y="140" text-anchor="middle">빈 스튜디오예요. 오늘 한 단계만 써도 첫 장비가 들어와요.</text>'}</svg>`;
+    const paint = () => {
+      const svg = `<svg viewBox="0 0 1010 310" role="img" aria-label="내 촬영장. 장비 ${have.length}개">
+        <rect class="floor" x="0" y="270" width="1010" height="40"/><path class="st3" d="M0 270H1010"/>
+        ${gear(have.filter((x) => x[5]))}${gear(have.filter((x) => !x[5]))}${lights}
+        ${have.length ? '' : '<text class="empty" x="505" y="150" text-anchor="middle">빈 스튜디오예요. 오늘 한 단계만 써도 첫 장비가 들어와요.</text>'}</svg>`;
+      const old = fig.querySelector('svg');
+      if (old) old.remove();
+      fig.insertAdjacentHTML('afterbegin', svg);
+    };
+    paint();
     fig.append(h('figcaption', {},
       h('span', { class: 'figno' }, `내 촬영장 ${n}일차`),
       `장비 ${have.length}/${GEAR.length}` + (next ? ` · 다음 장비 "${next[1]}"까지 ${next[0] - n}일` : ' · 촬영장 완성'),
       h('br', {}),
       n === 0 ? '연습한 날이 하루 쌓일 때마다 촬영장이 자라요.'
         : lit ? '조명이 켜져 있어요. 오늘도 한 단계만 쓰면 계속 켜져 있어요.'
-          : '조명이 꺼졌어요. 장비는 그대로 있어요. 오늘 한 단계만 써도 다시 켜져요.'));
+          : '조명이 꺼졌어요. 장비는 그대로 있어요. 오늘 한 단계만 써도 다시 켜져요.',
+      have.length > 1 ? h('button', { class: 'linkbtn replay', type: 'button', id: 'set-replay', onclick: paint }, '세트 짓는 장면 다시 보기') : null));
     return { fig, count: have.length, newest };
   }
 
