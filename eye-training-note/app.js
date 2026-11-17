@@ -326,7 +326,7 @@
     const url = URL.createObjectURL(file);
     try {
       const img = await loadImg(url);
-      return { full: shrink(img, 1800, 0.88), thumb: shrink(img, 520, 0.8) };
+      return { full: shrink(img, 2400, 0.88), thumb: shrink(img, 520, 0.8) };
     } finally { URL.revokeObjectURL(url); }
   }
 
@@ -558,7 +558,8 @@
       let src = '';
       if (c.image.kind === 'file') src = (await store.get('images', c.id))?.data || c.thumb;
       else src = c.image.url;
-      frame.append(src ? h('img', { src, alt: '분석할 이미지', onerror: () => frame.replaceChildren(failBox()) }) : failBox());
+      frame.append(src ? h('img', { src, alt: '분석할 이미지 (누르면 크게 보기)', class: 'zoomable', onclick: () => openZoom(src), onerror: () => frame.replaceChildren(failBox()) }) : failBox());
+      if (src) wrap.append(zoomFab(src));
       stage.append(frame, h('div', { class: 'under' },
         h('span', { class: 'label mono' }, c.image.kind === 'url' ? '링크 이미지' : '내 기기에 저장된 이미지'),
         picker('이미지 바꾸기', 'btn quiet small')));
@@ -1091,7 +1092,7 @@
         .filter(Boolean).join('  ·  '))));
     const lead = h('div', { class: 'opLead' });
     const gz = (c.steps.s2 || {}).gaze || [];
-    if (src) lead.append(gz.some((r) => r.x != null) ? gazeFigure(src, gz) : h('img', { src, alt: '', onerror: (e) => e.target.remove() }));
+    if (src) lead.append(gz.some((r) => r.x != null) ? gazeFigure(src, gz) : h('img', { src, alt: '', class: 'zoomable', onclick: () => openZoom(src), onerror: (e) => e.target.remove() }));
     const leadText = h('div', { class: 'opLeadText' });
     if (has(s11.final)) leadText.append(h('p', { class: 'opFinal' }, s11.final.trim()));
     if (core.length) leadText.append(h('p', {}, h('span', { class: 'label' }, '핵심 요소 '), h('strong', {}, core.join(' · '))));
@@ -1425,6 +1426,72 @@
     window.scrollTo(0, 0);
   }
 
+  /* ───────── 이미지 크게 보기 (확대, 끌어서 이동) ───────── */
+  function openZoom(src) {
+    if (!src || document.querySelector('.zoom')) return;
+    let s = 1, x = 0, y = 0;
+    const img = h('img', { src, alt: '크게 보는 이미지', draggable: false });
+    const pct = h('span', { class: 'zoompct' });
+    const stage = h('div', { class: 'zoomstage' }, img);
+    const apply = () => { img.style.transform = `translate(${x}px, ${y}px) scale(${s})`; pct.textContent = Math.round(s * 100) + '%'; };
+    const zoomAt = (cx, cy, ns) => {
+      ns = Math.min(8, Math.max(1, ns));
+      const r = stage.getBoundingClientRect();
+      const px = cx - r.left - r.width / 2, py = cy - r.top - r.height / 2;
+      x = px - (px - x) * (ns / s); y = py - (py - y) * (ns / s); s = ns;
+      if (s === 1) { x = 0; y = 0; }
+      apply();
+    };
+    const center = () => { const r = stage.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+    const close = () => { box.remove(); document.body.style.overflow = ''; document.removeEventListener('keydown', onKey); };
+    const onKey = (e) => {
+      if (e.key === 'Escape') close();
+      if (e.key === '+' || e.key === '=') zoomAt(...center(), s * 1.4);
+      if (e.key === '-') zoomAt(...center(), s / 1.4);
+    };
+    const pts = new Map();
+    let lastTap = 0, moved = 0, pinch = 0;
+    stage.addEventListener('pointerdown', (e) => { stage.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); moved = 0; pinch = 0; });
+    stage.addEventListener('pointermove', (e) => {
+      if (!pts.has(e.pointerId)) return;
+      const prev = pts.get(e.pointerId);
+      pts.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pts.size === 1) {
+        moved += Math.abs(e.clientX - prev[0]) + Math.abs(e.clientY - prev[1]);
+        if (s > 1) { x += e.clientX - prev[0]; y += e.clientY - prev[1]; apply(); }
+      } else if (pts.size === 2) {
+        const [a, b] = [...pts.values()];
+        const dist = Math.hypot(a[0] - b[0], a[1] - b[1]);
+        if (pinch) zoomAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, s * (dist / pinch));
+        pinch = dist; moved = 99;
+      }
+    });
+    const up = (e) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.delete(e.pointerId); pinch = 0;
+      if (pts.size === 0 && moved < 8) {
+        const now = Date.now();
+        if (now - lastTap < 320) { zoomAt(e.clientX, e.clientY, s > 1 ? 1 : 2.5); lastTap = 0; } else lastTap = now;
+      }
+    };
+    stage.addEventListener('pointerup', up);
+    stage.addEventListener('pointercancel', up);
+    stage.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.clientX, e.clientY, s * (e.deltaY < 0 ? 1.15 : 1 / 1.15)); }, { passive: false });
+    const box = h('div', { class: 'zoom', role: 'dialog', 'aria-label': '이미지 크게 보기' }, stage,
+      h('div', { class: 'zoombar' },
+        h('button', { class: 'btn', type: 'button', 'aria-label': '축소', onclick: () => zoomAt(...center(), s / 1.5) }, '−'),
+        pct,
+        h('button', { class: 'btn', type: 'button', 'aria-label': '확대', onclick: () => zoomAt(...center(), s * 1.5) }, '+'),
+        h('button', { class: 'btn', type: 'button', onclick: () => { s = 1; x = 0; y = 0; apply(); } }, '처음 크기'),
+        h('button', { class: 'btn solid', type: 'button', id: 'zoom-close', onclick: close }, '닫기')),
+      h('p', { class: 'zoomhint' }, '두 번 누르면 확대 · 두 손가락으로 벌리기 · 끌어서 이동'));
+    document.body.append(box);
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onKey);
+    apply();
+  }
+  const zoomFab = (src) => (src ? h('button', { class: 'zoomfab noprint', type: 'button', id: 'zoom-open', onclick: () => openZoom(src) }, '이미지 크게 보기') : null);
+
   /* ───────── 영상 카드 ───────── */
   const VIDEO_STEP = { id: 'video', title: '영상 정보', noUnknown: true, fields: [
     T('title', '영상 제목 (아티스트 - 곡)'),
@@ -1606,8 +1673,9 @@
         h('button', { class: 'btn quiet', onclick: () => { location.hash = 'card-' + c.id; } }, '← 카드로 돌아가기'),
         h('div', { class: 'slate mono' }, h('strong', {}, `No.${pad(c.no, 3)}`), h('span', {}, '2차 다시 쓰기'), savedLabel)),
       h('div', { class: 'editor' },
-        h('div', { class: 'stage' }, h('div', { class: 'frame' }, src ? h('img', { src, alt: '분석할 이미지' }) : h('div', { class: 'linkfail' }, '이미지 없음'))),
-        form)));
+        h('div', { class: 'stage' }, h('div', { class: 'frame' }, src ? h('img', { src, alt: '분석할 이미지 (누르면 크게 보기)', class: 'zoomable', onclick: () => openZoom(src) }) : h('div', { class: 'linkfail' }, '이미지 없음'))),
+        form),
+      zoomFab(src)));
     window.scrollTo(0, 0);
   }
   async function showCompare(id) {
@@ -1647,7 +1715,7 @@
         h('button', { class: 'btn quiet', onclick: () => { location.hash = 'card-' + c.id; } }, '← 카드로 돌아가기'),
         h('div', { class: 'slate mono' }, h('strong', {}, `No.${pad(c.no, 3)}`), h('span', {}, '1차 · 2차 비교'), savedLabel)),
       h('div', { class: 'editor' },
-        h('div', { class: 'stage' }, h('div', { class: 'frame' }, src ? h('img', { src, alt: '분석한 이미지' }) : h('div', { class: 'linkfail' }, '이미지 없음'))),
+        h('div', { class: 'stage' }, h('div', { class: 'frame' }, src ? h('img', { src, alt: '분석한 이미지 (누르면 크게 보기)', class: 'zoomable', onclick: () => openZoom(src) }) : h('div', { class: 'linkfail' }, '이미지 없음')), zoomFab(src)),
         h('div', { class: 'form' },
           h('section', { class: 'sec' }, h('header', {}, h('h2', {}, '내가 표시하기')),
             h('div', { class: 'field' }, h('span', { class: 'label' }, '2차에서 새로 보인 것 3개'), seen),

@@ -716,3 +716,18 @@ html[data-skin="pop"] {
 
 /* 깊게 파기: 근거 칸 */
 .text.why { font-size: 0.9375rem; border-style: dashed; }
+
+/* ── 이미지 크게 보기 ── */
+.zoomable { cursor: zoom-in; }
+.zoom { position: fixed; inset: 0; z-index: 50; background: #000; display: flex; flex-direction: column; }
+.zoomstage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: none; cursor: grab; }
+.zoomstage:active { cursor: grabbing; }
+.zoomstage img { max-width: 100%; max-height: 100%; user-select: none; -webkit-user-select: none; pointer-events: none; will-change: transform; border-radius: 0; }
+.zoombar { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; background: rgba(0, 0, 0, 0.6);
+  padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.zoompct { color: #fff; min-width: 4em; text-align: center; font-variant-numeric: tabular-nums; font-size: 0.875rem; }
+.zoomhint { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); left: 0; right: 0; margin: 0; text-align: center; color: rgba(255, 255, 255, 0.7); font-size: 0.8125rem; pointer-events: none; }
+.zoomfab { position: fixed; z-index: 15; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  background: var(--ink); color: var(--paper); border: 0; border-radius: 10px; padding: 10px 14px; font-size: 0.875rem; font-weight: 600; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); }
+@media (min-width: 900px) { .zoomfab { display: none; } }
+@media print { .zoom { display: none; } }
