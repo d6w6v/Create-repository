@@ -825,3 +825,58 @@ html[data-skin="school"] {
 html[data-skin="school"] .helpbtn.on, html[data-skin="school"] .helpbtn:hover { color: #fff; background: var(--ink); }
 html[data-skin="school"] .segbar .btn { font-size: 0.6875rem; padding: 0 1px; font-weight: 600; }
 .ver { opacity: 0.55; font-size: 0.75em; }
+
+/* ── 교과서 ── */
+.tabs { overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { flex: none; white-space: nowrap; }
+.book { max-width: 720px; display: flex; flex-direction: column; gap: 14px; font-size: 1.0625rem; line-height: 1.75; }
+.book p { margin: 0; }
+.booklead { font-size: 1.125rem; }
+.toc { list-style: none; margin: 8px 0 0; padding: 0; border-top: 2px solid var(--ink); }
+.tocrow { display: grid; grid-template-columns: 3.2em minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 14px 0; color: var(--ink); }
+.tocrow:hover .toctext strong { text-decoration: underline; }
+.tocno { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; color: var(--red, var(--ink)); }
+.toctext { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.toctext strong { font-size: 1.125rem; }
+.toctext .note { line-height: 1.5; }
+.chhead { display: flex; align-items: flex-end; gap: 16px; border-bottom: 4px solid var(--ink); padding-bottom: 10px; margin-top: 4px; }
+.chno { font-size: 4.5rem; font-weight: 800; line-height: 0.85; letter-spacing: -0.06em; color: var(--red, var(--ink)); font-variant-numeric: tabular-nums; }
+.chkicker { font-size: 0.8125rem; color: var(--mute); letter-spacing: 0.04em; }
+.chhead h2 { margin: 0; font-size: 2rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1.15; }
+.goal { background: var(--panel); padding: 12px 14px; font-size: 1rem; line-height: 1.6; }
+.chapter h3 { margin: 18px 0 0; font-size: 1.1875rem; font-weight: 800; letter-spacing: -0.02em; padding-top: 14px; border-top: 1px solid var(--line); }
+.chapter ul { margin: 0; padding-left: 1.2em; }
+.chapter li { padding: 2px 0; }
+.fig { margin: 6px 0; padding: 16px; border: 1px solid var(--line); background: var(--paper); }
+.fig svg { display: block; width: 100%; max-width: 460px; height: auto; margin: 0 auto; color: var(--ink); font-size: 9px; font-family: var(--font-body); }
+.fig svg text { fill: currentColor; }
+.fig svg .inv { fill: var(--paper); font-size: 8px; }
+.fig svg .frame { fill: none; stroke: currentColor; stroke-width: 1; }
+.fig svg .ink { fill: currentColor; }
+.fig svg .thin { fill: none; stroke: currentColor; stroke-width: 0.6; stroke-dasharray: 2 2; }
+.fig svg .ray { stroke: var(--red, currentColor); stroke-width: 1.2; }
+.fig svg .lamp { fill: var(--red, currentColor); }
+.fig svg .dot { fill: var(--paper); stroke: currentColor; stroke-width: 2; }
+.fig figcaption { margin-top: 10px; font-size: 0.875rem; line-height: 1.5; color: var(--mute); }
+.figno { font-weight: 700; color: var(--red, var(--ink)); margin-right: 8px; font-size: 0.8125rem; }
+.terms { margin: 0; display: grid; gap: 0; border-top: 1px solid var(--line); }
+.terms > div { display: grid; grid-template-columns: minmax(96px, 28%) minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 0.9375rem; line-height: 1.55; }
+.terms dt { font-weight: 700; }
+.terms dd { margin: 0; }
+.qhead h3 { border-top: 0; padding-top: 0; margin-top: 0; }
+.qhead { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.q { display: flex; flex-direction: column; gap: 8px; padding: 10px 0; }
+.qtext { font-weight: 600; }
+.qopts { display: flex; flex-direction: column; gap: 6px; }
+.qopt { text-align: left; justify-content: flex-start; white-space: normal; height: auto; line-height: 1.45; padding: 9px 12px; }
+.qopt.right { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.qopt.wrong { border-style: dashed; opacity: 0.6; text-decoration: line-through; }
+.qfb { font-size: 0.9375rem; line-height: 1.6; background: var(--panel); padding: 8px 12px; }
+.booklink { align-self: flex-start; background: none; border: 0; padding: 12px 0 4px; color: var(--mute); font-size: 0.8125rem; text-decoration: underline; text-underline-offset: 3px; }
+.booklink:hover { color: var(--ink); }
+html[data-skin="school"] .booklink { color: var(--red); padding: 12px 0 10px; border-bottom: 1px solid #dcdcdc; align-self: stretch; text-align: left; text-decoration: none; font-weight: 600; }
+html[data-skin="school"] .qopt.right { background: var(--red); border-color: var(--red); color: #fff; }
+html[data-skin="school"] .qopt:hover { background: #fff; color: var(--ink); border-color: var(--red); }
+html[data-skin="school"] .qopt.right:hover { background: var(--red); color: #fff; }
+html[data-skin="school"] .tabs { gap: 16px; }

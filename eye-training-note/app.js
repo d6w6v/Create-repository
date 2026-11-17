@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '20 · 교재판';
+  const APP_VERSION = '21 · 교과서판';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -1020,6 +1020,7 @@
         u.estimate = h('div', { class: 'nudge' }, '출처를 모르는 이미지예요. 감독의 의도는 "추정"이라고 구분해서 쓰세요.');
         u.body.append(u.estimate);
       }
+      u.body.append(h('button', { class: 'booklink', type: 'button', onclick: async () => { await saveNow(); location.hash = 'book-' + stepNo(u.st); } }, `교과서 ${stepNo(u.st)}단원 「${u.st.title}」 읽기 →`));
       for (const f of visibleFields(c, u.st)) u.body.append(buildField(c, u.st, f, changed, { origSrc }));
       u.built = true;
     }
@@ -2166,6 +2167,202 @@
     void done1;
   }
 
+  /* ───────── 교과서: 단원별 개념, 그림, 핵심 용어, 확인 문제 ───────── */
+  const FIG = {
+    comp() {
+      const frames = [['중앙', '<circle cx="30" cy="20" r="7"/>'], ['3분할', '<path d="M20 0V40M40 0V40M0 13.3H60M0 26.6H60" class="thin"/><circle cx="40" cy="13.3" r="6"/>'],
+        ['대칭', '<path d="M30 0V40" class="thin"/><rect x="10" y="12" width="12" height="16"/><rect x="38" y="12" width="12" height="16"/>'],
+        ['대각선', '<path d="M0 40L60 0" class="thin"/><circle cx="14" cy="31" r="5"/><circle cx="44" cy="10" r="5"/>'], ['여백', '<circle cx="50" cy="32" r="4"/>']];
+      return `<svg viewBox="0 0 340 62" role="img" aria-label="구도 다섯 가지">${frames.map(([name, inner], i) =>
+        `<g transform="translate(${i * 68 + 4},2)"><rect width="60" height="40" class="frame"/><g class="ink">${inner}</g><text x="30" y="56" text-anchor="middle">${name}</text></g>`).join('')}</svg>`;
+    },
+    light() {
+      const pos = [['정면', 90], ['앞사선', 45], ['측면', 0], ['뒤사선', -45], ['역광', -90]];
+      const pt = (deg, r) => [130 + r * Math.cos(deg * Math.PI / 180), 95 + r * Math.sin(deg * Math.PI / 180)];
+      return `<svg viewBox="0 0 260 200" role="img" aria-label="위에서 내려다본 조명 위치">
+        <circle cx="130" cy="95" r="16" class="ink"/><text x="130" y="99" text-anchor="middle" class="inv">인물</text>
+        <rect x="118" y="172" width="24" height="14" class="frame"/><text x="130" y="198" text-anchor="middle">카메라</text>
+        ${pos.map(([name, deg]) => { const [x, y] = pt(deg, 62); const [ex, ey] = pt(deg, 22); const [tx, ty] = pt(deg, 76);
+          const mid = deg === 90 || deg === -90;
+          return `<path d="M${x} ${y}L${ex} ${ey}" class="ray"/><circle cx="${x}" cy="${y}" r="6" class="lamp"/><text x="${mid ? x + 12 : tx}" y="${mid ? y + 4 : ty + 4}" text-anchor="start">${name}</text>`; }).join('')}
+        <text x="6" y="14">위에서 내려다본 그림</text></svg>`;
+    },
+    edge() {
+      return `<svg viewBox="0 0 300 70" role="img" aria-label="딱딱한 그림자와 부드러운 그림자">
+        <defs><linearGradient id="soft"><stop offset="0" stop-color="currentColor"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>
+        <rect x="6" y="6" width="130" height="40" class="frame"/><rect x="6" y="6" width="60" height="40" class="ink"/><text x="71" y="62" text-anchor="middle">딱딱한 빛: 경계가 또렷</text>
+        <rect x="164" y="6" width="130" height="40" class="frame"/><rect x="164" y="6" width="34" height="40" class="ink"/><rect x="198" y="6" width="60" height="40" fill="url(#soft)"/><text x="229" y="62" text-anchor="middle">부드러운 빛: 경계가 번짐</text></svg>`;
+    },
+    wheel() {
+      const seg = Array.from({ length: 12 }, (_, i) => { const a0 = (i * 30 - 105) * Math.PI / 180, a1 = (i * 30 - 75) * Math.PI / 180;
+        const p = (a, r) => `${90 + r * Math.cos(a)} ${90 + r * Math.sin(a)}`;
+        return `<path d="M${p(a0, 78)}A78 78 0 0 1 ${p(a1, 78)}L${p(a1, 44)}A44 44 0 0 0 ${p(a0, 44)}Z" fill="hsl(${i * 30} 78% 52%)"/>`; }).join('');
+      return `<svg viewBox="0 0 340 180" role="img" aria-label="색상환과 색 조화">${seg}
+        <path d="M90 12V168" class="thin"/><circle cx="90" cy="29" r="5" class="dot"/><circle cx="90" cy="151" r="5" class="dot"/>
+        <text x="186" y="40">보색: 정반대 색</text><text x="186" y="66">유사색: 이웃한 두세 색</text><text x="186" y="92">단색: 한 색의 밝기 차이</text><text x="186" y="118">삼색: 세 갈래로 벌어진 색</text>
+        <text x="186" y="150">점 두 개가 보색 관계</text></svg>`;
+    },
+  };
+  const BOOK = [
+    { n: 1, title: '첫 반응', goal: '분석을 시작하기 전에 내 반응을 먼저 적어야 하는 이유를 설명할 수 있다.',
+      body: [['h', '느낌은 문제, 분석은 풀이'], ['p', '이미지를 뜯어보기 시작하면 처음 3초의 느낌은 금방 사라져요. 그래서 먼저 적어 둬요. 뒤의 열 단계는 모두 "왜 그 느낌이 났는가"를 푸는 과정이에요.'],
+        ['h', '묘사하는 말과 판정하는 말'], ['p', '"예쁘다", "멋있다", "분위기 있다"는 점수를 매기는 말이라 다음 단계로 이어지지 않아요. 몸의 감각으로 바꿔 쓰면 이어져요.'],
+        ['ul', ['온도: 뜨겁다, 서늘하다', '무게: 가라앉는다, 떠 있다', '속도: 멈춰 있다, 쫓긴다', '소리: 조용하다, 웅웅거린다', '촉감: 끈적하다, 까끌하다', '거리: 코앞이다, 엿보는 것 같다']],
+        ['h', '점수의 쓸모'], ['p', '좋음 점수는 8단원 지우기 테스트의 기준선이에요. 무언가를 가렸을 때 이 점수에서 얼마나 내려가는지를 재요.']],
+      terms: [['첫 반응', '분석하기 전, 3초 안에 든 느낌'], ['감각어', '온도·무게·속도처럼 몸으로 느끼는 것을 가리키는 말'], ['판정어', '좋다·예쁘다처럼 점수만 매기는 말']],
+      quiz: [{ q: '첫 반응 문장으로 가장 알맞은 것은?', o: ['분위기 있는 느낌', '축축하고 느리게 가라앉는 느낌', '역광을 쓴 느낌'], a: 1, why: '첫째는 판정하는 말이고, 셋째는 이미 분석이에요. 둘째만 몸의 감각으로 느낌을 적었어요.' },
+        { q: '첫 반응을 분석보다 먼저 적는 까닭은?', o: ['분석하다 보면 처음 느낌이 사라지기 때문에', '점수를 높게 주기 위해서', '칸을 빨리 채우기 위해서'], a: 0, why: '처음 느낌은 뒤의 모든 분석이 설명해야 할 대상이에요.' }] },
+    { n: 2, title: '시선과 프레임', goal: '눈이 움직인 길과 카메라가 있던 자리를 화면에서 읽어낼 수 있다.',
+      body: [['h', '눈은 정해진 순서로 움직인다'], ['p', '눈은 대개 가장 밝은 곳, 대비가 가장 센 곳, 얼굴(특히 눈), 선이 모이는 곳 순으로 가요. 만든 사람은 이 순서를 이용해 볼 차례를 정해요.'],
+        ['h', '높이와 앵글은 다르다'], ['p', '카메라 높이는 카메라가 있는 자리이고, 앵글은 카메라가 고개를 든 방향이에요. 바닥에 놓고 수평으로 찍을 수도 있고, 눈높이에서 아래를 내려다볼 수도 있어요.'],
+        ['ul', ['높이: 지평선이 인물의 어디를 지나가는지 본다', '앵글: 턱 밑이 보이면 로우, 정수리가 보이면 하이', '화각: 가까운 것이 과장되면 광각, 앞뒤가 납작하면 망원']],
+        ['h', '구도'], ['fig', 'comp', '구도 다섯 가지. 검은 덩어리가 주인공이다.'],
+        ['h', '프레임은 잘라낸 것이다'], ['p', '화면 안에 무엇이 있는지만큼, 무엇을 뺐는지가 중요해요. 하늘을 자르면 갇힌 느낌이, 발을 자르면 떠 있는 느낌이 나요.']],
+      terms: [['시선 유도', '보는 사람의 눈이 가는 순서를 설계하는 것'], ['네거티브 스페이스', '주인공도 소품도 아닌 빈 면적'], ['앵글', '카메라가 기울어진 방향 (로우·아이레벨·하이)'], ['화각', '렌즈가 담는 넓이. 광각은 넓고 망원은 좁다'], ['심도', '초점이 맞는 앞뒤 범위']],
+      quiz: [{ q: '인물의 정수리가 보인다. 앵글은?', o: ['로우', '아이레벨', '하이'], a: 2, why: '위에서 내려다봐야 정수리가 보여요.' },
+        { q: '배경이 크게 흐리고 인물과 배경이 납작하게 붙어 보인다. 화각 인상은?', o: ['광각', '망원'], a: 1, why: '망원은 앞뒤 거리를 눌러 붙이고 배경을 크게 흐려요.' },
+        { q: '지평선이 인물의 허리를 지나간다. 카메라 높이는?', o: ['바닥', '허리', '눈높이'], a: 1, why: '지평선은 늘 카메라 높이에 놓여요.' }] },
+    { n: 3, title: '빛', goal: '그림자만 보고 광원의 개수, 방향, 크기를 추리할 수 있다.',
+      body: [['h', '빛은 안 보이고 그림자가 보인다'], ['p', '화면에서 조명 자체는 대개 안 보여요. 증거는 그림자와 반사광이에요. 그림자는 늘 빛의 반대편에 생겨요.'],
+        ['fig', 'light', '주광이 놓이는 다섯 자리. 인물 뒤로 갈수록 얼굴은 어두워지고 윤곽만 밝아진다.'],
+        ['h', '딱딱한 빛과 부드러운 빛'], ['p', '그림자 가장자리가 답이에요. 작고 센 광원은 또렷한 경계를, 크거나 한 번 퍼뜨린 광원은 번지는 경계를 만들어요.'], ['fig', 'edge', '그림자 경계로 광원의 크기를 안다.'],
+        ['h', '빛의 세 가지 역할'], ['ul', ['주광: 형태를 만드는 가장 센 빛', '보조광: 그림자를 살짝 채우는 약한 빛', '윤곽광: 뒤에서 가장자리를 따서 배경과 떼어내는 빛']],
+        ['h', '빛의 출처'], ['p', '창문이나 등이 화면에 보이면 빛이 "설명된" 것이에요. 설명되지 않는 빛은 무대 같은 인위적인 느낌을 줘요. 어느 쪽이든 선택이에요.']],
+      terms: [['주광', '가장 센 빛. 그림자의 방향을 정한다'], ['윤곽광', '인물 뒤쪽에서 가장자리만 밝히는 빛'], ['캐치라이트', '눈동자에 비친 광원의 반사'], ['명암 대비', '밝은 곳과 어두운 곳의 차이'], ['동기가 있는 빛', '화면 속 광원으로 설명되는 빛']],
+      quiz: [{ q: '코 그림자가 화면 오른쪽 아래로 떨어진다. 주광은 어디에 있나?', o: ['오른쪽 아래', '왼쪽 위', '정면'], a: 1, why: '그림자는 빛의 반대편에 생겨요.' },
+        { q: '그림자 가장자리가 칼로 자른 듯 또렷하다. 광원은?', o: ['작고 센 광원', '크고 퍼진 광원'], a: 0, why: '광원이 작을수록 경계가 또렷해요.' },
+        { q: '얼굴은 어둡고 머리카락 가장자리만 밝게 빛난다. 이 빛의 역할은?', o: ['주광', '보조광', '윤곽광'], a: 2, why: '뒤에서 가장자리만 따는 빛이 윤곽광이에요.' }] },
+    { n: 4, title: '색', goal: '색을 면적, 온도, 진하기, 관계로 나눠 말할 수 있다.',
+      body: [['h', '면적으로 본다'], ['p', '눈을 가늘게 뜨면 세부가 지워지고 색 덩어리만 남아요. 가장 넓은 색이 지배색, 다음이 보조색, 작지만 눈에 띄는 색이 포인트색이에요. 흔히 6:3:1에 가깝게 나뉘어요.'],
+        ['h', '온도와 진하기'], ['ul', ['색온도: 빨강·주황 쪽은 따뜻하고 파랑·청록 쪽은 차갑다', '채도: 원색에 가까우면 높고 회색을 탄 듯하면 낮다', '밝기: 대부분 밝으면 하이키, 대부분 어두우면 로우키']],
+        ['h', '색끼리의 관계'], ['fig', 'wheel', '색상환. 마주 보는 색이 보색이다.'],
+        ['h', '색이 하는 일'], ['p', '색은 주인공을 배경에서 떼어 내거나, 화면을 하나로 묶거나, 무언가를 상징해요. 한 이미지에서 색이 이 셋 중 무엇을 하는지 정해 말해 봐요.']],
+      terms: [['지배색', '가장 넓은 면적을 차지하는 색'], ['포인트색', '면적은 작지만 눈을 끄는 색'], ['보색', '색상환에서 정반대에 있는 색'], ['채도', '색의 진하기'], ['로우키', '화면 대부분이 어두운 상태']],
+      quiz: [{ q: '빨강의 보색은?', o: ['주황', '청록', '보라'], a: 1, why: '색상환에서 빨강의 맞은편은 청록이에요.' },
+        { q: '화면 대부분이 어둡고 얼굴 일부만 밝다. 전체 밝기는?', o: ['하이키', '로우키'], a: 1, why: '대부분이 어두우면 로우키예요.' },
+        { q: '색을 볼 때 눈을 가늘게 뜨는 까닭은?', o: ['세부를 지우고 색 덩어리만 보려고', '더 선명하게 보려고'], a: 0, why: '세부가 사라져야 면적 비율이 보여요.' }] },
+    { n: 5, title: '질감과 재질', goal: '표면이 빛을 되쏘는 방식으로 재질과 후반 작업을 읽을 수 있다.',
+      body: [['h', '재질은 반사로 읽는다'], ['ul', ['날카로운 반사: 금속, 유리, 젖은 표면', '부드러운 반사: 피부, 천, 종이', '거의 없는 반사: 벽돌, 콘크리트, 두꺼운 모직']],
+        ['p', '한 화면에 번들거리는 것과 빛을 먹는 것이 같이 있으면 질감 대비가 생겨요. 눈은 그 경계에 머물러요.'],
+        ['h', '찍은 뒤의 손길'], ['p', '입자(그레인), 선명도, 색 보정은 화면 전체에 깔리는 질감이에요. 검정이 완전히 검은지 살짝 떠 있는지만 봐도 보정 방향이 보여요.'],
+        ['h', '렌즈의 흔적'], ['p', '가장자리가 어두워지는 비네팅, 빛이 번지는 플레어, 흐린 배경의 빛망울도 재질의 일부예요.']],
+      terms: [['그레인', '필름 입자. 어두운 곳에서 잘 보인다'], ['그레이딩', '찍은 뒤 색과 밝기를 만지는 작업'], ['비네팅', '화면 가장자리가 어두워지는 현상'], ['할레이션', '밝은 곳 주변이 붉게 번지는 현상']],
+      quiz: [{ q: '젖은 아스팔트는 어떤 반사를 하나?', o: ['날카로운 반사', '거의 없는 반사'], a: 0, why: '젖은 표면은 거울처럼 날카롭게 되쏘아요.' },
+        { q: '필름 입자가 가장 잘 보이는 곳은?', o: ['가장 밝은 곳', '어두운 곳과 중간 밝기'], a: 1, why: '밝게 날아간 곳에서는 입자가 묻혀요.' }] },
+    { n: 6, title: '인물과 소품 연출', goal: '인물, 의상, 소품, 장소가 하는 말을 읽을 수 있다.',
+      body: [['h', '화면에 놓인 것은 모두 선택이다'], ['p', '화면 안에 놓인 모든 것을 미장센이라고 해요. 우연히 들어온 것은 없다고 가정하고 읽어요.'],
+        ['h', '시선과 자세'], ['ul', ['카메라를 똑바로 보면 보는 사람에게 말을 건다', '화면 밖을 보면 그쪽에 사건이 있다', '어깨가 열렸는지, 무게가 어느 발에 있는지가 태도를 말한다']],
+        ['h', '배치'], ['p', '인물을 어디에 세웠는지를 블로킹이라고 해요. 둘 사이의 거리는 관계를, 높낮이는 힘의 차이를 말해요.'],
+        ['h', '소품과 시대감'], ['p', '소품은 정보예요. 직업, 시대, 방금 일어난 일을 알려 줘요. 시대감은 머리 모양, 옷의 윤곽, 화면의 질감이 함께 만들어요.']],
+      terms: [['미장센', '화면 안에 놓인 모든 것'], ['블로킹', '인물을 세우는 자리와 움직임'], ['실루엣', '옷과 몸이 만드는 바깥 윤곽']],
+      quiz: [{ q: '인물이 카메라를 똑바로 본다. 어떤 효과가 나나?', o: ['보는 사람에게 말을 건다', '화면 밖 사건을 암시한다'], a: 0, why: '눈이 마주치면 보는 사람이 장면 안으로 끌려 들어가요.' },
+        { q: '두 인물 중 한 명이 훨씬 높은 자리에 있다. 무엇을 말하나?', o: ['친밀함', '힘의 차이'], a: 1, why: '높낮이는 힘의 차이를 가장 빨리 전해요.' }] },
+    { n: 7, title: '일부러 틀린 것', goal: '관습을 알고, 그것이 깨진 자리를 찾을 수 있다.',
+      body: [['h', '관습'], ['p', '같은 종류의 이미지가 되풀이하는 방식이 관습이에요. 총 든 인물은 아래에서 올려 찍는다, 인물 사진은 눈에 초점을 맞춘다 같은 것들이에요.'],
+        ['h', '눈에 걸리는 곳'], ['p', '관습이 깨진 곳은 눈에 걸려요. 기억에 남는 이미지에는 대개 이런 곳이 하나 있어요.'],
+        ['h', '실수와 선택 구별하기'], ['p', '다른 요소들이 그 "틀림"을 받쳐 주고 있으면 선택이에요. 혼자 튀고 나머지와 따로 놀면 실수일 가능성이 커요.']],
+      terms: [['관습', '한 장르가 되풀이하는 방식'], ['위반', '관습에서 일부러 벗어난 것']],
+      quiz: [{ q: '틀린 것이 실수가 아니라 선택이라는 단서는?', o: ['화면 한 곳에만 있다', '다른 요소들이 같은 방향으로 맞춰져 있다'], a: 1, why: '빛, 구도, 연출이 그 틀림을 함께 받쳐 주면 의도예요.' }] },
+    { n: 8, title: '지우기 테스트', goal: '이 이미지를 떠받치는 것이 무엇인지 실험으로 확인할 수 있다.',
+      body: [['h', '생각하지 말고 가려 본다'], ['p', '손가락이나 종이로 실제로 가려 봐요. 머릿속 상상은 이미 좋아하는 쪽으로 기울어 있어요.'],
+        ['h', '읽는 법'], ['ul', ['많이 줄어든다: 이 이미지의 기둥', '조금 줄어든다: 기둥을 돕는 것', '안 줄어든다: 없어도 되는 것']],
+        ['p', '기둥이 둘 이상 나오면, 그 둘이 서로를 필요로 하는지 다시 따져 봐요.']],
+      terms: [['핵심 요소', '가렸을 때 좋음이 가장 많이 줄어드는 것']],
+      quiz: [{ q: '가려도 좋음 점수가 줄지 않는 요소는?', o: ['이 이미지의 기둥', '없어도 되는 것'], a: 1, why: '빼도 달라지지 않으면 장식이에요.' }] },
+    { n: 9, title: '비교', goal: '두 이미지의 차이를 한 줄로 말할 수 있다.',
+      body: [['h', '거의 같은 두 장'], ['p', '비교는 비슷할수록 쓸모가 있어요. 거의 같은데 한쪽만 끌린다면, 둘의 차이가 곧 끌림의 원인이에요.'],
+        ['h', '계보'], ['p', '모든 이미지는 앞선 이미지에 기대고 있어요. 어떤 영화, 사진가, 시대를 닮았는지 떠올려 보면 만든 사람이 무엇을 가져오고 무엇을 바꿨는지 보여요. 확인되지 않았으면 추정이라고 적어요.']],
+      terms: [['레퍼런스', '만든 사람이 참고했을 앞선 이미지']],
+      quiz: [{ q: '비교 대상으로 가장 쓸모 있는 것은?', o: ['전혀 다른 분위기의 이미지', '거의 같은데 덜 끌리는 이미지'], a: 1, why: '차이가 작을수록 원인을 하나로 좁힐 수 있어요.' }] },
+    { n: 10, title: '디렉터의 눈', goal: '관찰한 것을 결정의 말로 바꿀 수 있다.',
+      body: [['h', '관찰에서 결정으로'], ['p', '"빛이 오른쪽에서 온다"는 관찰이에요. "빛을 오른쪽에 뒀다"는 결정이에요. 주어를 만든 사람으로 바꾸면, 다른 선택지와 그걸 버린 이유가 따라 나와요.'],
+        ['ul', ['결정: 여러 선택지 중 고른 것', '효과: 그 선택이 보는 사람에게 하는 일', '대안: 흔히 택했을 다른 방법과 그것을 버릴 이유']],
+        ['h', '보이는 것과 암시하는 것'], ['p', '화면에 있는 그대로를 외연, 그것이 불러오는 뜻을 내포라고 해요. 붉은 빛(외연)은 위험일 수도 열기일 수도 있어요(내포). 하나로 정하고 근거를 대요.'],
+        ['h', '추정은 추정이라고 쓴다'], ['p', '만든 사람의 의도는 크레딧이나 인터뷰로 확인되지 않으면 추정이에요.']],
+      terms: [['외연', '화면에 보이는 것 그대로'], ['내포', '보이는 것이 불러오는 뜻'], ['추정', '확인되지 않은 의도에 대한 내 생각']],
+      quiz: [{ q: '"붉은 빛이 두 사람의 얼굴을 덮고 있다"는?', o: ['외연', '내포'], a: 0, why: '해석 없이 보이는 것만 말했으니 외연이에요.' },
+        { q: '인터뷰로 확인되지 않은 감독의 의도는 어떻게 적나?', o: ['사실로 적는다', '추정이라고 표시한다'], a: 1, why: '확인할 수 없는 것과 눈으로 본 것을 섞지 않아요.' }] },
+    { n: 11, title: '정리', goal: '분석을 한 문장과 다시 찍을 수 있는 레시피로 줄일 수 있다.',
+      body: [['h', '크리틱의 네 걸음'], ['ul', ['묘사: 무엇이 보이는가', '분석: 어떻게 짜여 있는가', '해석: 무엇을 뜻하는가', '판단: 잘 되었는가, 왜']],
+        ['p', '앞의 열 단원이 이 순서로 놓여 있어요. 마지막 단원은 판단이에요.'],
+        ['h', '최종 문장'], ['p', '"무엇 때문에 어떤 느낌이 난다"의 꼴로 써요. 앞부분은 화면에서 가리킬 수 있는 것이어야 해요.'],
+        ['h', '레시피'], ['p', '레시피는 남이 읽고 다시 찍을 수 있을 만큼 구체적이어야 해요. "어둡게"가 아니라 "빨간 필터를 씌운 조명 하나를 오른쪽 앞 45도에".']],
+      terms: [['크리틱', '작품을 묘사·분석·해석·판단하는 수업 방식'], ['레시피', '같은 효과를 다시 만들기 위한 조건 목록']],
+      quiz: [{ q: '크리틱의 순서로 알맞은 것은?', o: ['판단, 해석, 분석, 묘사', '묘사, 분석, 해석, 판단'], a: 1, why: '본 것에서 시작해 판단으로 끝나요.' },
+        { q: '더 좋은 레시피는?', o: ['조명을 분위기 있게', '빨간 필터 조명 하나를 오른쪽 앞 45도에'], a: 1, why: '남이 읽고 그대로 따라 할 수 있어야 레시피예요.' }] },
+  ];
+  async function loadStudy() { return (await store.get('meta', 'study')) || { id: 'study', read: {}, quiz: {} }; }
+  const quizDone = (study, ch) => ch.quiz.filter((_, i) => study.quiz[`${ch.n}.${i}`]).length;
+
+  async function showBookList() {
+    cur = null; savedLabel = null;
+    const study = await loadStudy();
+    const total = BOOK.reduce((a, ch) => a + ch.quiz.length, 0);
+    const solved = BOOK.reduce((a, ch) => a + quizDone(study, ch), 0);
+    app.replaceChildren(h('div', { class: 'wrap' }, topBar('book', '보는 법을 배우는 열한 단원'),
+      h('div', { class: 'book' },
+        h('p', { class: 'booklead' }, '각 단원은 분석 카드의 한 단계와 짝이에요. 먼저 읽고, 확인 문제를 풀고, 카드에서 직접 써 보는 순서로 공부해요.'),
+        h('p', { class: 'note', id: 'study-progress' }, `읽은 단원 ${Object.keys(study.read).length}/${BOOK.length} · 확인 문제 ${solved}/${total}`),
+        h('ol', { class: 'toc' }, BOOK.map((ch) => h('li', {},
+          h('button', { class: 'tocrow', type: 'button', onclick: () => { location.hash = 'book-' + ch.n; } },
+            h('span', { class: 'tocno' }, pad(ch.n)),
+            h('span', { class: 'toctext' }, h('strong', {}, ch.title), h('span', { class: 'note' }, ch.goal)),
+            h('span', { class: 'chip-state' + (study.read[ch.n] && quizDone(study, ch) === ch.quiz.length ? ' done' : '') },
+              study.read[ch.n] ? `문제 ${quizDone(study, ch)}/${ch.quiz.length}` : '안 읽음'))))))));
+    window.scrollTo(0, 0);
+  }
+  async function showBook(n) {
+    const ch = BOOK.find((c) => c.n === Number(n));
+    if (!ch) { location.hash = 'book'; return; }
+    cur = null; savedLabel = null;
+    const study = await loadStudy();
+    if (!study.read[ch.n]) { study.read[ch.n] = Date.now(); await store.put('meta', study); }
+    let figNo = 0;
+    const body = ch.body.map(([kind, a, b]) => {
+      if (kind === 'h') return h('h3', {}, a);
+      if (kind === 'p') return h('p', {}, a);
+      if (kind === 'ul') return h('ul', {}, a.map((t) => h('li', {}, t)));
+      const fig = h('figure', { class: 'fig' });
+      fig.innerHTML = FIG[a]();
+      fig.append(h('figcaption', {}, h('span', { class: 'figno' }, `그림 ${ch.n}-${++figNo}`), b));
+      return fig;
+    });
+    const score = h('span', { class: 'chip-state' });
+    const drawScore = () => { const d = quizDone(study, ch); score.textContent = `${d}/${ch.quiz.length}`; score.classList.toggle('done', d === ch.quiz.length); };
+    const quiz = ch.quiz.map((qz, i) => {
+      const fb = h('p', { class: 'qfb', hidden: true });
+      const opts = h('div', { class: 'qopts', role: 'group', 'aria-label': `확인 문제 ${i + 1}` }, qz.o.map((text, j) =>
+        h('button', { class: 'btn qopt', type: 'button', onclick: async (e) => {
+          const right = j === qz.a;
+          const me = e.currentTarget;
+          opts.querySelectorAll('.qopt').forEach((bt) => bt.classList.remove('right', 'wrong'));
+          me.classList.add(right ? 'right' : 'wrong');
+          fb.hidden = false;
+          fb.replaceChildren(h('strong', {}, right ? '맞아요. ' : '다시 생각해 봐요. '), right ? qz.why : '본문에서 이 부분을 다시 읽고 골라 보세요.');
+          if (right && !study.quiz[`${ch.n}.${i}`]) { study.quiz[`${ch.n}.${i}`] = Date.now(); await store.put('meta', study); drawScore(); }
+        } }, text)));
+      return h('div', { class: 'q' }, h('p', { class: 'qtext' }, h('span', { class: 'figno' }, `문제 ${i + 1}`), qz.q), opts, fb);
+    });
+    drawScore();
+    const prev = BOOK.find((c) => c.n === ch.n - 1); const next = BOOK.find((c) => c.n === ch.n + 1);
+    app.replaceChildren(h('div', { class: 'wrap' }, topBar('book', '보는 법을 배우는 열한 단원'),
+      h('article', { class: 'book chapter' },
+        h('div', {}, h('button', { class: 'btn quiet small', type: 'button', onclick: () => { location.hash = 'book'; } }, '← 목차')),
+        h('header', { class: 'chhead' }, h('span', { class: 'chno' }, pad(ch.n)), h('div', {}, h('p', { class: 'chkicker' }, `${ch.n}단원`), h('h2', {}, ch.title))),
+        h('div', { class: 'goal' }, h('span', { class: 'helptag' }, '학습 목표'), ch.goal),
+        body,
+        h('h3', {}, '핵심 용어'),
+        h('dl', { class: 'terms' }, ch.terms.map(([t, d]) => h('div', {}, h('dt', {}, t), h('dd', {}, d)))),
+        h('div', { class: 'fieldtop qhead' }, h('h3', {}, '확인 문제'), score), quiz,
+        h('h3', {}, '직접 해 보기'),
+        h('p', {}, `분석 카드의 ${ch.n}단계가 이 단원의 연습 문제예요. 이미지 한 장을 골라 방금 읽은 것을 써 보세요.`),
+        h('div', { class: 'seg' },
+          h('button', { class: 'btn solid', type: 'button', onclick: () => { location.hash = 'new'; } }, '새 카드로 연습하기'),
+          prev ? h('button', { class: 'btn', type: 'button', onclick: () => { location.hash = 'book-' + prev.n; } }, `← ${prev.n}단원 ${prev.title}`) : null,
+          next ? h('button', { class: 'btn', type: 'button', onclick: () => { location.hash = 'book-' + next.n; } }, `${next.n}단원 ${next.title} →`) : null))));
+    window.scrollTo(0, 0);
+  }
+
   function topBar(active, sub, action) {
     const tab = (key, name, hash) => h('button', { class: 'tab' + (active === key ? ' on' : ''), type: 'button', id: 'tab-' + key,
       'aria-current': active === key ? 'page' : null, onclick: () => { location.hash = hash; } }, name);
@@ -2174,7 +2371,7 @@
         h('h1', {}, 'DOPEYE'),
         h('div', { class: 'sub' }, sub, h('span', { class: 'ver' }, `  v${APP_VERSION.split(' ')[0]}`))),
       h('div', { class: 'row' },
-        h('nav', { class: 'tabs', 'aria-label': '화면 이동' }, tab('list', '카드', 'list'), tab('series', '시리즈', 'series'), tab('diary', '일기', 'diary'), tab('look', '돌아보기', 'look'), tab('backup', '백업', 'backup')),
+        h('nav', { class: 'tabs', 'aria-label': '화면 이동' }, tab('book', '교과서', 'book'), tab('list', '카드', 'list'), tab('series', '시리즈', 'series'), tab('diary', '일기', 'diary'), tab('look', '돌아보기', 'look'), tab('backup', '백업', 'backup')),
         action || null));
   }
 
@@ -2185,6 +2382,8 @@
     if (flushPage) { await flushPage(); flushPage = null; }
     diaryPaste = null;
     if (name === 'diary') return showDiary();
+    if (name === 'book') return showBookList();
+    if (name.startsWith('book-')) return showBook(name.slice(5));
     if (name === 'backup') return showBackup();
     if (name === 'look') return showLook();
     if (name === 'series') return showSeriesList();
