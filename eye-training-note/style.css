@@ -911,3 +911,48 @@ html[data-skin="school"] .core .label { color: #fff; opacity: 0.8; font-weight: 
 .gamerow { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; }
 #boss { margin-bottom: 20px; }
 #boss .missiontext + .note { margin: 0; }
+
+/* ════════ 모션: 모양과 글씨는 그대로, 움직임만 ════════ */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes reveal { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes pop { 0% { transform: scale(0.82); } 60% { transform: scale(1.08); } 100% { transform: scale(1); } }
+@keyframes shake { 0%, 100% { transform: none; } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes growX { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes dropPin { 0% { transform: translate(-50%, -160%) scale(1.5); opacity: 0; } 70% { transform: translate(-50%, -44%) scale(0.92); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1); } }
+@keyframes toastIn { from { opacity: 0; transform: translate(-50%, 18px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes bitFly { 0% { transform: translate(0, 0) rotate(0); opacity: 1; } 100% { transform: translate(var(--dx), calc(var(--dy) + 160px)) rotate(var(--rot)); opacity: 0; } }
+
+.wrap { animation: fadeIn 0.22s ease-out; }
+.tile { animation: fadeUp 0.36s ease-out both; }
+.tile:nth-child(2) { animation-delay: 40ms; } .tile:nth-child(3) { animation-delay: 80ms; } .tile:nth-child(4) { animation-delay: 120ms; }
+.tile:nth-child(5) { animation-delay: 160ms; } .tile:nth-child(6) { animation-delay: 200ms; } .tile:nth-child(7) { animation-delay: 240ms; } .tile:nth-child(n+8) { animation-delay: 280ms; }
+.tocrow, .toc li { animation: fadeUp 0.3s ease-out both; }
+.toc li:nth-child(2) { animation-delay: 30ms; } .toc li:nth-child(3) { animation-delay: 60ms; } .toc li:nth-child(4) { animation-delay: 90ms; } .toc li:nth-child(5) { animation-delay: 120ms; }
+.toc li:nth-child(6) { animation-delay: 150ms; } .toc li:nth-child(n+7) { animation-delay: 180ms; }
+.stepbody:not([hidden]), .wsbody:not([hidden]), .help:not([hidden]), .stuck:not([hidden]) { animation: reveal 0.26s ease-out; }
+.nudge:not([hidden]), .qfb:not([hidden]) { animation: fadeUp 0.22s ease-out; }
+.toast { animation: toastIn 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+.sec > header .chip-state.done, #mission .chip-state.done, #boss .chip-state.done { animation: pop 0.34s ease-out; }
+.btn.on, .tab.on, .qopt.right, .pinbtn.on { animation: pop 0.2s ease-out; }
+.qopt.wrong { animation: shake 0.32s ease-out; }
+.barfill { transform-origin: left center; animation: growX 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.barrow:nth-child(2) .barfill { animation-delay: 60ms; } .barrow:nth-child(3) .barfill { animation-delay: 120ms; } .barrow:nth-child(4) .barfill { animation-delay: 180ms; } .barrow:nth-child(n+5) .barfill { animation-delay: 240ms; }
+.pinlayer .pin:last-child { animation: dropPin 0.3s cubic-bezier(0.3, 0.8, 0.4, 1.3); }
+.pinlayer polyline { stroke-dashoffset: 0; animation: fadeIn 0.4s ease-out; }
+#levelup, .core:not([hidden]) { animation: pop 0.36s ease-out; }
+.roadtile, #rank .badges li.got { animation: fadeUp 0.34s ease-out both; }
+.roadtile:nth-child(2) { animation-delay: 60ms; } .roadtile:nth-child(3) { animation-delay: 120ms; } .roadtile:nth-child(4) { animation-delay: 180ms; }
+#dex .btn.on { animation: pop 0.3s ease-out both; }
+.zoom { animation: fadeIn 0.18s ease-out; }
+.sheetbox { animation: fadeUp 0.24s ease-out; }
+.btn, .tab, .tile .pic, .tocrow, .helpbtn { transition: background-color 0.15s, color 0.15s, border-color 0.15s, transform 0.12s, opacity 0.15s; }
+.btn:active { transform: scale(0.96); }
+.tile:hover .pic { transform: translateY(-3px); }
+.playerlv { display: inline-block; animation: fadeUp 0.3s ease-out; }
+.burst { position: fixed; left: 50%; bottom: calc(60px + env(safe-area-inset-bottom, 0px)); width: 0; height: 0; z-index: 40; pointer-events: none; }
+.bit { position: absolute; width: 9px; height: 9px; left: -4px; top: -4px; animation: bitFly 1.1s cubic-bezier(0.15, 0.6, 0.3, 1) forwards; }
+.bit.b0 { background: var(--ink); } .bit.b1 { background: var(--red, var(--ink)); } .bit.b2 { background: var(--mark); width: 6px; height: 12px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

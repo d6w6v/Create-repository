@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '28 · 콤보·타임어택·보스';
+  const APP_VERSION = '29 · 모션';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -58,6 +58,35 @@
     document.body.append(t);
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.remove(), 3500);
+  }
+
+  /* 축하: 알림과 함께 색종이가 튄다 (움직임 줄이기를 켠 기기에서는 알림만) */
+  function burst(n) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const box = h('div', { class: 'burst', 'aria-hidden': 'true' });
+    for (let i = 0; i < (n || 26); i++) {
+      const ang = Math.PI * (0.15 + Math.random() * 0.7), dist = 120 + Math.random() * 220;
+      const bit = h('span', { class: 'bit b' + (i % 3) });
+      bit.style.setProperty('--dx', `${Math.cos(ang) * dist * (Math.random() < 0.5 ? -1 : 1)}px`);
+      bit.style.setProperty('--dy', `${-Math.sin(ang) * dist}px`);
+      bit.style.setProperty('--rot', `${(Math.random() * 720 - 360) | 0}deg`);
+      bit.style.animationDelay = `${(Math.random() * 90) | 0}ms`;
+      box.append(bit);
+    }
+    document.body.append(box);
+    setTimeout(() => box.remove(), 1400);
+  }
+  function celebrate(msg, n) { toast(msg); burst(n); }
+  function countUp(el, from, to, fmt) {
+    if (from === to || matchMedia('(prefers-reduced-motion: reduce)').matches) { el.textContent = fmt(to); return; }
+    const t0 = performance.now(), dur = 700;
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = fmt(Math.round(from + (to - from) * e));
+      if (k < 1 && document.body.contains(el)) requestAnimationFrame(step);
+    };
+    el.textContent = fmt(from);
+    requestAnimationFrame(step);
   }
 
   /* ───────── 저장소 (이 기기의 브라우저 안 서랍) ───────── */
@@ -572,11 +601,11 @@
           h('div', { class: 'row' },
             ms.done[tid]
               ? h('span', { class: 'note' }, `해냈어요. 미션 연속 ${missionStreak(ms.done)}일째예요.`)
-              : h('button', { class: 'btn small', type: 'button', id: 'mission-done', onclick: async () => { ms.done[tid] = Date.now(); await store.put('meta', ms); toast('미션 완료 · +25 XP'); showList(); } }, '해냈어요  +25 XP'))));
+              : h('button', { class: 'btn small', type: 'button', id: 'mission-done', onclick: async () => { ms.done[tid] = Date.now(); await store.put('meta', ms); celebrate('미션 완료 · +25 XP', 18); showList(); } }, '해냈어요  +25 XP'))));
       drawMission();
       const g = await gameState();
       let was = 0; try { was = Number(localStorage.getItem('eye-level') || 0); localStorage.setItem('eye-level', String(g.lv)); } catch (e) { /* 기억 못 해도 진행 */ }
-      if (g.lv > was && cards.length) wrap.append(h('div', { class: 'banner', id: 'levelup' }, `등급이 올랐어요. Lv.${g.lv + 1} ${g.title}`));
+      if (g.lv > was && cards.length) { wrap.append(h('div', { class: 'banner', id: 'levelup' }, `등급이 올랐어요. Lv.${g.lv + 1} ${g.title}`)); burst(50); }
       const wid = weekId();
       const [bName, bDesc] = bossOf(wid);
       const bCard = g.cards.find((x) => x.boss === wid);
@@ -1407,23 +1436,23 @@
         const fresh = [...nowTerms].filter((t) => !myTerms.has(t) && !knownTerms.has(t));
         if (doneBefore) {
           const newly = [...doneNow].filter((id) => !doneBefore.has(id));
-          if (fresh.length) toast(`새 용어 획득: ${fresh.join(', ')} · +${fresh.length * 15} XP`);
-          else if (newly.length) toast(allDone ? `카드 완주 · +${STEP_XP[c.mode] || 15} XP` : `${stepNo(STEPS.find((x) => x.id === newly[0]))}단계 완료 · +${STEP_XP[c.mode] || 15} XP`);
+          if (fresh.length) celebrate(`새 용어 획득: ${fresh.join(', ')} · +${fresh.length * 15} XP`, 10);
+          else if (newly.length) (allDone ? celebrate : toast)(allDone ? `카드 완주 · +${STEP_XP[c.mode] || 15} XP` : `${stepNo(STEPS.find((x) => x.id === newly[0]))}단계 완료 · +${STEP_XP[c.mode] || 15} XP`);
         }
         if (doneBefore && doneNow.has('s8') && !doneBefore.has('s8') && guessed(c)) {
           if (!c.guessAt) c.guessAt = Date.now();
           const combo = comboOf([...otherCards, c]);
           const hit = coreElements(c).includes(c.steps.s8.guess);
-          toast(hit ? (combo.streak >= 2 ? `예측 적중 · 콤보 ${combo.streak} · +${30 + Math.min(50, 10 * (combo.streak - 1))} XP` : '예측 적중 · +30 XP') : '예측 빗나감 · 콤보가 끊겼어요');
+          (hit ? celebrate : toast)(hit ? (combo.streak >= 2 ? `예측 적중 · 콤보 ${combo.streak} · +${30 + Math.min(50, 10 * (combo.streak - 1))} XP` : '예측 적중 · +30 XP') : '예측 빗나감 · 콤보가 끊겼어요');
         }
         if (allDone && c.mode === 'quick' && c.attack && c.attack.startAt && c.attack.secs == null) {
           c.attack.secs = Math.round((Date.now() - c.attack.startAt) / 1000);
           c.attack.ok = c.attack.secs <= ATTACK_SECS;
           const best = Math.min(...otherCards.filter((x) => x.attack && x.attack.ok).map((x) => x.attack.secs), Infinity);
-          toast(c.attack.ok ? (c.attack.secs < best ? `타임어택 성공 ${mmss(c.attack.secs)} · 최고 기록 · +40 XP` : `타임어택 성공 ${mmss(c.attack.secs)} · +40 XP`) : `시간 초과 ${mmss(c.attack.secs)}. 다음 카드에서 다시 도전해요.`);
+          (c.attack.ok ? celebrate : toast)(c.attack.ok ? (c.attack.secs < best ? `타임어택 성공 ${mmss(c.attack.secs)} · 최고 기록 · +40 XP` : `타임어택 성공 ${mmss(c.attack.secs)} · +40 XP`) : `시간 초과 ${mmss(c.attack.secs)}. 다음 카드에서 다시 도전해요.`);
           drawGameRow();
         }
-        if (allDone && doneBefore && !bossWasBeaten && bossBeaten(c)) { toast(`보스 격파: ${bossOf(c.boss)[0]} · +150 XP`); drawGameRow(); }
+        if (allDone && doneBefore && !bossWasBeaten && bossBeaten(c)) { celebrate(`보스 격파: ${bossOf(c.boss)[0]} · +150 XP`, 60); drawGameRow(); }
         bossWasBeaten = bossBeaten(c);
         doneBefore = doneNow; myTerms = nowTerms;
       }
@@ -2477,7 +2506,12 @@
     return h('div', { class: 'player', id: 'player' },
       h('div', { class: 'fieldtop' },
         h('strong', { class: 'playerlv' }, `Lv.${g.lv + 1} ${g.title}`),
-        h('span', { class: 'mono label' }, (g.combo.streak >= 2 ? `콤보 ${g.combo.streak} · ` : '') + (g.next ? `${g.xp} XP · 다음 "${g.next[1]}"까지 ${g.next[0] - g.xp}` : `${g.xp} XP · 최고 등급`))),
+        (() => {
+          const el = h('span', { class: 'mono label' });
+          let from = g.xp; try { from = Number(sessionStorage.getItem('eye-xp') ?? g.xp); sessionStorage.setItem('eye-xp', String(g.xp)); } catch (e) { /* 그냥 표시 */ }
+          countUp(el, from, g.xp, (v) => (g.combo.streak >= 2 ? `콤보 ${g.combo.streak} · ` : '') + (g.next ? `${v} XP · 다음 "${g.next[1]}"까지 ${Math.max(0, g.next[0] - v)}` : `${v} XP · 최고 등급`));
+          return el;
+        })()),
       h('span', { class: 'bartrack', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(pct), 'aria-label': '다음 등급까지' },
         h('span', { class: 'barfill', style: `width:${pct}%` })));
   }
