@@ -475,3 +475,131 @@ ul.plain { list-style: none; margin: 0; padding: 0; font-size: var(--fs-s); }
 ul.plain li { padding: 6px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .banner.row { align-items: center; justify-content: space-between; }
 @media (max-width: 460px) { .tab { padding: 8px 9px; font-size: var(--fs-xs); } }
+
+/* ════════════════════════════════════════════════════════════
+   플래티넘 스킨 — 80~90년대 매킨토시 화면을 그대로.
+   배치: 점박이 회색 바탕화면 위에, 회색 테두리를 두른 네모난 창들.
+   글자는 그 시절 화면처럼 도트(픽셀) 글씨. 직접 쓰는 글만 읽기 편한 보통 글씨.
+   ════════════════════════════════════════════════════════════ */
+@font-face { font-family: "Galmuri14"; src: url("fonts/Galmuri14.woff2") format("woff2"); font-display: swap; }
+:root {
+  --bg: #bfbfbf; --bg2: #b3b3b3;
+  --chrome: #dedede;       /* 창틀, 버튼 면 */
+  --paper: #ffffff;
+  --ink: #000000;
+  --mute: #4f4f4f;
+  --line: #a9a9a9;
+  --panel: #ececec;
+  --hi: #ffffff;           /* 볼록한 면의 밝은 모서리 */
+  --lo: #8a8a8a;           /* 볼록한 면의 어두운 모서리 */
+  --shadow: #000000;
+  --px: "Galmuri14", "Noto Sans KR", "Apple SD Gothic Neo", monospace;
+  --font-mono: var(--px);
+  --r: 0px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #2b2b2b; --bg2: #252525; --chrome: #474747; --paper: #161616; --ink: #f1f1f1; --mute: #b4b4b4; --line: #5c5c5c; --panel: #303030; --hi: #707070; --lo: #1c1c1c; --shadow: #000000; }
+}
+:root[data-theme="dark"] { --bg: #2b2b2b; --bg2: #252525; --chrome: #474747; --paper: #161616; --ink: #f1f1f1; --mute: #b4b4b4; --line: #5c5c5c; --panel: #303030; --hi: #707070; --lo: #1c1c1c; --shadow: #000000; }
+
+body { background: repeating-conic-gradient(var(--bg) 0 25%, var(--bg2) 0 50%) 0 0 / 4px 4px; letter-spacing: 0; }
+
+/* 도트 글씨를 쓰는 곳 */
+.top h1, .sec h2, .lookh, .subhead, .btn, .tab, .label, .mono, .chip-state, .tag, .due, .cmpTag, .cmpStep, .stepno, .barval, .barname, .roadnum, .dStats strong, .pickmark, .rowlabel, .top .sub, .opStep h3 {
+  font-family: var(--px); font-weight: 400; letter-spacing: 0; -webkit-font-smoothing: none; font-smooth: never;
+}
+.mono { font-size: 14px; text-transform: none; }
+.label, .btn.small, .chip-state, .tag, .due, .cmpTag, .barval, .barname, .stepno, .top .sub, .tile .meta.mono, .cutmini span, .segbar .btn { font-size: 14px; }
+.btn, .tab, .sec h2, .subhead, .cmpStep, .opStep h3 { font-size: 14px; }
+.top h1, .lookh, .roadnum, .dStats strong, .dStats strong.mono, .sName { font-size: 28px; line-height: 1.2; }
+.sName { font-family: var(--px); font-weight: 400; }
+.roadnum .label { font-size: 14px; }
+.feelline { font-family: var(--px); font-weight: 400; font-size: 14px; }
+.feelline .text { font-size: 1rem; font-weight: 500; }
+.core strong { font-family: var(--px); font-weight: 400; font-size: 28px; line-height: 1.2; }
+.label { color: var(--mute); }
+
+/* 맨 위 */
+.top { align-items: flex-end; }
+.top::after { border-radius: 0; height: 6px; outline: 1px solid var(--ink); }
+
+/* 창: 흰 속 + 회색 창틀 + 검은 바깥선 + 그림자 */
+.sec, .roadtile, .dStats > div, .sRow, .onepage {
+  border: 1px solid var(--ink); border-radius: 0; background: var(--paper);
+  box-shadow: 0 0 0 1px var(--hi), 0 0 0 4px var(--chrome), 0 0 0 5px var(--ink), 8px 8px 0 0 rgba(0, 0, 0, 0.28);
+  margin: 5px 8px 8px 5px;
+}
+.sec > header {
+  background: repeating-linear-gradient(180deg, var(--chrome) 0 2px, var(--lo) 2px 3px) content-box, var(--chrome);
+  border-bottom: 1px solid var(--ink); padding: 5px 8px; gap: 8px; justify-content: flex-start;
+}
+.sec > header::before { content: ""; flex: none; width: 13px; height: 13px; background: var(--chrome); border: 1px solid var(--ink); box-shadow: inset 1px 1px 0 var(--hi), inset -1px -1px 0 var(--lo), 0 0 0 2px var(--chrome); }
+.sec > header > * { background: var(--chrome); }
+.sec h2 { padding: 0 8px; line-height: 1.5; }
+.sec > header .steptoggle { flex: 0 1 auto; }
+.sec > header .chip-state, .sec > header .label { margin-left: auto; }
+.sec > header .chip-state { border: 1px solid var(--ink); border-radius: 0; background: var(--paper); padding: 0 6px; line-height: 1.5; }
+.sec > header .chip-state.done { background: var(--ink); color: var(--paper); }
+.step.locked { box-shadow: 0 0 0 1px var(--hi), 0 0 0 4px var(--chrome), 0 0 0 5px var(--lo); border-color: var(--lo); }
+.step.locked > header { background: var(--chrome); border-bottom-color: var(--lo) !important; }
+.step.locked > header::before { border-color: var(--lo); box-shadow: none; }
+.step.locked:has(> .note:not([hidden])) > header { border-bottom: 1px solid var(--lo) !important; }
+.step.locked .chip-state { border-color: var(--lo) !important; color: var(--mute) !important; background: var(--chrome) !important; }
+.form:has(.step) { gap: 16px; }
+.subhead { border-top: 1px dashed var(--ink); }
+.roadtile, .dStats > div, .sRow { padding: 10px 12px; }
+.onepage { padding: 16px; }
+
+/* 버튼: 볼록한 회색 단추 */
+.btn, .tab, .mini {
+  background: var(--chrome); color: var(--ink); border: 1px solid var(--ink); border-radius: 4px;
+  box-shadow: inset 1px 1px 0 var(--hi), inset -1px -1px 0 var(--lo); min-height: 38px; padding: 6px 14px;
+}
+.btn:hover { background: var(--panel); }
+.btn:active, .mini:active { transform: none; background: var(--lo); box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.5); }
+.btn.solid, .btn.on, .tab.on { background: var(--ink); color: var(--paper); box-shadow: inset 1px 1px 0 var(--mute), inset -1px -1px 0 var(--mute); }
+.btn.solid:hover, .btn.on:hover { background: var(--ink); opacity: 1; }
+.btn.solid { outline: 2px solid var(--ink); outline-offset: 2px; }
+.btn.quiet { border-color: var(--ink); color: var(--ink); box-shadow: inset 1px 1px 0 var(--hi), inset -1px -1px 0 var(--lo); }
+.btn.small { min-height: 32px; padding: 4px 10px; border-radius: 3px; }
+.btn:disabled { box-shadow: none; outline: 0; }
+.tabs { border: 1px solid var(--ink); border-radius: 4px; box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.28); background: var(--chrome); }
+.tab { border: 0; border-right: 1px solid var(--ink); border-radius: 0; min-height: 38px; }
+.tab:last-child { border-right: 0; }
+.score .btn { min-height: 44px; font-size: 14px; }
+.segbar { border: 1px solid var(--ink); border-top: 0; border-radius: 0; }
+.segbar .btn { background: var(--chrome); border-right: 1px solid var(--ink); box-shadow: inset 1px 1px 0 var(--hi), inset -1px -1px 0 var(--lo); min-height: 34px; }
+.segbar .btn.on { background: var(--ink); color: var(--paper); box-shadow: none; }
+.pinbtn { border: 1px solid var(--ink); border-radius: 50%; }
+.mini { min-height: 28px; padding: 0 6px; border-radius: 3px; }
+
+/* 글 쓰는 칸: 오목하게 들어간 흰 칸 */
+.text { border: 1px solid var(--ink); border-radius: 0; background: var(--paper); box-shadow: inset 2px 2px 0 var(--line); padding: 9px 11px; }
+.text:focus { outline: 2px solid var(--ink); outline-offset: 1px; }
+.text:disabled { border-style: dashed; box-shadow: none; }
+.rowcells.joined > .text { border-radius: 0; }
+.searchbar .text { border-radius: 0; padding-left: 11px; }
+.sName { border: 0; border-bottom: 1px solid var(--ink); box-shadow: none; background: transparent; padding: 4px 0; }
+
+/* 작은 조각들 */
+.tag, .chip-state, .nudge, .banner, .due, .cmpTag, .core, .stuck, .toast, .drop, .empty { border-radius: 0; }
+.tag, .chip-state { border: 1px solid var(--ink); background: var(--paper); }
+.nudge, .banner, .due { border: 1px solid var(--mark-ink); }
+.drop, .empty { border: 1px dashed var(--ink); background: var(--paper); box-shadow: 0 0 0 4px var(--chrome), 0 0 0 5px var(--ink); margin: 5px; }
+.toast { border: 1px solid var(--paper); box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3); font-family: var(--px); font-size: 14px; }
+.tile .pic, .tile .nopic, .dImg, .cutpic, .pick, .dEntry img, .sStrip img, .pair img, .gazemap, .cutmini img, .sketch img { border: 1px solid var(--ink); border-radius: 0; }
+.tile .pic, .tile .nopic { box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.28); }
+.stage .frame { border: 1px solid var(--ink); border-radius: 0; background: var(--paper); box-shadow: 0 0 0 1px var(--hi), 0 0 0 4px var(--chrome), 0 0 0 5px var(--ink), 8px 8px 0 0 rgba(0, 0, 0, 0.28); margin: 5px 8px 8px 5px; }
+.bartrack, .bar { border-radius: 0; }
+.bartrack { background: var(--panel); border: 1px solid var(--ink); height: 12px; }
+.barrow .bartrack { border: 0; background: transparent; }
+.barrow .bar { background: repeating-conic-gradient(var(--ink) 0 25%, var(--paper) 0 50%) 0 0 / 2px 2px; border: 1px solid var(--ink); }
+.barrow { border-radius: 0; }
+.pin { box-shadow: none; }
+@media (max-width: 460px) { .tab { padding: 6px 7px; font-size: 14px; } }
+@media print {
+  body { background: #fff; }
+  .onepage { box-shadow: none; border: 0; margin: 0; padding: 0; }
+}
+.tile .meta.mono { white-space: normal; flex-wrap: wrap; gap: 0 8px; }
+.segbar .btn { font-family: var(--font-body); font-size: 12px; font-weight: 500; -webkit-font-smoothing: auto; padding: 0 1px; }
