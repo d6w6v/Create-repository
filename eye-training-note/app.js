@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '23 · 전문용어판';
+  const APP_VERSION = '24 · 통합판';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -126,9 +126,11 @@
   const ERASE = ['인물', '소품', '배경', '가장 큰 색', '질감', '구도'];
   const STEPS = [
     { id: 's1', title: '첫 반응', quick: true, noUnknown: true, fields: [
-      { k: 'feel', label: '느낌 한 줄', type: 'feel' },
-      { k: 'words', label: '떠오른 단어 3개', type: 'multi', n: 3, ph: '단어' },
-      { k: 'score', label: '좋음 점수 (1~10)', type: 'scale' } ] },
+      { k: 'feel', label: '느낌 한 줄', type: 'feel', quick: true },
+      { k: 'words', label: '떠오른 단어 3개', type: 'multi', n: 3, ph: '단어', quick: true },
+      { k: 'score', label: '좋음 점수 (1~10)', type: 'scale', quick: true },
+      T('punctum', '이유 없이 눈에 걸리는 작은 디테일 하나', { opt: true,
+        help: '프랑스 비평가 롤랑 바르트가 『밝은 방』에서 "푼크툼"이라고 부른 것이에요. 주제와 상관없이 나만 찔리는 작은 디테일이에요. 찾는 게 아니라 걸리는 것이라, 없으면 비워 둬요. 카드마다 이 칸이 쌓이면 내 취향의 단서가 돼요.' }) ] },
     { id: 's2', title: '시선과 프레임', quick: true, fields: [
       { k: 'gaze', label: '눈이 간 순서와 이유', type: 'rows', quick: true, pins: true, rowLabels: ['①', '②', '③'],
         cols: [{ k: 'where', label: '눈이 간 곳', type: 'text' }, { k: 'why', label: '이유', type: 'choice', options: WHY }] },
@@ -264,6 +266,10 @@
       D({ k: 'lines', label: '주요 선의 방향', type: 'choices', options: ['수평', '수직', '대각', '곡선'] }, '벽 모서리, 팔, 시선, 그림자 가장자리처럼 눈이 따라가는 선이에요. 수평은 안정, 수직은 힘, 대각은 움직임, 곡선은 부드러움을 줘요.'),
       D(C('balance', '균형', ['대칭', '비대칭', '방사형']), '화면 좌우의 무게예요. 큰 것, 어두운 것, 진한 색일수록 무거워요. 한쪽에 큰 덩어리와 반대쪽에 작은 것 여럿이 맞서면 비대칭 균형이에요.'),
       D(T('exit', '눈이 화면 밖으로 빠져나가는 곳'), '시선이 한 바퀴 돌고 끝나는 지점이에요. 빠져나갈 곳이 없으면 "갇힌 화면"이라고 써요.'),
+      { type: 'head', label: '덩어리로 보기', deep: true },
+      D(T('figureGround', '전경과 배경: 무엇이 앞으로 나오고 무엇이 물러나나'), '게슈탈트 심리학의 "도형과 바탕"이에요. 바우하우스 이후 디자인 기초 수업에서 가르쳐요. 눈은 화면을 앞으로 나온 것과 뒤로 물러난 것으로 먼저 나눠요. 밝기, 색, 선명도 중 무엇이 그 둘을 갈랐는지 써요.'),
+      D(T('grouping', '묶임: 가깝거나 닮아서 한 덩어리로 보이는 것'), '게슈탈트의 근접과 유사 원리예요. 서로 가까운 것, 색이나 모양이 닮은 것은 하나로 읽혀요. 두 인물이 한 덩어리인지 따로인지, 무엇이 그렇게 만드는지 써요.'),
+      D(T('closure', '이어짐: 끊겼는데 이어져 보이는 선, 일부만 보이는데 전체로 읽히는 형태'), '게슈탈트의 연속과 폐쇄 원리예요. 눈은 끊긴 선을 이어 보고, 잘린 형태를 채워 봐요. 프레임에 잘린 몸, 그림자에 묻힌 윤곽을 내가 어떻게 채워서 보는지 써요.'),
     ],
     s3: [
       { type: 'head', label: '빛 더 깊게', deep: true },
@@ -294,6 +300,11 @@
       D(T('place', '배경이 말해 주는 것'), '장소가 인물에 대해 무엇을 알려 주는지 적어요. 계층, 시간대, 직업, 방금 일어난 일 같은 것이에요.'),
     ],
     s7: [
+      { type: 'head', label: '느리게 보기 (10분)', deep: true },
+      { type: 'timer', deep: true },
+      D(T('m1', '1분째에 본 것'), '하버드대학교의 미술사학자 제니퍼 로버츠는 학생들에게 한 작품을 세 시간 동안 보게 해요. 오래 봐야만 보이는 것이 있다는 훈련이에요. 여기서는 10분으로 줄였어요. "틀린 것"은 대개 오래 봐야 눈에 걸려요.'),
+      D(T('m5', '5분째에 새로 보인 것'), '1분째와 겹치지 않는 것만 써요. 가장자리, 그림자 속, 배경의 작은 것들을 봐요.'),
+      D(T('m10', '10분째에 새로 보인 것'), '더 볼 게 없다고 느낀 뒤에 보이는 것이 진짜예요. 하나라도 좋아요.'),
       D(T('genre', '이 장르의 흔한 방식과 무엇이 다른가'), '같은 종류의 이미지 열 장을 떠올려 보고, 그 열 장이 공통으로 하는 것 중 이 이미지가 안 하는 것을 찾아요.'),
     ],
     s9: [
@@ -301,12 +312,18 @@
     ],
     s10: [
       { type: 'head', label: '의미 읽기', deep: true },
+      D(T('medium', '무엇으로 만든 이미지인가 (필름, 디지털, 합성 등)'), '오하이오주립대학교의 테리 바렛은 『사진 비평』에서 주제 + 매체 + 형식 + 맥락 = 내용이라고 정리했어요. 매체는 무엇으로 만들었는가예요. 같은 장면도 필름인지 합성인지에 따라 뜻이 달라져요. 확실하지 않으면 추정이라고 써요.'),
+      D(T('context', '어디에, 누구를 위해, 언제 나온 이미지인가'), '바렛의 식에서 "맥락"이에요. 앨범 커버인지, 광고인지, 영화의 한 컷인지에 따라 같은 이미지도 다르게 읽혀요. 모르면 모른다고 쓰고, 알아볼 방법을 적어요.'),
       D(T('denote', '보이는 것 그대로 (설명 없이)'), '해석을 빼고 화면에 있는 것만 말해요. "여자 둘, 골목, 붉은 빛"처럼요. 이걸 외연이라고 해요.'),
       D(T('connote', '그것이 암시하는 것'), '위에 적은 것들이 불러오는 뜻이에요. 붉은 빛은 위험일 수도 열기일 수도 있어요. 이걸 내포라고 해요. 한 가지로 정하고 이유를 써요.'),
+      D(T('symbol', '관습적으로 읽히는 상징이나 인용'), '미술사학자 에르빈 파노프스키의 도상 해석에서 둘째 층이에요. 붉은 빛은 위험, 흰 옷은 순수처럼 문화가 정해 둔 뜻, 그리고 다른 영화나 그림을 인용한 곳을 찾아요.'),
+      D(T('attitude', '이 이미지가 드러내는 시대와 문화의 태도 (추정)'), '파노프스키의 셋째 층이에요. 만든 사람이 의도하지 않았어도 이미지에 배어 있는 그 시대의 생각이에요. 대개 추정이니 추정이라고 써요.'),
       D(T('audience', '누구에게 말을 거는 이미지인가'), '이 이미지를 좋아할 사람과 싫어할 사람을 한 명씩 떠올려 적어요.'),
     ],
     s11: [
       { type: 'head', label: '크리틱 마무리', deep: true },
+      D(T('punctumWhy', '1단계에 적은 "눈에 걸린 디테일"이 왜 걸렸는지, 이제 설명할 수 있나'), '바르트는 푼크툼을 설명하기 어려운 것이라고 했어요. 분석을 끝낸 지금 다시 보면 이유가 보이기도 해요. 여전히 모르겠으면 그렇게 써요. 1단계에서 비워 뒀다면 "없음"이라고 써요.'),
+      D(A('neutralQ', '만든 사람에게 묻고 싶은 중립 질문 두 가지'), '안무가 리즈 러먼의 "비평적 반응 과정"에서 온 연습이에요. 질문에 내 의견이 숨어 있으면 중립이 아니에요. "왜 이렇게 어둡게 했나"가 아니라 "밝기는 어떻게 정했나"예요. 감독이 스태프와 아티스트에게 말할 때 쓰는 기술이에요.'),
       D(T('weak', '이 이미지의 약한 곳 1개'), '좋아하는 이미지에서도 약점을 찾는 게 크리틱이에요. 덜어내면 더 좋아질 것, 또는 어색한 곳 하나.'),
       D(A('pitch', '30초 발표문 (세 문장)'), '수업에서 이 이미지를 소개한다고 생각하고 써요. 첫 문장은 무엇이 보이는지, 둘째는 핵심 결정, 셋째는 내가 가져갈 것.'),
     ],
@@ -317,6 +334,10 @@
     if (!extra) continue;
     const at = st.fields.findIndex((f) => f.k === 'sum');
     st.fields.splice(at < 0 ? st.fields.length : at, 0, ...extra);
+    if (st.id === 's7') { // 느리게 보기는 "틀린 것"을 찾기 전에 한다
+      const slow = st.fields.filter((f) => f.type === 'timer' || ['m1', 'm5', 'm10'].includes(f.k) || f.label === '느리게 보기 (10분)');
+      st.fields = [...slow, { type: 'head', label: '틀린 것 찾기', deep: true }, ...st.fields.filter((f) => !slow.includes(f))];
+    }
   }
   const stepNo = (st) => STEPS.indexOf(st) + 1;
   const visibleSteps = (c) => c.mode === 'quick' ? STEPS.filter((s) => s.quick) : STEPS;
@@ -361,7 +382,8 @@
     if (f.type === 'erase') return ERASE.some((n) => v[n] != null);
     return has(v);
   }
-  const realFields = (c, st) => visibleFields(c, st).filter((f) => f.type !== 'head');
+  const isDeco = (f) => f.type === 'head' || f.type === 'timer';
+  const realFields = (c, st) => visibleFields(c, st).filter((f) => !isDeco(f));
   const whyOk = (c, st, f) => c.mode !== 'deep' || st.id === 'video' || st.sheet || !needsWhy(f) || has((c.steps[st.id] || {})[f.k + 'Why']);
   const fieldOk = (c, st, f) => f.opt || isUnknown(c, st, f) || (filled(c, st, f) && whyOk(c, st, f));
   const stepDone = (c, st) => realFields(c, st).every((f) => fieldOk(c, st, f));
@@ -710,6 +732,23 @@
   function buildField(c, st, f, changed, ctx) {
     ctx = ctx || {};
     if (f.type === 'head') return h('h3', { class: 'subhead' }, f.label);
+    if (f.type === 'timer') {
+      const clockEl = h('strong', { class: 'mono' }, '00:00');
+      const say = h('span', { class: 'note' }, '타이머를 켜고 이미지만 봐요. 1분, 5분, 10분이 될 때 아래 칸을 하나씩 써요.');
+      let t0 = 0, tick = null;
+      const btn = h('button', { class: 'btn small', type: 'button', id: 'slow-timer', onclick: () => {
+        if (tick) { clearInterval(tick); tick = null; btn.textContent = '10분 타이머 시작'; return; }
+        t0 = Date.now(); btn.textContent = '타이머 멈추기';
+        tick = setInterval(() => {
+          if (!document.body.contains(clockEl)) { clearInterval(tick); tick = null; return; }
+          const sec = Math.floor((Date.now() - t0) / 1000);
+          clockEl.textContent = `${pad(Math.floor(sec / 60))}:${pad(sec % 60)}`;
+          say.textContent = sec < 60 ? '보기만 해요. 아직 쓰지 않아요.' : sec < 300 ? '1분째 칸을 쓰고, 다시 봐요.' : sec < 600 ? '5분째 칸을 쓰고, 다시 봐요.' : '10분이 됐어요. 마지막 칸을 써요.';
+          if (sec >= 600) { clearInterval(tick); tick = null; btn.textContent = '10분 타이머 시작'; }
+        }, 1000);
+      } }, '10분 타이머 시작');
+      return h('div', { class: 'field' }, h('div', { class: 'row' }, btn, clockEl), say);
+    }
     const id = fid(st, f);
     const data = c.steps[st.id] || (c.steps[st.id] = {});
     val(c, st, f);
@@ -1036,7 +1075,7 @@
         u.estimate = h('div', { class: 'nudge' }, '출처를 모르는 이미지예요. 감독의 의도는 "추정"이라고 구분해서 쓰세요.');
         u.body.append(u.estimate);
       }
-      u.body.append(h('button', { class: 'booklink', type: 'button', onclick: async () => { await saveNow(); location.hash = 'book-' + stepNo(u.st); } }, `교과서 ${stepNo(u.st)}단원 「${u.st.title}」 읽기 →`));
+      u.body.append(h('button', { class: 'booklink', type: 'button', onclick: async () => { await saveNow(); location.hash = 'book-' + stepNo(u.st); } }, `${['반응', '묘사', '묘사', '묘사', '묘사', '묘사', '분석', '분석', '분석', '해석', '판단'][stepNo(u.st) - 1]} 단계 · 교과서 ${stepNo(u.st)}단원 「${u.st.title}」 읽기 →`));
       for (const f of visibleFields(c, u.st)) u.body.append(buildField(c, u.st, f, changed, { origSrc }));
       u.built = true;
     }
@@ -1144,7 +1183,7 @@
     const wsSec = h('section', { class: 'sec step', id: 'sheets' },
       h('header', {}, h('h2', {}, '크리틱 워크시트'), h('span', { class: 'chip-state', id: 'ws-count' })),
       h('div', { class: 'stepbody' },
-        h('p', { class: 'note' }, '미술대학과 영화과 수업에서 널리 쓰이는 분석법 열 가지예요. 같은 이미지를 다른 틀로 다시 써 보는 연습이에요. 필수가 아니니 하나씩 골라서 해요.'),
+        h('p', { class: 'note' }, '예전에 따로 있던 워크시트예요. 이제 겹치지 않는 질문만 골라 각 단계의 \"깊게 파기\" 칸에 녹여 넣었어요. 여기 써 둔 내용은 그대로 남아요.'),
         wsList));
     const wsBlocks = WORKSHEETS.map((st) => {
       const chip = h('span', { class: 'chip-state' });
@@ -1192,7 +1231,7 @@
     void wsOpen;
 
     form.append(unkSec, finish);
-    if (!pass2) form.append(wsSec);
+    if (!pass2 && WORKSHEETS.some((st) => sheetCount(c, st) > 0)) form.append(wsSec);
     const shSec = h('section', { class: 'sec step', id: 'shots' },
       h('header', {}, h('h2', {}, '샷리스트'), h('span', { class: 'chip-state' + (hasShots ? ' done' : '') }, hasShots ? '있음' : '아직 없음')),
       h('div', { class: 'stepbody' },
@@ -1292,7 +1331,7 @@
     for (const st of allSteps(c)) {
       const rows = [];
       for (const f of st.fields) {
-        if (f.type === 'head') continue;
+        if (isDeco(f)) continue;
         if (isUnknown(c, st, f)) { unk.push(`${pad(stepNo(st))} ${f.label}`); continue; }
         const text = fmt(c, st, f);
         if (text) rows.push(h('div', { class: 'opRow' }, h('dt', {}, f.label), h('dd', {}, text)));
@@ -1934,7 +1973,7 @@
     for (const st of allSteps(c)) {
       const rows = [];
       for (const f of st.fields) {
-        if (f.type === 'head') continue;
+        if (isDeco(f)) continue;
         if (isUnknown(c, st, f)) { unk.push(`${pad(stepNo(st))} ${st.title} · ${f.label}`); rows.push(`- **${f.label}**: 모르겠음`); continue; }
         const text = fmt(c, st, f);
         if (!text) continue;
@@ -2150,7 +2189,7 @@
       for (const st of STEPS) for (const f of st.fields) {
         if (f.type === 'choice' && has((c.steps[st.id] || {})[f.k])) picks.push(`${f.label.replace(/ \(.*\)$/, '')}: ${c.steps[st.id][f.k]}`);
         if (f.type === 'choices') for (const v of [].concat((c.steps[st.id] || {})[f.k] || [])) picks.push(`${f.label.replace(/ \(.*\)$/, '')}: ${v}`);
-        if (f.type !== 'head' && isUnknown(c, st, f)) unk.push(`${pad(stepNo(st))} ${st.title} · ${f.label}`);
+        if (!isDeco(f) && isUnknown(c, st, f)) unk.push(`${pad(stepNo(st))} ${st.title} · ${f.label}`);
       }
       for (const e of coreElements(c)) picks.push(`핵심 요소: ${e}`);
     }
