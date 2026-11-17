@@ -893,3 +893,11 @@ html[data-skin="school"] .tabs { gap: 16px; }
 .fig svg { max-width: 520px; }
 html[data-skin="school"] .ws { border-bottom-color: #dcdcdc; }
 html[data-skin="school"] .wsbody > .field { padding: 0; }
+
+/* ── 게임 요소 (기존 딱지와 버튼 모양 그대로) ── */
+.missiontext { margin: 0; font-weight: 700; font-size: 1.0625rem; line-height: 1.5; }
+#mission { margin-bottom: 20px; }
+.dexoff { opacity: 0.45; border-style: dashed !important; padding: 4px 9px; }
+#hit-rate { margin: 0; }
+#hit-rate strong { font-size: 1.5rem; }
+html[data-skin="school"] .core .label { color: #fff; opacity: 0.8; font-weight: 500; }

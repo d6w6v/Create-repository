@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '25 · 전문용어 확장판';
+  const APP_VERSION = '26 · 게임판';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -225,6 +225,8 @@
       { k: 'breakHow', label: '틀리는 방식', type: 'choices', options: ['뒤집기', '과장', '생략', '병치', '반복', '우연처럼'],
         help: '뒤집기는 관습을 정반대로 한 것, 과장은 정도를 끝까지 민 것, 생략은 있어야 할 것을 뺀 것, 병치는 어울리지 않는 둘을 나란히 놓은 것, 반복은 같은 것을 지나치게 되풀이한 것, 우연처럼은 실수로 보이게 꾸민 것이에요. 시대가 안 맞는 것을 일부러 섞는 것은 아나크로니즘이라고 해요.' }, ] },
     { id: 's8', title: '지우기 테스트', quick: true, noUnknown: true, fields: [
+      { k: 'guess', label: '가리기 전에 찍어 보기: 이 이미지의 기둥은 무엇일까', type: 'choice', options: ['인물', '소품', '배경', '가장 큰 색', '질감', '구도'], opt: true, noOptNote: true, noWhy: true,
+        help: '실험하기 전에 먼저 예측해요. 아래에서 실제로 가려 본 결과와 맞는지 비교해서 "적중"인지 알려 줘요. 맞히는 비율이 오르는 게 눈이 느는 증거예요. 가려 보기 시작하면 예측은 고칠 수 없어요.' },
       { k: 'erase', label: '이 요소를 가리면 좋음이 얼마나 줄어드나', type: 'erase' } ] },
     { id: 's9', title: '비교', fields: [
       T('other', '비슷해 보이지만 끌리지 않았던 이미지'),
@@ -559,6 +561,21 @@
     wrap.append(topBar('list', cards.length ? `분해한 컷 ${cards.length}장` : '내가 먼저 쓰고, 앱은 돕기만 한다',
       h('button', { class: 'btn solid', id: 'new-card', onclick: () => { location.hash = 'new'; } }, '+ 새 카드')));
 
+    {
+      const ms = (await store.get('meta', 'missions')) || { id: 'missions', done: {} };
+      const tid = today();
+      const box = h('section', { class: 'sec', id: 'mission' });
+      const drawMission = () => box.replaceChildren(
+        h('header', {}, h('h2', {}, '오늘의 미션'), h('span', { class: 'chip-state' + (ms.done[tid] ? ' done' : '') }, ms.done[tid] ? '완료' : `연속 ${missionStreak(ms.done)}일`)),
+        h('div', { class: 'stepbody', style: 'padding-top:14px' },
+          h('p', { class: 'missiontext' }, missionOf(tid)),
+          h('div', { class: 'row' },
+            ms.done[tid]
+              ? h('span', { class: 'note' }, `해냈어요. 미션 연속 ${missionStreak(ms.done)}일째예요.`)
+              : h('button', { class: 'btn small', type: 'button', id: 'mission-done', onclick: async () => { ms.done[tid] = Date.now(); await store.put('meta', ms); drawMission(); } }, '해냈어요'))));
+      drawMission();
+      wrap.append(box);
+    }
     if (new Date().getDay() === 0 && cards.length) {
       const wkNote = await store.get('meta', 'week-' + dstr(weekStart(new Date())));
       if (!wkNote || !has(wkNote.change)) wrap.append(h('div', { class: 'banner row' }, h('span', {}, '일요일이에요. 이번 주 회고를 쓸 때예요.'),
@@ -923,7 +940,8 @@
         const all = ERASE.every((n) => data.erase[n] != null);
         core.hidden = !all;
         core.replaceChildren(...(els.length
-          ? [h('span', { class: 'label' }, '이 이미지의 핵심 요소'), h('strong', {}, els.join(' · '))]
+          ? [h('span', { class: 'label' }, '이 이미지의 핵심 요소'), h('strong', {}, els.join(' · ')),
+             has(data.guess) ? h('span', { class: 'label', id: 'guess-result' }, `내 예측: ${data.guess} → ${els.includes(data.guess) ? '적중' : '빗나감'}`) : null]
           : [h('span', {}, '가려도 줄어드는 게 없다고 표시했어요. 정말 그런지 하나씩 손으로 가려 보세요.')]));
       };
       control = h('div', { class: 'rows' }, ERASE.map((name) => {
@@ -951,7 +969,7 @@
     const top = h('div', { class: 'fieldtop' },
       h('label', { class: 'label', for: dom },
         st.id !== 'video' ? h('span', { class: 'fnum' }, `${st.code || stepNo(st)}.${st.sheet ? st.fields.indexOf(f) + 1 : realFields(c, st).indexOf(f) + 1}`) : null,
-        f.label + (f.opt ? ' · 없으면 비워 둬요' : '')));
+        f.label + (f.opt && !f.noOptNote ? ' · 없으면 비워 둬요' : '')));
     let helpBox = null;
     if (f.help) {
       helpBox = h('p', { class: 'help', hidden: true, id: dom + '-help' }, h('span', { class: 'helptag' }, '용어'), f.help);
@@ -1312,6 +1330,14 @@
           document.getElementById('fld-' + fid(st, f).replace('.', '-'))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } }, h('span', { class: 'mono' }, pad(stepNo(st))), ` ${st.title} · ${f.label}`))));
       const allDone = !blocked;
+      { // 예측 게임: 예측을 고르기 전에는 가려 보기를 잠그고, 가려 보기 시작하면 예측을 잠근다
+        const s8 = c.steps.s8 || {};
+        const started = ERASE.some((n) => (s8.erase || {})[n] != null);
+        const eraseSet = form.querySelector('#fld-s8-erase fieldset');
+        const guessSet = form.querySelector('#fld-s8-guess fieldset');
+        if (eraseSet) eraseSet.disabled = !has(s8.guess) && !started;
+        if (guessSet) guessSet.disabled = started;
+      }
       if (!pass2) { const s1ok = stepDone(c, STEPS[0]); wsSec.classList.toggle('locked', !s1ok); wsSec.querySelector('.stepbody').hidden = !s1ok; }
       if (!pass2) {
         if (allDone && !c.doneAt) { c.doneAt = Date.now(); touch(); }
@@ -2187,6 +2213,59 @@
     window.scrollTo(0, 0);
   }
 
+  /* ───────── 게임처럼: 오늘의 미션, 용어 도감, 예측 적중률 ───────── */
+  const MISSIONS = [
+    '그림자만 본다. 3단계(빛)의 방향과 높이를 근거까지 채우기',
+    '핀 세 개를 5초 안에 찍기. 생각하지 않고 눈이 간 대로',
+    '"모르겠음" 없이 카드 한 장 완주하기',
+    '도감에 없는 용어 하나를 획득하기',
+    '눈을 가늘게 뜨고 색 비율 세 가지를 10초 안에 적기',
+    '빠른 버전으로 5분 안에 한 장 끝내기',
+    '지우기 테스트의 예측을 적중시키기',
+    '오늘 고른 이미지에서 "일부러 틀린 것"을 두 개 찾고 더 센 쪽을 적기',
+    '이미지를 크게 보기로 8배까지 키워 입자와 반사광 확인하기',
+    '최종 문장을 "예쁘다" 같은 판정하는 말 없이 쓰기',
+    '어제와 전혀 다른 장르의 이미지로 카드 만들기',
+    '소품을 하나도 빠뜨리지 않고 열 개 이상 적기',
+    '레시피의 "렌즈와 거리"와 "조리개와 셔터"를 숫자로 적기',
+    '교과서 한 단원을 읽고 확인 문제 다 맞히기',
+  ];
+  const missionOf = (dateStr) => MISSIONS[[...dateStr].reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7) % MISSIONS.length];
+  function missionStreak(done) {
+    const d = new Date();
+    if (!done[dstr(d)]) d.setDate(d.getDate() - 1);
+    let n = 0;
+    while (done[dstr(d)]) { n++; d.setDate(d.getDate() - 1); }
+    return n;
+  }
+  const DEX_SKIP = new Set(['없어 보임', '인물 없음', '해당 없음', '없음', '음악 없음', '중간', '보통']);
+  const DEX_KEYS = ['shotSize', 'angle', 'lens', 'comp', 'dir', 'pattern', 'kind', 'lightTemp', 'modifier', 'harmony', 'contrastKind', 'look', 'finish', 'stock', 'lensFx', 'postFx',
+    'gazeType', 'poseType', 'staging', 'propRole', 'silhouette', 'breakHow', 'shotMove', 'shotTrans', 'shotSpeed', 'shotRhythm'];
+  function dexData(cards) {
+    return STEPS.map((st) => {
+      const terms = [];
+      for (const f of st.fields) {
+        if (!DEX_KEYS.includes(f.k) || !f.options) continue;
+        for (const o of f.options) {
+          if (DEX_SKIP.has(o)) continue;
+          const n = cards.filter((c) => [].concat((c.steps[st.id] || {})[f.k] || []).includes(o)).length;
+          terms.push({ term: o, n });
+        }
+      }
+      return { st, terms };
+    }).filter((g) => g.terms.length);
+  }
+  function guessStats(cards) {
+    let tried = 0, hit = 0;
+    for (const c of cards) {
+      const s8 = c.steps.s8 || {};
+      if (!has(s8.guess) || !ERASE.every((n) => (s8.erase || {})[n] != null)) continue;
+      tried++;
+      if (coreElements(c).includes(s8.guess)) hit++;
+    }
+    return { tried, hit };
+  }
+
   /* ───────── 돌아보기: 로드맵 카운터 + 주간 회고 + 취향 지도 ───────── */
   function tally(items) {
     const m = new Map();
@@ -2304,6 +2383,24 @@
         past.length ? h('div', { class: 'field' }, h('span', { class: 'label' }, '지난 주들에 적은 것'),
           h('ul', { class: 'plain' }, past.slice(0, 8).map((m) => h('li', {}, h('span', { class: 'label mono' }, m.id.slice(5) + '  '), m.change)))) : null));
 
+    /* 예측 적중률과 용어 도감 */
+    const gs = guessStats(cards);
+    const dex = dexData(cards);
+    const dexTotal = dex.reduce((n, g) => n + g.terms.length, 0);
+    const dexGot = dex.reduce((n, g) => n + g.terms.filter((t) => t.n).length, 0);
+    const gameSec = h('section', { class: 'sec', id: 'dex' },
+      h('header', {}, h('h2', {}, '용어 도감'), h('span', { class: 'chip-state' + (dexGot === dexTotal ? ' done' : '') }, `${dexGot}/${dexTotal}`)),
+      h('div', { class: 'stepbody', style: 'padding-top:14px' },
+        h('p', { class: 'note' }, '카드에서 한 번이라도 고른 용어는 획득한 것으로 바뀌어요. 획득한 용어를 누르면 그 용어를 쓴 카드가 모여요. 빈 용어를 채우려면 그 기법이 쓰인 이미지를 찾아야 해요.'),
+        h('div', { class: 'field' }, h('span', { class: 'label' }, '지우기 테스트 예측 적중률'),
+          h('p', { id: 'hit-rate' }, gs.tried ? h('strong', {}, `${Math.round((gs.hit / gs.tried) * 100)}%`) : h('strong', {}, '아직 없음'),
+            h('span', { class: 'note' }, gs.tried ? `  ${gs.tried}번 예측해서 ${gs.hit}번 적중` : '  8단계에서 가리기 전에 예측을 고르면 쌓여요.'))),
+        dex.map((g) => h('div', { class: 'field' },
+          h('span', { class: 'label' }, `${pad(stepNo(g.st))} ${g.st.title}  ${g.terms.filter((t) => t.n).length}/${g.terms.length}`),
+          h('div', { class: 'tags' }, g.terms.map((t) => t.n
+            ? h('button', { class: 'btn small on', type: 'button', onclick: () => { listQuery = t.term; listVideo = ''; location.hash = 'list'; } }, `${t.term} `, h('span', { class: 'mono' }, t.n))
+            : h('span', { class: 'chip-state dexoff' }, t.term)))))));
+
     /* 취향 지도 */
     const done1 = cards.filter((c) => stepDone(c, STEPS[0]));
     const charts = tasteData(cards).map(([t, sub, rows]) => barChart(t, sub, rows, '장'));
@@ -2312,6 +2409,7 @@
       h('div', { class: 'look' },
         h('div', { class: 'fieldtop' }, h('h2', { class: 'lookh' }, '로드맵'), status), road,
         week,
+        gameSec,
         h('div', { class: 'fieldtop' }, h('h2', { class: 'lookh' }, '취향 지도'), h('span', { class: 'label' }, `카드 ${cards.length}장 기준`)),
         cards.length < 3 ? h('p', { class: 'note' }, '카드가 몇 장 더 쌓여야 무늬가 보여요. 지금은 있는 만큼만 보여줘요.') : null,
         h('div', { class: 'charts' }, charts))));
