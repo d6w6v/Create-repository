@@ -713,3 +713,6 @@ html[data-skin="pop"] {
   html[data-skin] body { background: #fff; }
   html[data-skin] .onepage { background: #fff; border: 0; box-shadow: none; }
 }
+
+/* 깊게 파기: 근거 칸 */
+.text.why { font-size: 0.9375rem; border-style: dashed; }

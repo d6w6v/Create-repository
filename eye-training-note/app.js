@@ -1,4 +1,4 @@
-/* 눈 훈련 노트 — 개발 2단계까지: 카드 저장 + 분석 1~11단계 + 잠금 + 모르겠음 + 빠른 버전 + 한 장 보기 */
+/* DOPEYE (눈 훈련 노트) — 개발 2단계까지: 카드 저장 + 분석 1~11단계 + 잠금 + 모르겠음 + 빠른 버전 + 한 장 보기 */
 (() => {
   'use strict';
   document.documentElement.lang = 'ko';
@@ -94,7 +94,7 @@
     const now = Date.now();
     return {
       id: now.toString(36) + Math.random().toString(36).slice(2, 6),
-      no, type: type || 'still', mode: 'full',
+      no, type: type || 'still', mode: (() => { try { return localStorage.getItem('eye-mode') || 'full'; } catch (e) { return 'full'; } })(),
       createdAt: now, updatedAt: now,
       date: today(), tags: [],
       image: { kind: 'none' }, thumb: '',
@@ -130,7 +130,8 @@
       C('angle', '앵글', ['로우', '아이레벨', '하이']),
       C('lens', '화각 인상', ['광각', '중간', '망원']),
       C('comp', '구도', ['중앙', '3분할', '대칭', '대각선', '여백']),
-      T('crop', '잘라낸 것(크롭)이 있다면 무엇을 뺐나', { opt: true }) ] },
+      T('crop', '잘라낸 것(크롭)이 있다면 무엇을 뺐나', { opt: true }),
+      A('sum', '이 단계의 한 줄 결론: 가장 큰 결정 하나와 그 효과', { deep: true }) ] },
     { id: 's3', title: '빛', fields: [
       { k: 'lights', label: '광원 개수', type: 'num', unit: '개' },
       { k: 'dir', label: '방향 (광원이 여러 개면 여러 개 골라요)', type: 'choices', options: ['정면', '앞사선', '측면', '뒤사선', '역광', '위', '아래'] },
@@ -140,26 +141,30 @@
       T('shadow', '그림자 위치와 진하기'),
       T('brightest', '가장 밝은 곳'),
       T('darkest', '가장 어두운 곳'),
-      T('mood', '빛이 만든 분위기') ] },
+      T('mood', '빛이 만든 분위기'),
+      A('sum', '이 단계의 한 줄 결론: 가장 큰 결정 하나와 그 효과', { deep: true }) ] },
     { id: 's4', title: '색', fields: [
       { k: 'colors', label: '색 비율', type: 'rows', rowLabels: ['지배색', '보조색', '포인트색'],
         cols: [{ k: 'name', label: '무슨 색', type: 'text' }, { k: 'pct', label: '비율', type: 'num', unit: '%' }] },
       C('temp', '색온도', ['따뜻', '차가움', '섞임']),
       C('sat', '채도', ['높음', '낮음']),
       T('repeat', '색이 반복되는 곳'),
-      T('pop', '튀는 색 1개는 어디에 있나') ] },
+      T('pop', '튀는 색 1개는 어디에 있나'),
+      A('sum', '이 단계의 한 줄 결론: 가장 큰 결정 하나와 그 효과', { deep: true }) ] },
     { id: 's5', title: '질감과 재질', fields: [
       { k: 'materials', label: '화면의 재질 3가지', type: 'multi', n: 3, ph: '재질' },
       T('gloss', '번들거림 vs 무광 대비가 있나'),
       T('grain', '필름 그레인'),
       T('sharp', '선명도'),
-      T('grade', '보정 방향') ] },
+      T('grade', '보정 방향'),
+      A('sum', '이 단계의 한 줄 결론: 가장 큰 결정 하나와 그 효과', { deep: true }) ] },
     { id: 's6', title: '인물과 소품 연출', fields: [
       T('eyes', '시선 방향'),
       T('face', '표정'),
       T('pose', '손/자세가 말하는 것'),
       A('props', '소품 목록 (전부)'),
-      T('era', '시대감을 만드는 것') ] },
+      T('era', '시대감을 만드는 것'),
+      A('sum', '이 단계의 한 줄 결론: 가장 큰 결정 하나와 그 효과', { deep: true }) ] },
     { id: 's7', title: '일부러 틀린 것', interp: true, fields: [
       T('wrong', '"원래라면 안 그럴 텐데" 싶은 것 1개'),
       T('effect', '그게 만드는 효과'),
@@ -192,7 +197,13 @@
   ];
   const stepNo = (st) => STEPS.indexOf(st) + 1;
   const visibleSteps = (c) => c.mode === 'quick' ? STEPS.filter((s) => s.quick) : STEPS;
+  const needsWhy = (f) => (f.type === 'choice' || f.type === 'choices') && !f.opt;
+  const MODE_NAME = { quick: '빠른 버전', full: '전체 버전', deep: '깊게 파기' };
   function visibleFields(c, st) {
+    if (c.mode !== 'deep') return visibleFieldsBase(c, st).filter((f) => !f.deep);
+    return visibleFieldsBase(c, st);
+  }
+  function visibleFieldsBase(c, st) {
     if (c.mode === 'quick' && st.fields.some((f) => f.quick)) return st.fields.filter((f) => f.quick);
     return st.fields;
   }
@@ -228,7 +239,8 @@
     return has(v);
   }
   const realFields = (c, st) => visibleFields(c, st).filter((f) => f.type !== 'head');
-  const fieldOk = (c, st, f) => f.opt || isUnknown(c, st, f) || filled(c, st, f);
+  const whyOk = (c, st, f) => c.mode !== 'deep' || st.id === 'video' || !needsWhy(f) || has((c.steps[st.id] || {})[f.k + 'Why']);
+  const fieldOk = (c, st, f) => f.opt || isUnknown(c, st, f) || (filled(c, st, f) && whyOk(c, st, f));
   const stepDone = (c, st) => realFields(c, st).every((f) => fieldOk(c, st, f));
   const stepHasData = (c, st) => realFields(c, st).some((f) => hasAny(c, st, f));
   function progress(c) {
@@ -250,6 +262,10 @@
   /* 한 장 보기에서 값을 글자로 바꾸기 */
   function fmt(c, st, f) {
     const v = val(c, st, f);
+    const why = (c.steps[st.id] || {})[f.k + 'Why'];
+    const because = has(why) ? `\n근거: ${String(why).trim()}` : '';
+    if (f.type === 'choices') return v.length ? v.join(', ') + because : '';
+    if (f.type === 'choice') return has(v) ? String(v).trim() + because : '';
     if (f.type === 'feel') return has(v) ? `이건 ${v}한 느낌` : '';
     if (f.type === 'choices') return v.join(', ');
     if (f.type === 'multi') return v.filter(has).join(' / ');
@@ -435,7 +451,7 @@
       h('div', { class: 'meta' },
         h('span', {}, c.tags.map((t) => '#' + t).join(' ')),
         h('span', { class: 'chip-state' + (pr.done ? ' done' : '') },
-          (c.mode === 'quick' ? '5분 · ' : '') + (pr.done ? '완료' : `${pr.n}/${pr.total}단계`))));
+          (c.mode === 'quick' ? '5분 · ' : c.mode === 'deep' ? '깊게 · ' : '') + (pr.done ? '완료' : `${pr.n}/${pr.total}단계`))));
   }
 
   /* ───────── 카드 화면 ───────── */
@@ -717,7 +733,15 @@
       drawCore();
     }
 
-    const set = h('fieldset', { class: 'ctl', disabled: isUnknown(c, st, f) }, control);
+    const deep = c.mode === 'deep' && st.id !== 'video';
+    let whyBox = null;
+    if (deep && needsWhy(f)) {
+      const ta = h('textarea', { class: 'text area why', id: dom + '-why', rows: 1, placeholder: '근거: 화면의 어디를 보고 그렇게 판단했나', value: data[f.k + 'Why'] || '',
+        'aria-label': `${f.label} 근거`, oninput: () => { data[f.k + 'Why'] = ta.value; changed(); } });
+      grow(ta); texts.push(ta);
+      whyBox = ta;
+    }
+    const set = h('fieldset', { class: 'ctl', disabled: isUnknown(c, st, f) }, control, whyBox);
     const holder = h('div', { class: 'field' + (isUnknown(c, st, f) ? ' unk' : ''), id: 'fld-' + id.replace('.', '-') });
     const top = h('div', { class: 'fieldtop' },
       h('label', { class: 'label', for: dom }, f.label + (f.opt ? ' · 없으면 비워 둬요' : '')));
@@ -750,6 +774,12 @@
     }
     if (extra) holder.append(extra);
     if (texts.length) watchVague(texts, holder);
+    if (deep && (f.type === 'text' || f.type === 'area') && !f.opt) {
+      const more = h('div', { class: 'nudge', hidden: true }, '조금 더: 어디가, 어떻게, 그래서 어떤 효과인지까지 한 문장으로.');
+      holder.append(more);
+      const check = () => { const n = texts[0].value.trim().length; more.hidden = !(n > 0 && n < 10); };
+      texts[0].addEventListener('input', check); check();
+    }
     return holder;
   }
 
@@ -816,7 +846,7 @@
           h('button', { class: 'btn small', type: 'button', onclick: () => { location.hash = 'series-' + x.id; } }, x.name)))) : null));
 
     /* ── 쓰는 방식: 전체 / 빠른 버전 ── */
-    const setMode = async (m) => { if (c.mode === m) return; c.mode = m; await saveNow(); await renderCard(); };
+    const setMode = async (m) => { if (c.mode === m) return; c.mode = m; try { localStorage.setItem('eye-mode', m); } catch (e) { /* 기억 못 해도 진행 */ } await saveNow(); await renderCard(); };
     /* ── 영상 정보 (영상 카드만) ── */
     if (!pass2 && c.type === 'video') {
       const vd = c.steps.video || (c.steps.video = {});
@@ -842,8 +872,12 @@
     if (!pass2) form.append(h('div', { class: 'field' },
       h('span', { class: 'label' }, '쓰는 방식'),
       h('div', { class: 'seg', role: 'group', 'aria-label': '쓰는 방식' },
-        h('button', { class: 'btn small' + (c.mode !== 'quick' ? ' on' : ''), type: 'button', id: 'mode-full', onclick: () => setMode('full') }, '전체 버전 (11단계)'),
-        h('button', { class: 'btn small' + (c.mode === 'quick' ? ' on' : ''), type: 'button', id: 'mode-quick', onclick: () => setMode('quick') }, '빠른 버전 (5분)')),
+        h('button', { class: 'btn small' + (c.mode === 'quick' ? ' on' : ''), type: 'button', id: 'mode-quick', onclick: () => setMode('quick') }, '빠른 버전 (5분)'),
+        h('button', { class: 'btn small' + (c.mode !== 'quick' && c.mode !== 'deep' ? ' on' : ''), type: 'button', id: 'mode-full', onclick: () => setMode('full') }, '전체 버전 (11단계)'),
+        h('button', { class: 'btn small' + (c.mode === 'deep' ? ' on' : ''), type: 'button', id: 'mode-deep', onclick: () => setMode('deep') }, '깊게 파기 (근거까지)')),
+      c.mode === 'deep'
+        ? h('p', { class: 'note' }, '버튼을 고를 때마다 "왜 그렇게 봤는지" 근거를 한 줄 쓰고, 단계마다 한 줄 결론을 내려요. 오래 걸리지만 눈이 가장 많이 늘어요.')
+        : null,
       c.mode === 'quick'
         ? h('p', { class: 'note' }, '첫 반응 → 시선 지도 → 지우기 테스트 → 정리만 써요. 나중에 전체 버전으로 이어 쓸 수 있고, 쓴 내용은 그대로 남아요.')
         : null));
@@ -1020,7 +1054,7 @@
       finish.hidden = !!pass2 || !(allDone || c.mode === 'quick');
       if (pass2) pass2(allDone);
       finish.replaceChildren(
-        allDone ? h('p', { class: 'note' }, c.mode === 'quick' ? '빠른 버전을 다 썼어요.' : '11단계를 모두 썼어요.') : null,
+        allDone ? h('p', { class: 'note' }, c.mode === 'quick' ? '빠른 버전을 다 썼어요.' : c.mode === 'deep' ? '11단계를 근거까지 모두 썼어요.' : '11단계를 모두 썼어요.') : null,
         allDone ? h('button', { class: 'btn', type: 'button', onclick: () => { location.hash = 'view-' + c.id; } }, '한 장으로 보기') : null,
         c.mode === 'quick' ? h('button', { class: 'btn solid', type: 'button', id: 'continue-full', onclick: () => setMode('full') }, '전체 버전으로 이어쓰기') : null);
     };
@@ -1052,7 +1086,7 @@
     const s11 = c.steps.s11 || {};
     const page = h('article', { class: 'onepage' });
     page.append(h('header', { class: 'opHead' },
-      h('div', { class: 'mono' }, `No.${pad(c.no, 3)} · ${typeName(c)} · ${c.date}` + (c.mode === 'quick' ? ' · 빠른 버전' : '')),
+      h('div', { class: 'mono' }, `No.${pad(c.no, 3)} · ${typeName(c)} · ${c.date}` + (c.mode === 'quick' || c.mode === 'deep' ? ` · ${MODE_NAME[c.mode]}` : '')),
       h('div', {}, [c.source.unknown ? '출처 모름' : c.source.text.trim(), trustName ? `신뢰도: ${trustName}` : '', c.tags.map((t) => '#' + t).join(' ')]
         .filter(Boolean).join('  ·  '))));
     const lead = h('div', { class: 'opLead' });
@@ -1478,7 +1512,7 @@
         h('header', {},
           h('div', {}, h('h1', {}, sl.title.trim() || '샷리스트'),
             h('p', { class: 'mono' }, `${today()} · 5 SHOTS · 총 ${sum()}초`),
-            h('p', {}, `레퍼런스: 눈 훈련 노트 No.${pad(c.no, 3)}` + (has(c.steps.s1.feel) ? ` · ${c.steps.s1.feel.trim()}한 느낌` : ''))),
+            h('p', {}, `레퍼런스: DOPEYE No.${pad(c.no, 3)}` + (has(c.steps.s1.feel) ? ` · ${c.steps.s1.feel.trim()}한 느낌` : ''))),
           src ? h('img', { src, alt: '' }) : null),
         h('table', {},
           h('thead', {}, h('tr', {}, ['샷', '스케치', '무슨 장면', '카메라 높이', '움직임', '길이'].map((t) => h('th', {}, t)))),
@@ -1630,9 +1664,9 @@
   const trustLabel = (c) => (TRUST.find(([k]) => k === c.trust) || [])[1] || '';
   function cardMarkdown(c, forAi) {
     const L = [];
-    L.push(`# 눈 훈련 노트 No.${pad(c.no, 3)}`, '');
+    L.push(`# DOPEYE No.${pad(c.no, 3)}`, '');
     L.push(`- 날짜: ${c.date}`);
-    L.push(`- 종류: ${typeName(c)} · ${c.mode === 'quick' ? '빠른 버전' : '전체 버전'}`);
+    L.push(`- 종류: ${typeName(c)} · ${MODE_NAME[c.mode] || '전체 버전'}`);
     if (c.tags.length) L.push(`- 태그: ${c.tags.map((t) => '#' + t).join(' ')}`);
     L.push(`- 출처: ${c.source.unknown ? '모름' : (c.source.text.trim() || '(안 씀)')}` + (trustLabel(c) ? ` (신뢰도: ${trustLabel(c)})` : ''));
     if (c.image.kind === 'url') L.push('', `![이미지](${c.image.url})`);
@@ -1747,7 +1781,7 @@
         let data;
         try { data = JSON.parse(await f.text()); } catch (e) { data = null; }
         if (!data || data.app !== 'eye-training-note' || !Array.isArray(data.cards)) {
-          toast('눈 훈련 노트의 백업 파일이 아니에요. "eye-note-backup-날짜.json" 파일을 골라 주세요.');
+          toast('DOPEYE의 백업 파일이 아니에요. "eye-note-backup-날짜.json" 파일을 골라 주세요.');
           return;
         }
         drawImport(data);
@@ -1952,7 +1986,7 @@
       'aria-current': active === key ? 'page' : null, onclick: () => { location.hash = hash; } }, name);
     return h('div', { class: 'top' },
       h('div', {},
-        h('h1', {}, '눈 훈련 노트'),
+        h('h1', {}, 'DOPEYE'),
         h('div', { class: 'sub' }, sub)),
       h('div', { class: 'row' },
         h('nav', { class: 'tabs', 'aria-label': '화면 이동' }, tab('list', '카드', 'list'), tab('series', '시리즈', 'series'), tab('diary', '일기', 'diary'), tab('look', '돌아보기', 'look'), tab('backup', '백업', 'backup')),
