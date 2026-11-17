@@ -298,6 +298,7 @@
   const app = document.getElementById('app');
   let cur = null;          // 지금 열려 있는 카드
   let curPersisted = false;
+  let inEditor = false;    // 지금 화면이 카드 편집 화면인가
   let saveTimer = null;
   let savedLabel = null;
 
@@ -396,6 +397,7 @@
         h('span', {}, `No.${pad(c.no, 3)} · ${c.date}`),
         h('span', {}, c.steps.s1.score != null ? `${c.steps.s1.score}/10` : '')),
       h('div', { class: 'feel' }, feel ? `${feel}한 느낌` : '첫 반응을 아직 안 썼어요'),
+      dueAgain(c) ? h('div', { class: 'due' }, '다시 볼 때가 됐어요') : null,
       h('div', { class: 'meta' },
         h('span', {}, c.tags.map((t) => '#' + t).join(' ')),
         h('span', { class: 'chip-state' + (pr.done ? ' done' : '') },
@@ -464,6 +466,7 @@
 
   async function renderCard() {
     const c = cur;
+    inEditor = true;
     const wrap = h('div', { class: 'wrap' });
     savedLabel = h('span', { class: 'saved mono' }, curPersisted ? '자동 저장됨' : '이미지를 올리면 저장이 시작돼요');
     wrap.append(h('div', { class: 'bar' },
@@ -504,7 +507,11 @@
     }
 
     const body = h('div', { class: 'editor' }, stage);
-    if (c.image.kind !== 'none') body.append(buildForm(c, (await store.all('series')).filter((x) => x.cardIds.includes(c.id))));
+    if (c.image.kind !== 'none') body.append(buildForm(c, {
+      mySeries: (await store.all('series')).filter((x) => x.cardIds.includes(c.id)),
+      origSrc: await cardImage(c),
+      reImg: c.reshoot && c.reshoot.has ? ((await store.get('images', c.id + '-re')) || {}).data || '' : '',
+    }));
     wrap.append(body);
     app.replaceChildren(wrap);
   }
@@ -633,7 +640,8 @@
     return holder;
   }
 
-  function buildForm(c, mySeries) {
+  function buildForm(c, ctx) {
+    const { mySeries = [], pass2 = null, origSrc = '', reImg = '' } = ctx || {};
     const form = h('div', { class: 'form' });
     let refresh = () => {};
     const changed = () => { refresh(); touch(); };
@@ -684,7 +692,7 @@
     }
     drawTrust();
 
-    form.append(h('section', { class: 'sec' },
+    if (!pass2) form.append(h('section', { class: 'sec' },
       h('header', {}, h('h2', {}, '기본 정보')),
       h('div', { class: 'field' }, h('label', { class: 'label', for: 'f-date' }, '날짜'), date),
       h('div', { class: 'field' }, h('label', { class: 'label', for: 'f-tag' }, '태그'), tagBox, tagInput),
@@ -696,7 +704,7 @@
 
     /* ── 쓰는 방식: 전체 / 빠른 버전 ── */
     const setMode = async (m) => { if (c.mode === m) return; c.mode = m; await saveNow(); await renderCard(); };
-    form.append(h('div', { class: 'field' },
+    if (!pass2) form.append(h('div', { class: 'field' },
       h('span', { class: 'label' }, '쓰는 방식'),
       h('div', { class: 'seg', role: 'group', 'aria-label': '쓰는 방식' },
         h('button', { class: 'btn small' + (c.mode !== 'quick' ? ' on' : ''), type: 'button', id: 'mode-full', onclick: () => setMode('full') }, '전체 버전 (11단계)'),
@@ -756,7 +764,79 @@
       rvArea('missed', 'AI는 봤는데 나는 못 본 것', '다음 카드에서 먼저 볼 것'),
       rvArea('disagree', 'AI가 틀렸다고 생각하는 것', 'AI의 말도 정답이 아니라 하나의 의견이에요'));
     const rvSec = h('section', { class: 'sec step', id: 'review' }, h('header', {}, h('h2', {}, '정답 확인'), rvBadge), rvNote, rvBody);
-    form.append(unkSec, finish, rvSec);
+    /* ── 3일 뒤 다시 쓰기 ── */
+    const agBadge = h('span', { class: 'chip-state' });
+    const agBody = h('div', { class: 'stepbody' });
+    const agSec = h('section', { class: 'sec step', id: 'again' }, h('header', {}, h('h2', {}, '3일 뒤 다시 쓰기'), agBadge), agBody);
+    function drawAgain(done) {
+      agSec.classList.toggle('locked', !done);
+      if (!done) { agBadge.textContent = '잠김'; agBody.replaceChildren(h('p', { class: 'note' }, '이 카드를 다 쓰면 열려요. 3일 뒤에 같은 칸을 새 눈으로 다시 채우고, 1차와 나란히 봐요.')); return; }
+      if (c.second) {
+        agBadge.textContent = '2차 있음';
+        agBody.replaceChildren(h('div', { class: 'seg' },
+          h('button', { class: 'btn solid', type: 'button', id: 'go-compare', onclick: () => { location.hash = 'compare-' + c.id; } }, '1차와 2차 나란히 보기'),
+          h('button', { class: 'btn', type: 'button', onclick: () => { location.hash = 'again-' + c.id; } }, '2차 이어 쓰기')));
+        return;
+      }
+      const left = Math.ceil((doneTime(c) + 3 * DAY - Date.now()) / DAY);
+      const ready = left <= 0;
+      agBadge.textContent = ready ? '다시 볼 때' : `${left}일 남음`;
+      agBody.replaceChildren(
+        h('p', { class: 'note' }, ready
+          ? '다 쓴 지 3일이 지났어요. 1차 답은 가려 두고, 같은 칸을 처음부터 다시 써요.'
+          : `다 쓴 기억이 흐려져야 새로 보여요. ${left}일 뒤에 다시 쓰는 걸 추천해요.`),
+        h('div', { class: 'seg' },
+          h('button', { class: 'btn' + (ready ? ' solid' : ''), type: 'button', id: 'go-again', onclick: () => { location.hash = 'again-' + c.id; } },
+            ready ? '3일 뒤 다시 쓰기 시작' : '기다리지 않고 지금 쓰기')));
+    }
+
+    /* ── 재현 촬영 기록 ── */
+    const rs = c.reshoot || { has: false, diffs: ['', '', ''], missed: '' };
+    if (!pass2 && !c.reshoot) c.reshoot = rs;
+    const rsBody = h('div', { class: 'stepbody' });
+    const rsBadge = h('span', { class: 'chip-state' });
+    function drawReshoot(img) {
+      rsBadge.textContent = rs.has ? '기록 있음' : '아직 없음';
+      rsBadge.classList.toggle('done', rs.has);
+      const input = h('input', { type: 'file', accept: 'image/*', hidden: true, id: 'reshoot-file', onchange: async () => {
+        const f = input.files[0]; input.value = '';
+        if (!f || !f.type.startsWith('image/')) { toast('사진 파일만 올릴 수 있어요.'); return; }
+        const url = URL.createObjectURL(f);
+        try {
+          const data = shrink(await loadImg(url), 1800, 0.88);
+          await store.put('images', { id: c.id + '-re', data });
+          rs.has = true; touch(); drawReshoot(data);
+        } catch (e) { toast('이 파일은 사진으로 읽을 수 없어요.'); }
+        finally { URL.revokeObjectURL(url); }
+      } });
+      if (!rs.has) {
+        rsBody.replaceChildren(input,
+          h('p', { class: 'note' }, '이 이미지를 내 손으로 다시 찍어 봐요. 찍은 사진을 올리면 원본 옆에 나란히 놓여요. 따라 찍어 봐야 보이는 게 있어요.'),
+          h('div', {}, h('button', { class: 'btn', type: 'button', onclick: () => input.click() }, '재현 사진 올리기')));
+        return;
+      }
+      const diffs = h('div', { class: 'rows' }, rs.diffs.map((_, i) => {
+        const inp = h('input', { class: 'text', id: `rs-diff-${i + 1}`, placeholder: `다른 점 ${i + 1}`, value: rs.diffs[i], 'aria-label': `원본과 다른 점 ${i + 1}`,
+          oninput: () => { rs.diffs[i] = inp.value; touch(); } });
+        return inp;
+      }));
+      const missed = h('input', { class: 'text', id: 'rs-missed', value: rs.missed, placeholder: '찍어 보고서야 알게 된 것',
+        oninput: () => { rs.missed = missed.value; touch(); } });
+      const holder = h('div', { class: 'field' }, h('span', { class: 'label' }, '원본과 다른 점 3개'), diffs);
+      watchVague([...diffs.querySelectorAll('input')], holder);
+      rsBody.replaceChildren(input,
+        h('div', { class: 'pair' },
+          h('figure', {}, origSrc ? h('img', { src: origSrc, alt: '원본' }) : null, h('figcaption', { class: 'mono label' }, '원본')),
+          h('figure', {}, img ? h('img', { src: img, alt: '재현 사진' }) : null, h('figcaption', { class: 'mono label' }, '재현'))),
+        holder,
+        h('div', { class: 'field' }, h('label', { class: 'label', for: 'rs-missed' }, '내가 못 봤던 것 1개'), missed),
+        h('div', {}, h('button', { class: 'btn small quiet', type: 'button', onclick: () => input.click() }, '재현 사진 바꾸기')));
+    }
+    const rsSec = h('section', { class: 'sec step', id: 'reshoot' }, h('header', {}, h('h2', {}, '재현 촬영 기록'), rsBadge), rsBody);
+    if (!pass2) drawReshoot(reImg);
+
+    form.append(unkSec, finish);
+    if (!pass2) form.append(rvSec, agSec, rsSec);
 
     refresh = () => {
       let blocked = false;
@@ -789,11 +869,16 @@
           document.getElementById('fld-' + fid(st, f).replace('.', '-'))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } }, h('span', { class: 'mono' }, pad(stepNo(st))), ` ${st.title} · ${f.label}`))));
       const allDone = !blocked;
+      if (!pass2) {
+        if (allDone && !c.doneAt) { c.doneAt = Date.now(); touch(); }
+        drawAgain(allDone);
+      }
       const rvOpen = allDone && c.mode !== 'quick';
       rvSec.classList.toggle('locked', !rvOpen);
       rvBadge.textContent = rvOpen ? '열림' : '잠김';
       rvNote.hidden = rvOpen; rvBody.hidden = !rvOpen;
-      finish.hidden = !(allDone || c.mode === 'quick');
+      finish.hidden = !!pass2 || !(allDone || c.mode === 'quick');
+      if (pass2) pass2(allDone);
       finish.replaceChildren(
         allDone ? h('p', { class: 'note' }, c.mode === 'quick' ? '빠른 버전을 다 썼어요.' : '11단계를 모두 썼어요.') : null,
         allDone ? h('button', { class: 'btn', type: 'button', onclick: () => { location.hash = 'view-' + c.id; } }, '한 장으로 보기') : null,
@@ -811,7 +896,7 @@
         : [h('button', { class: 'btn small quiet', type: 'button', onclick: () => drawDanger(true) }, '이 카드 지우기')]));
     }
     drawDanger(false);
-    form.append(danger);
+    if (!pass2) form.append(danger);
     return form;
   }
 
@@ -871,6 +956,7 @@
     curPersisted = false;
     await store.del('cards', id);
     await store.del('images', id);
+    await store.del('images', id + '-re');
     for (const x of await store.all('series')) {
       if (x.cardIds.includes(id)) { x.cardIds = x.cardIds.filter((y) => y !== id); delete x.differ[id]; await store.put('series', x); }
     }
@@ -1163,6 +1249,96 @@
     window.scrollTo(0, 0);
   }
 
+  /* ───────── 재분석(2차)과 재현 촬영 ───────── */
+  const DAY = 86400000;
+  const cardDone = (c) => progress(c).done;
+  const doneTime = (c) => c.doneAt || c.updatedAt;
+  const dueAgain = (c) => cardDone(c) && !c.second && Date.now() - doneTime(c) >= 3 * DAY;
+  function secondView(c) {
+    const s = c.second;
+    const v = Object.create(c);
+    Object.defineProperty(v, 'steps', { value: s.steps });
+    Object.defineProperty(v, 'unknown', { get: () => s.unknown, set: (x) => { s.unknown = x; } });
+    return v;
+  }
+  async function cardImage(c) {
+    return c.image.kind === 'file' ? ((await store.get('images', c.id))?.data || c.thumb) : c.image.url;
+  }
+  async function showAgain(id) {
+    if (saveTimer) await saveNow();
+    const c = await store.get('cards', id);
+    if (!c) { toast('그 카드를 찾을 수 없어요.'); location.hash = 'list'; return; }
+    if (!c.second) {
+      c.second = { startedAt: Date.now(), steps: { s1: { feel: '', words: ['', '', ''], score: null } }, unknown: [], newSeen: ['', '', ''], wrongGuess: '' };
+      await store.put('cards', c);
+    }
+    cur = c; curPersisted = true;
+    savedLabel = h('span', { class: 'saved mono' }, '자동 저장됨');
+    const src = await cardImage(c);
+    const end = h('div', { class: 'finish', hidden: true },
+      h('p', { class: 'note' }, '2차를 다 썼어요. 이제 1차와 나란히 놓고 봐요.'),
+      h('button', { class: 'btn solid', type: 'button', id: 'to-compare', onclick: () => { location.hash = 'compare-' + c.id; } }, '1차와 2차 나란히 보기'));
+    const form = buildForm(secondView(c), { pass2: (allDone) => { end.hidden = !allDone; } });
+    form.prepend(h('div', { class: 'nudge' }, '1차에 쓴 답은 가려 뒀어요. 처음 보는 이미지처럼 새 눈으로 다시 써요.'));
+    form.append(end);
+    app.replaceChildren(h('div', { class: 'wrap' },
+      h('div', { class: 'bar' },
+        h('button', { class: 'btn quiet', onclick: () => { location.hash = 'card-' + c.id; } }, '← 카드로 돌아가기'),
+        h('div', { class: 'slate mono' }, h('strong', {}, `No.${pad(c.no, 3)}`), h('span', {}, '2차 다시 쓰기'), savedLabel)),
+      h('div', { class: 'editor' },
+        h('div', { class: 'stage' }, h('div', { class: 'frame' }, src ? h('img', { src, alt: '분석할 이미지' }) : h('div', { class: 'linkfail' }, '이미지 없음'))),
+        form)));
+    window.scrollTo(0, 0);
+  }
+  async function showCompare(id) {
+    if (saveTimer) await saveNow();
+    const c = await store.get('cards', id);
+    if (!c || !c.second) { location.hash = c ? 'card-' + id : 'list'; return; }
+    cur = c; curPersisted = true;
+    savedLabel = h('span', { class: 'saved mono' }, '자동 저장됨');
+    const v2 = secondView(c);
+    const src = await cardImage(c);
+    const rows = [];
+    let changed = 0;
+    for (const st of visibleSteps(c)) {
+      const part = [];
+      for (const f of realFields(c, st)) {
+        const a = isUnknown(c, st, f) ? '모르겠음' : fmt(c, st, f);
+        const b = isUnknown(v2, st, f) ? '모르겠음' : fmt(v2, st, f);
+        if (!a && !b) continue;
+        const diff = a !== b;
+        if (diff) changed++;
+        part.push(h('div', { class: 'cmpRow' + (diff ? ' diff' : '') },
+          h('div', { class: 'label' }, f.label, diff ? h('span', { class: 'cmpTag' }, '달라짐') : null),
+          h('div', { class: 'cmpCell' }, a || '—'), h('div', { class: 'cmpCell' }, b || '—')));
+      }
+      if (part.length) rows.push(h('h3', { class: 'cmpStep' }, h('span', { class: 'mono' }, pad(stepNo(st))), ' ' + st.title), ...part);
+    }
+    const s = c.second;
+    const seen = h('div', { class: 'rows' }, s.newSeen.map((_, i) => {
+      const inp = h('input', { class: 'text', id: `ns-${i + 1}`, placeholder: `새로 보인 것 ${i + 1}`, value: s.newSeen[i], 'aria-label': `2차에서 새로 보인 것 ${i + 1}`,
+        oninput: () => { s.newSeen[i] = inp.value; touch(); } });
+      return inp;
+    }));
+    const wrong = h('input', { class: 'text', id: 'wrong-guess', value: s.wrongGuess, placeholder: '1차에는 이렇게 추정했는데, 다시 보니 아니었다',
+      oninput: () => { s.wrongGuess = wrong.value; touch(); } });
+    app.replaceChildren(h('div', { class: 'wrap' },
+      h('div', { class: 'bar' },
+        h('button', { class: 'btn quiet', onclick: () => { location.hash = 'card-' + c.id; } }, '← 카드로 돌아가기'),
+        h('div', { class: 'slate mono' }, h('strong', {}, `No.${pad(c.no, 3)}`), h('span', {}, '1차 · 2차 비교'), savedLabel)),
+      h('div', { class: 'editor' },
+        h('div', { class: 'stage' }, h('div', { class: 'frame' }, src ? h('img', { src, alt: '분석한 이미지' }) : h('div', { class: 'linkfail' }, '이미지 없음'))),
+        h('div', { class: 'form' },
+          h('section', { class: 'sec' }, h('header', {}, h('h2', {}, '내가 표시하기')),
+            h('div', { class: 'field' }, h('span', { class: 'label' }, '2차에서 새로 보인 것 3개'), seen),
+            h('div', { class: 'field' }, h('label', { class: 'label', for: 'wrong-guess' }, '1차에서 틀렸던 추정 1개'), wrong)),
+          h('section', { class: 'sec' }, h('header', {}, h('h2', {}, '1차와 2차 나란히'), h('span', { class: 'label mono' }, `${changed}칸 달라짐`)),
+            h('div', { class: 'cmpHead mono' }, h('span', {}, `1차 · ${dstr(new Date(c.createdAt))}`), h('span', {}, `2차 · ${dstr(new Date(s.startedAt))}`)),
+            rows.length ? rows : h('p', { class: 'note' }, '아직 비교할 내용이 없어요.'),
+            h('div', {}, h('button', { class: 'btn', type: 'button', onclick: () => { location.hash = 'again-' + c.id; } }, '2차 이어 쓰기')))))));
+    window.scrollTo(0, 0);
+  }
+
   /* ───────── 백업과 내보내기 ───────── */
   const STORES = ['cards', 'images', 'diary', 'meta', 'series'];
   const trustLabel = (c) => (TRUST.find(([k]) => k === c.trust) || [])[1] || '';
@@ -1192,6 +1368,20 @@
       if (rows.length) L.push('', `## ${pad(stepNo(st))} ${st.title}`, ...rows);
     }
     if (unk.length) L.push('', '## 모르겠음으로 남긴 칸', ...unk.map((u) => `- ${u}`));
+    if (!forAi && c.second) {
+      const ns = c.second.newSeen.filter(has);
+      if (ns.length || has(c.second.wrongGuess)) {
+        L.push('', '## 3일 뒤 다시 쓰기');
+        if (ns.length) L.push('- **2차에서 새로 보인 것**:', ...ns.map((t) => `  - ${t.trim()}`));
+        if (has(c.second.wrongGuess)) L.push(`- **1차에서 틀렸던 추정**: ${c.second.wrongGuess.trim()}`);
+      }
+    }
+    if (!forAi && c.reshoot && c.reshoot.has) {
+      const ds = c.reshoot.diffs.filter(has);
+      L.push('', '## 재현 촬영 기록');
+      if (ds.length) L.push('- **원본과 다른 점**:', ...ds.map((t) => `  - ${t.trim()}`));
+      if (has(c.reshoot.missed)) L.push(`- **내가 못 봤던 것**: ${c.reshoot.missed.trim()}`);
+    }
     const rv = c.review || {};
     if (!forAi && (has(rv.missed) || has(rv.disagree))) {
       L.push('', '## 정답 확인');
@@ -1347,6 +1537,8 @@
 
   async function route() {
     const name = location.hash.replace(/^#/, '');
+    const sameCard = inEditor && cur && name === 'card-' + cur.id;
+    if (!sameCard) inEditor = false;
     if (flushPage) { await flushPage(); flushPage = null; }
     diaryPaste = null;
     if (name === 'diary') return showDiary();
@@ -1356,10 +1548,12 @@
     if (name === 'new') return showCard(null);
     if (name.startsWith('card-')) {
       const id = name.slice(5);
-      if (cur && cur.id === id && curPersisted && app.firstChild) return;
+      if (cur && cur.id === id && curPersisted && inEditor && app.firstChild) return;
       return showCard(id);
     }
     if (name.startsWith('view-')) return showView(name.slice(5));
+    if (name.startsWith('again-')) return showAgain(name.slice(6));
+    if (name.startsWith('compare-')) return showCompare(name.slice(8));
     return showList();
   }
   window.addEventListener('hashchange', route);
