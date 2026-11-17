@@ -824,3 +824,4 @@ html[data-skin="school"] {
 }
 html[data-skin="school"] .helpbtn.on, html[data-skin="school"] .helpbtn:hover { color: #fff; background: var(--ink); }
 html[data-skin="school"] .segbar .btn { font-size: 0.6875rem; padding: 0 1px; font-weight: 600; }
+.ver { opacity: 0.55; font-size: 0.75em; }

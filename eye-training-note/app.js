@@ -8,7 +8,12 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  try { setSkin(new URLSearchParams(location.search).get('skin') ?? localStorage.getItem('eye-skin') ?? 'school'); } catch (e) { /* 기본 모양 */ }
+  const APP_VERSION = '20 · 교재판';
+  try {
+    // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
+    if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
+    setSkin(new URLSearchParams(location.search).get('skin') ?? localStorage.getItem('eye-skin') ?? 'school');
+  } catch (e) { document.documentElement.dataset.skin = 'school'; }
   const PREVIEW = !!window.EYE_PREVIEW; // 미리보기 주소에서는 파일 저장과 인쇄가 막혀 있다
 
   /* 화면 조각을 바꿔 끼울 때 빈 것(null)은 건너뛴다 */
@@ -2021,6 +2026,7 @@
           h('p', { class: 'note' }, '내보낸 파일을 다시 넣어요. 컴퓨터에서 쓴 기록을 폰으로 옮길 때도 이걸 써요.'), importBox),
         h('section', { class: 'sec' }, h('header', {}, h('h2', {}, '이 기기의 기록')),
           h('p', {}, `카드 ${all.cards.length}장 · 일기 ${all.diary.length}일 · 시리즈 ${all.series.length}개` + (mb ? ` · ${mb}` : '')),
+          h('p', { class: 'note', id: 'app-version' }, `앱 버전 ${APP_VERSION}`),
           h('p', { class: 'note' }, protect === true
             ? '기록 보호: 켜짐. 브라우저가 저장 공간을 정리할 때 이 앱의 기록은 건드리지 않아요.'
             : '기록 보호: 꺼짐. 오래 안 열면 브라우저가 기록을 정리해 버릴 수 있어요. 특히 아이폰은 홈 화면에 추가하지 않으면 7일쯤 안 쓴 사이트의 기록을 지워요.'),
@@ -2166,7 +2172,7 @@
     return h('div', { class: 'top' },
       h('div', {},
         h('h1', {}, 'DOPEYE'),
-        h('div', { class: 'sub' }, sub)),
+        h('div', { class: 'sub' }, sub, h('span', { class: 'ver' }, `  v${APP_VERSION.split(' ')[0]}`))),
       h('div', { class: 'row' },
         h('nav', { class: 'tabs', 'aria-label': '화면 이동' }, tab('list', '카드', 'list'), tab('series', '시리즈', 'series'), tab('diary', '일기', 'diary'), tab('look', '돌아보기', 'look'), tab('backup', '백업', 'backup')),
         action || null));
