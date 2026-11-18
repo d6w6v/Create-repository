@@ -1006,25 +1006,32 @@ html[data-skin="school"] .facts dt { font-family: var(--tt); }
 .rollpick .linkbtn.on { color: var(--ink); font-weight: 700; text-decoration: none; }
 .filmcount { font-variant-numeric: tabular-nums; }
 
-/* ── 여는 장면: 슬레이트. 흰 판, 검은 줄, 검정·흰색 줄무늬 막대. 딱 치고 위로 빠진다 ── */
-.slate-ov { position: fixed; inset: 0; z-index: 90; background: #fff; display: flex; align-items: center; justify-content: center; transition: transform 0.38s cubic-bezier(0.7, 0, 0.2, 1); }
-.slate-ov.out { transform: translateY(-100%); }
-.slate { width: min(78vw, 400px); color: #111; font-family: var(--grot, var(--font-body)); animation: slateIn 0.2s ease-out both; }
-.slstick { height: 36px; border: 2px solid #111; background: repeating-linear-gradient(-55deg, #111 0 22px, #fff 22px 44px); }
-.slstick.sltop { transform-origin: 0 100%; transform: rotate(-24deg); }
-.slstick.slbase { border-top: 0; background: repeating-linear-gradient(55deg, #111 0 22px, #fff 22px 44px); }
-.slate-ov.clap .slstick.sltop { transform: rotate(0deg); transition: transform 0.1s cubic-bezier(0.6, 0, 1, 0.5); }
-.slate-ov.clap .slate { animation: slateHit 0.24s ease-out 0.1s; }
-.slboard { border: 2px solid #111; border-top: 0; background: #fff; }
-.slrow { display: grid; grid-template-columns: minmax(0, 1fr); }
-.slrow + .slrow { border-top: 2px solid #111; }
-.slrow.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.slcell { display: flex; flex-direction: column; gap: 4px; padding: 9px 12px 11px; min-width: 0; }
-.slcell + .slcell { border-left: 2px solid #111; }
-.sllabel { font-family: var(--tt, ui-monospace, "SF Mono", Menlo, Consolas, monospace); font-size: 10px; letter-spacing: 0.1em; color: #666; }
-.sltitle { font-size: 2.1rem; font-weight: 800; letter-spacing: -0.055em; line-height: 1; }
-.sltitle::after { content: ""; display: inline-block; width: 0.26em; height: 0.26em; background: var(--red, #e4002b); margin-left: 0.08em; }
-.slnum { font-size: 2.6rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
-.sldate { font-family: var(--tt, ui-monospace, "SF Mono", Menlo, Consolas, monospace); font-size: 1rem; font-weight: 500; letter-spacing: 0.02em; }
-@keyframes slateIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
-@keyframes slateHit { 0% { transform: translateY(5px); } 45% { transform: translateY(-2px); } 100% { transform: none; } }
+/* ── 여는 장면: 화면 전체가 슬레이트. 검은 화면, 큰 글자, 가는 줄. 딱 치고 친 자리에서 위아래로 갈라진다 ── */
+.slate-ov { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; color: #fff; font-family: var(--grot, var(--font-body)); overflow: hidden; --band: clamp(30px, 6.5vh, 58px); --open: -7deg; --ease: cubic-bezier(0.76, 0, 0.24, 1); }
+@media (max-width: 700px) { .slate-ov { --open: -15deg; } }
+.slup, .sldown { background: #111; transition: transform 0.5s var(--ease); }
+.slup { flex: none; padding-top: 24vh; }
+.sldown { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.slate-ov.out .slup { transform: translateY(-101%); }
+.slate-ov.out .sldown { transform: translateY(101%); }
+.slstick { height: var(--band); background: repeating-linear-gradient(-55deg, #fff 0 calc(var(--band) * 0.62), #111 calc(var(--band) * 0.62) calc(var(--band) * 1.24)); }
+.slstick.sltop { transform-origin: 0 100%; transform: rotate(var(--open)); }
+.slstick.slbase { margin-top: 2px; background: repeating-linear-gradient(55deg, #fff 0 calc(var(--band) * 0.62), #111 calc(var(--band) * 0.62) calc(var(--band) * 1.24)); }
+.slate-ov.clap .slstick.sltop { transform: rotate(0deg); transition: transform 0.09s cubic-bezier(0.6, 0, 1, 0.45); }
+.slate-ov.clap:not(.out) .sldown { animation: slateHit 0.22s ease-out 0.09s; }
+.slrow { display: grid; grid-template-columns: minmax(0, 1fr); border-top: 1px solid rgba(255, 255, 255, 0.28); animation: slateIn 0.36s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.slrow:first-child { border-top: 0; }
+.slrow.sltitlerow { flex: 1.15; animation-delay: 0.04s; }
+.slrow.three { flex: 1; grid-template-columns: repeat(3, minmax(0, 1fr)); animation-delay: 0.1s; }
+.slrow.slfoot { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 14px clamp(16px, 3vw, 36px) calc(16px + env(safe-area-inset-bottom, 0px)); animation-delay: 0.16s; }
+.slcell { display: flex; flex-direction: column; justify-content: space-between; gap: 6px; padding: clamp(12px, 2.2vh, 22px) clamp(16px, 3vw, 36px); min-width: 0; }
+.slcell + .slcell { border-left: 1px solid rgba(255, 255, 255, 0.28); }
+.sllabel, .sldate, .sltag { font-family: var(--tt, ui-monospace, "SF Mono", Menlo, Consolas, monospace); font-size: 11px; letter-spacing: 0.12em; }
+.sllabel { color: rgba(255, 255, 255, 0.55); }
+.sldate { color: #fff; }
+.sltag { color: var(--red, #e4002b); text-align: right; }
+.sltitle { font-size: clamp(3.2rem, 17vw, 10rem); font-weight: 800; letter-spacing: -0.06em; line-height: 0.9; }
+.sltitle::after { content: ""; display: inline-block; width: 0.24em; height: 0.24em; background: var(--red, #e4002b); margin-left: 0.07em; }
+.slnum { font-size: clamp(2.8rem, 14vw, 8.5rem); font-weight: 800; letter-spacing: -0.05em; line-height: 0.9; font-variant-numeric: tabular-nums; }
+@keyframes slateIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes slateHit { 0% { transform: translateY(4px); } 100% { transform: none; } }
