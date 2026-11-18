@@ -1016,32 +1016,33 @@ html[data-skin="school"] .facts dt { font-family: var(--tt); }
 .facts.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (prefers-reduced-motion: reduce) { .heropic .hcolor { transition: none; } }
 
-/* ── 여는 장면: 화면 전체가 슬레이트. 검은 화면, 큰 글자, 가는 줄. 딱 치고 친 자리에서 위아래로 갈라진다 ── */
-.slate-ov { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; color: #fff; font-family: var(--grot, var(--font-body)); overflow: hidden; --band: clamp(30px, 6.5vh, 58px); --open: -7deg; --ease: cubic-bezier(0.76, 0, 0.24, 1); }
-@media (max-width: 700px) { .slate-ov { --open: -15deg; } }
-.slup, .sldown { background: #111; transition: transform 0.5s var(--ease); }
-.slup { flex: none; padding-top: 24vh; }
-.sldown { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* ── 여는 장면: 검은 화면, 가는 줄 두 개(슬레이트를 줄로만 줄인 것), 이름, 작은 정보 한 줄. 장식 없음 ── */
+.slate-ov { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; color: #fff; font-family: var(--grot, var(--font-body)); overflow: hidden;
+  --seam: 54%; --out: cubic-bezier(0.83, 0, 0.17, 1); --rise: cubic-bezier(0.16, 1, 0.3, 1); }
+.slup, .sldown { background: #0b0b0b; transition: transform 0.72s var(--out); will-change: transform; }
+.slup { flex: none; height: var(--seam); display: flex; align-items: flex-end; justify-content: center; padding: 0 20px clamp(14px, 2.6vh, 26px); }
+.sldown { flex: 1; min-height: 0; display: flex; align-items: flex-start; justify-content: center; padding: clamp(14px, 2.6vh, 26px) 20px 0; }
 .slate-ov.out .slup { transform: translateY(-101%); }
 .slate-ov.out .sldown { transform: translateY(101%); }
-.slstick { height: var(--band); background: repeating-linear-gradient(-55deg, #fff 0 calc(var(--band) * 0.62), #111 calc(var(--band) * 0.62) calc(var(--band) * 1.24)); }
-.slstick.sltop { transform-origin: 0 100%; transform: rotate(var(--open)); }
-.slstick.slbase { margin-top: 2px; background: repeating-linear-gradient(55deg, #fff 0 calc(var(--band) * 0.62), #111 calc(var(--band) * 0.62) calc(var(--band) * 1.24)); }
-.slate-ov.clap .slstick.sltop { transform: rotate(0deg); transition: transform 0.09s cubic-bezier(0.6, 0, 1, 0.45); }
-.slate-ov.clap:not(.out) .sldown { animation: slateHit 0.22s ease-out 0.09s; }
-.slrow { display: grid; grid-template-columns: minmax(0, 1fr); border-top: 1px solid rgba(255, 255, 255, 0.28); animation: slateIn 0.36s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-.slrow:first-child { border-top: 0; }
-.slrow.sltitlerow { flex: 1.15; animation-delay: 0.04s; }
-.slrow.three { flex: 1; grid-template-columns: repeat(3, minmax(0, 1fr)); animation-delay: 0.1s; }
-.slrow.slfoot { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 14px clamp(16px, 3vw, 36px) calc(16px + env(safe-area-inset-bottom, 0px)); animation-delay: 0.16s; }
-.slcell { display: flex; flex-direction: column; justify-content: space-between; gap: 6px; padding: clamp(12px, 2.2vh, 22px) clamp(16px, 3vw, 36px); min-width: 0; }
-.slcell + .slcell { border-left: 1px solid rgba(255, 255, 255, 0.28); }
-.sllabel, .sldate, .sltag { font-family: var(--tt, ui-monospace, "SF Mono", Menlo, Consolas, monospace); font-size: 11px; letter-spacing: 0.12em; }
-.sllabel { color: rgba(255, 255, 255, 0.55); }
-.sldate { color: #fff; }
-.sltag { color: var(--red, #e4002b); text-align: right; }
-.sltitle { font-size: clamp(3.2rem, 17vw, 10rem); font-weight: 800; letter-spacing: -0.06em; line-height: 0.9; }
-.sltitle::after { content: ""; display: inline-block; width: 0.24em; height: 0.24em; background: var(--red, #e4002b); margin-left: 0.07em; }
-.slnum { font-size: clamp(2.8rem, 14vw, 8.5rem); font-weight: 800; letter-spacing: -0.05em; line-height: 0.9; font-variant-numeric: tabular-nums; }
-@keyframes slateIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-@keyframes slateHit { 0% { transform: translateY(4px); } 100% { transform: none; } }
+/* 줄 두 개 */
+.slline, .slarm { position: absolute; left: 0; right: 0; top: var(--seam); height: 1px; background: #fff; pointer-events: none; }
+.slline { transform: scaleX(0); transition: transform 0.5s var(--rise), opacity 0.25s; }
+.slate-ov.go .slline { transform: scaleX(1); }
+.slarm { transform-origin: 0 50%; transform: rotate(-6deg); opacity: 0; transition: opacity 0.3s; }
+.slate-ov.go .slarm { opacity: 0.9; }
+.slate-ov.clap .slarm { transform: rotate(0deg); transition: transform 0.11s cubic-bezier(0.6, 0, 1, 0.5); }
+.slate-ov.out .slline, .slate-ov.out .slarm { opacity: 0; transition: opacity 0.2s; }
+@media (max-width: 700px) { .slarm { transform: rotate(-12deg); } }
+/* 이름: 글자가 줄 아래에서 하나씩 올라온다 */
+.sltitle { display: flex; align-items: flex-end; font-size: clamp(3.4rem, 18vw, 10.5rem); font-weight: 800; letter-spacing: -0.06em; line-height: 0.86; }
+.slch { display: inline-block; clip-path: inset(0 -0.3em 0 -0.3em); padding-top: 0.06em; }
+.slch > span { display: inline-block; transform: translateY(108%); transition: transform 0.62s var(--rise); }
+.slate-ov.title .slch > span { transform: none; }
+.sldot { width: 0.24em; height: 0.24em; margin: 0 0 0.045em 0.07em; background: var(--red, #e4002b); transform: scale(0); transition: transform 0.4s var(--rise) 0.36s; }
+.slate-ov.title .sldot { transform: none; }
+/* 정보 한 줄 */
+.slmetas { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px clamp(18px, 3vw, 40px); opacity: 0; transform: translateY(-6px); transition: opacity 0.5s 0.3s, transform 0.6s var(--rise) 0.3s; }
+.slate-ov.title .slmetas { opacity: 1; transform: none; }
+.slmeta { display: inline-flex; gap: 8px; align-items: baseline; font-family: var(--tt, ui-monospace, "SF Mono", Menlo, Consolas, monospace); font-size: 11px; letter-spacing: 0.14em; }
+.sllabel { color: rgba(255, 255, 255, 0.45); }
+.slnum { color: #fff; font-variant-numeric: tabular-nums; }

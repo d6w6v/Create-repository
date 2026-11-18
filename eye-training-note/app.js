@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '42 · 오늘의 한 판';
+  const APP_VERSION = '43 · 여는 장면';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -3207,27 +3207,32 @@
     if (name.startsWith('compare-')) return showCompare(name.slice(8));
     return showList();
   }
-  /* ───────── 여는 장면: 화면 전체가 슬레이트. 딱 치고, 친 자리에서 위아래로 갈라지며 페이지가 열린다 ───────── */
+  /* ───────── 여는 장면: 가는 줄 두 개가 딱 붙고, 그 자리에서 이름이 올라온 뒤 위아래로 열린다 ───────── */
   function slateIntro() {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
-    const num = () => h('strong', { class: 'slnum' }, '--');
-    const cell = (k, v) => h('div', { class: 'slcell' }, h('span', { class: 'sllabel' }, k), v);
+    const num = () => h('span', { class: 'slnum' }, '--');
     const roll = num(); const scene = num(); const take = num();
     const d = new Date();
+    const meta = (k, v) => h('span', { class: 'slmeta' }, h('span', { class: 'sllabel' }, k), v);
     const ov = h('div', { class: 'slate-ov', id: 'slate', 'aria-hidden': 'true' },
-      h('div', { class: 'slup' }, h('div', { class: 'slstick sltop' }), h('div', { class: 'slstick slbase' })),
+      h('div', { class: 'slup' },
+        h('strong', { class: 'sltitle' },
+          [...'DOPEYE'].map((ch, i) => h('span', { class: 'slch' }, h('span', { style: `transition-delay:${i * 38}ms` }, ch))),
+          h('span', { class: 'sldot' }))),
       h('div', { class: 'sldown' },
-        h('div', { class: 'slrow sltitlerow' }, cell('PROD.', h('strong', { class: 'sltitle' }, 'DOPEYE'))),
-        h('div', { class: 'slrow three' }, cell('ROLL', roll), cell('SCENE', scene), cell('TAKE', take)),
-        h('div', { class: 'slrow slfoot' },
-          h('span', { class: 'sldate' }, `${d.getFullYear()}.${pad(d.getMonth() + 1, 2)}.${pad(d.getDate(), 2)}`),
-          h('span', { class: 'sltag' }, 'VISUAL ANALYSIS WORKBOOK'))));
+        h('div', { class: 'slmetas' }, meta('ROLL', roll), meta('SCENE', scene), meta('TAKE', take),
+          meta('DATE', h('span', { class: 'slnum' }, `${d.getFullYear()}.${pad(d.getMonth() + 1, 2)}.${pad(d.getDate(), 2)}`)))),
+      h('span', { class: 'slline' }), h('span', { class: 'slarm' }));
     document.body.append(ov);
     let gone = false;
-    const close = () => { if (gone) return; gone = true; ov.classList.add('out'); setTimeout(() => ov.remove(), 600); };
+    const timers = [];
+    const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+    const close = () => { if (gone) return; gone = true; timers.forEach(clearTimeout); ov.classList.add('out'); setTimeout(() => ov.remove(), 800); };
     ov.addEventListener('pointerdown', close);
-    setTimeout(() => ov.classList.add('clap'), 560); // 딱
-    setTimeout(close, 1000);                         // 친 자리에서 위아래로 갈라지며 열린다
+    requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('go'))); // 가는 줄이 그어진다
+    at(460, () => ov.classList.add('clap'));   // 위쪽 줄이 내려와 딱 붙는다
+    at(570, () => ov.classList.add('title'));  // 붙는 순간 이름이 올라온다
+    at(1650, close);                           // 붙은 줄을 경계로 위아래로 열린다
     return (g) => { // 롤, 지금까지 분해한 컷 수, 오늘이 몇 번째 날인지
       const day = g.days.size + (g.days.has(dstr(new Date())) ? 0 : 1);
       roll.textContent = pad(Math.max(1, Math.ceil(day / ROLL)), 2);
