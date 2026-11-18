@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '45 · 픽셀';
+  const APP_VERSION = '46 · 퍼즐과 픽셀 친구들';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -624,7 +624,7 @@
         const streak = missionStreak(ms.done);
         const flags = Math.min(7, streak);
         const track = h('div', { class: 'pxtrack', id: 'px-track', role: 'img', 'aria-label': `미션 연속 ${streak}일` },
-          Array.from({ length: 7 }, (_, i) => h('span', { class: 'pxslot' + (i < flags ? ' on' : '') }, i < flags ? sprite(PX_FLAG, 3) : null, i === flags ? pxHero(3) : null)),
+          Array.from({ length: 7 }, (_, i) => h('span', { class: 'pxslot' + (i < flags ? ' on' : '') }, i < flags ? sprite(PX_FLAG, 3) : null, i === flags ? pxHero(2) : null)),
           h('span', { class: 'mono pxnote' }, `연속 ${streak}/7`));
         box.replaceChildren(
           h('header', {}, h('h2', {}, '오늘의 미션'), h('span', { class: 'chip-state' + (done ? ' done' : '') }, done ? '완료' : tier ? '진행 중' : '하나 고르기')),
@@ -656,6 +656,9 @@
       const openBoss = () => { if (bCard) location.hash = 'card-' + bCard.id; else { pendingBoss = true; location.hash = 'new'; } };
 
       // 왼쪽: 보스 이미지. 흑백으로 시작해서, 단계를 끝낼 때마다 한 조각씩 색이 돌아온다
+      const PUZZLES = [['strips', '띠'], ['grid', '격자'], ['cover', '가림막'], ['mix', '뒤섞임']];
+      let puzzleKind = 'strips'; try { const k = localStorage.getItem('eye-puzzle'); if (PUZZLES.some((x) => x[0] === k)) puzzleKind = k; } catch (e) { /* 기본값 */ }
+      let drawPuzzle = null; let previewPuzzle = null;
       const pic = h('button', { class: 'heropic' + (bCard ? '' : ' poster'), type: 'button', id: 'boss-pic', onclick: openBoss, 'aria-label': bCard ? '보스 카드 열기' : '새 카드로 보스에 도전' });
       if (!bCard) {
         pic.append(h('span', { class: 'plabel mono' }, 'THIS WEEK / BOSS'), h('strong', { class: 'pname' }, bName), h('span', { class: 'pdesc' }, bDesc),
@@ -663,17 +666,56 @@
       } else {
         const src = await cardImage(bCard).catch(() => '') || cardSrc(bCard);
         if (src) {
-          const color = h('img', { class: 'hcolor', src, alt: '' });
-          let seen = cut; try { const m = (localStorage.getItem('eye-boss-seen') || '').split('|'); if (m[0] === wid) seen = Math.min(cut, Number(m[1]) || 0); else seen = 0; localStorage.setItem('eye-boss-seen', `${wid}|${cut}`); } catch (e) { /* 그냥 표시 */ }
-          const clip = (k) => `inset(0 ${beaten ? 0 : (100 - (k / hp.total) * 100).toFixed(3)}% 0 0)`;
-          color.style.clipPath = clip(seen);
-          pic.append(h('img', { class: 'hgray', src, alt: '' }), color, beaten ? null : h('span', { class: 'hlines', 'aria-hidden': 'true' }));
-          if (seen !== cut) requestAnimationFrame(() => requestAnimationFrame(() => { color.style.clipPath = clip(cut); }));
+          const total = hp.total;
+          // 조각이 풀리는 순서는 카드마다 다르게 섞는다
+          const order = (() => { const o = Array.from({ length: 12 }, (_, i) => i); let seed = dayHash(String(bCard.id), 5);
+            for (let i = 11; i > 0; i--) { seed = (seed * 9301 + 49297) % 233280; const j = seed % (i + 1); [o[i], o[j]] = [o[j], o[i]]; } return o; })();
+          const cellBox = (i) => `left:${(i % 4) * 25}%;top:${Math.floor(i / 4) * 33.3334}%;width:25%;height:33.3334%`;
+          let source = null; let timer = 0;
+          const colorImg = h('img', { class: 'hcolor', src, alt: '' });
+          drawPuzzle = (kind, n, done) => {
+            const solved = done ? 12 : n; // 열두 번째 조각은 격파해야 풀린다
+            pic.dataset.puzzle = kind;
+            const kids = [];
+            if (kind === 'mix') {
+              const cv = h('canvas', { class: 'hcanvas', width: 1200, height: 800 });
+              const rest = order.slice(solved);
+              const at = new Map(order.slice(0, solved).map((c) => [c, c])); // 칸 → 그 칸에 놓인 조각
+              rest.forEach((c, j) => at.set(c, rest[(j + 1) % rest.length]));
+              const paint = () => { if (!source) return; const x = cv.getContext('2d'); const iw = source.naturalWidth; const ih = source.naturalHeight;
+                const cw = Math.min(iw, ih * 1.5); const ch = cw / 1.5; const ox = (iw - cw) / 2; const oy = (ih - ch) / 2;
+                for (let c = 0; c < 12; c++) { const t = at.get(c); x.drawImage(source, ox + (t % 4) * cw / 4, oy + Math.floor(t / 4) * ch / 3, cw / 4, ch / 3, (c % 4) * 300, Math.floor(c / 4) * 800 / 3, 300, 800 / 3 + 1); } };
+              if (source) paint(); else { const im = new Image(); im.onload = () => { source = im; paint(); }; im.src = src; }
+              kids.push(cv, ...rest.map((c) => h('span', { class: 'pzcell gray', style: cellBox(c) })));
+            } else {
+              kids.push(colorImg);
+              if (kind === 'strips') {
+                for (let i = (done ? total : n); i < total; i++) kids.push(h('span', { class: 'pzcell gray', style: `left:${(i / total) * 100}%;top:0;width:${100 / total + 0.05}%;height:100%` }));
+              } else {
+                order.forEach((c, k) => { if (k >= solved) kids.push(h('span', { class: 'pzcell ' + (kind === 'cover' ? 'cover' : 'gray'), style: cellBox(c) }, kind === 'cover' ? h('span', { class: 'mono' }, k < total ? pad(k + 1, 2) : 'KO') : null)); });
+              }
+            }
+            if (!done) kids.push(h('span', { class: 'hlines ' + (kind === 'strips' ? '' : 'grid'), 'aria-hidden': 'true' }));
+            if (done) kids.push(h('span', { class: 'hstamp' }, '격파'));
+            pic.replaceChildren(...kids);
+          };
+          previewPuzzle = (kind) => { // 0단계부터 끝까지 빠르게 돌려 보여 주고, 지금 상태로 돌아온다
+            clearInterval(timer); let k = 0;
+            drawPuzzle(kind, 0, false);
+            timer = setInterval(() => { k++; if (!pic.isConnected) { clearInterval(timer); return; }
+              if (k <= total) drawPuzzle(kind, k, false); else if (k === total + 1) drawPuzzle(kind, total, true); else if (k >= total + 4) { clearInterval(timer); drawPuzzle(kind, cut, beaten); } }, 260);
+          };
+          drawPuzzle(puzzleKind, cut, beaten);
         } else pic.classList.add('poster'), pic.append(h('strong', { class: 'pname' }, bName), h('span', { class: 'pdesc' }, '이미지 없이 글로 싸우는 중'));
-        if (beaten) pic.append(h('span', { class: 'hstamp' }, '격파'));
       }
       const slices = bCard ? h('div', { class: 'hslices', role: 'img', 'aria-label': `${hp.total}단계 중 ${cut}단계 끝냄` },
         STEPS.map((st, i) => h('span', { class: 'hs' + (i < cut ? ' done' : i === cut && !beaten ? ' next' : '') }, pad(i + 1, 2)))) : null;
+      const pzPick = h('div', { class: 'pzpick', id: 'puzzle-pick' });
+      const drawPick = () => pzPick.replaceChildren(h('span', { class: 'flabel' }, '퍼즐 모양'),
+        ...PUZZLES.map(([k, name]) => h('button', { class: 'btn small' + (k === puzzleKind ? ' on' : ''), type: 'button', id: 'puzzle-' + k, 'aria-pressed': String(k === puzzleKind),
+          onclick: () => { puzzleKind = k; try { localStorage.setItem('eye-puzzle', k); } catch (e) { /* 이번만 */ } drawPick(); previewPuzzle(k); } }, name)),
+        h('span', { class: 'note' }, '누르면 끝까지 풀리는 모습을 미리 보여 줘요.'));
+      if (drawPuzzle) drawPick();
 
       // 픽셀 무대: 눈알이 단계를 끝낸 만큼 보스 쪽으로 걸어간다
       const heroEl = pxHero(4); heroEl.classList.add('pxhero');
@@ -700,7 +742,7 @@
             ? h('button', { class: 'btn small', type: 'button', id: 'boss-open', onclick: openBoss }, beaten ? `격파한 카드 보기 (No.${pad(bCard.no, 3)})` : `이어서 싸우기 (No.${pad(bCard.no, 3)})`)
             : h('button', { class: 'btn small', type: 'button', id: 'boss-new', onclick: openBoss }, '새 카드로 도전'))));
       wrap.append(
-        h('div', { class: 'hero', id: 'hero' }, h('div', { class: 'heroleft' }, pic, slices), h('div', { class: 'heroright' }, bossBox, box)),
+        h('div', { class: 'hero', id: 'hero' }, h('div', { class: 'heroleft' }, pic, slices, drawPuzzle ? pzPick : null), h('div', { class: 'heroright' }, bossBox, box)),
         playerBar(g));
     }
     if (new Date().getDay() === 0 && cards.length) {
@@ -2632,21 +2674,18 @@
     ['평범함의 보스', '아무것도 특별해 보이지 않는데 끌리는 이미지. "틀린 것"을 찾기가 가장 어려워요.'],
   ];
   /* 픽셀 그림: 글자 한 칸이 점 하나. k 검정, w 흰색, r 빨강, g 회색, . 빈 칸 */
-  const PX_HERO = [[
-    '....kkkk....', '..kkwwwwkk..', '.kwwwwwwwwk.', '.kwwwkkwwwk.', 'kwwwkrrkwwwk', 'kwwwkrrkwwwk',
-    '.kwwwkkwwwk.', '.kwwwwwwwwk.', '..kkwwwwkk..', '....kkkk....', '...k....k...', '..kk....kk..'], [
-    '....kkkk....', '..kkwwwwkk..', '.kwwwwwwwwk.', '.kwwwkkwwwk.', 'kwwwkrrkwwwk', 'kwwwkrrkwwwk',
-    '.kwwwkkwwwk.', '.kwwwwwwwwk.', '..kkwwwwkk..', '....kkkk....', '....k..k....', '...kk..kk...']];
+  const PX_HERO = [['................', '..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kwwwwkkkkwwwwk.', '.kwwwkwrrwkwwwk.', 'kwwwwkwrrwkwwwwk', 'kwwwwwkkkkwwwwwk', 'kwkwwwwwwwwwwkwk', 'kwwrwwkwwkwwrwwk', 'kwwwwwwkkwwwwwwk', '.kwwwwwwwwwwwwk.', '..kkwwwwwwwwkk..', '...kkkk..kkkk...', '...kk......kk...'],
+    ['................', '..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kwwwwkkkkwwwwk.', '.kwwwkwrrwkwwwk.', 'kwwwwkwrrwkwwwwk', 'kwwwwwkkkkwwwwwk', 'kwkwwwwwwwwwwkwk', 'kwgrwwkwwkwwrwwk', 'kwwwwwwkkwwwwwwk', '.kwwwwwwwwwwwwk.', '..kkwwwwwwwwkk..', '...kkkk..kkkk...', '.....kk..kk.....']];
   const PX_FLAG = ['krrr.', 'krrrr', 'krrr.', 'k....', 'k....', 'k....', 'k....', 'kkk..'];
   const PX_BOSS = [
-    ['......kk......', '.k....kk....k.', '..k..rrrr..k..', '....rrrrrr....', '...rrwrrwrr...', 'kk.rrkrrkrr.kk', 'kk.rrrrrrrr.kk', '...rrrkkrrr...', '....rrrrrr....', '..k..rrrr..k..', '.k....kk....k.', '......kk......'],
-    ['....kkkkkk....', '..kkkkkkkkkk..', '.kkkkkkkkkkkk.', 'kkkkkkkkkkkkkk', 'kkwwkkkkkkwwkk', 'kkwrkkkkkkrwkk', 'kkkkkkkkkkkkkk', 'kkkkkkkkkkkkkk', 'kkkkkrrrrkkkkk', '.kkkkkkkkkkkk.', '.kk.kkk.kkk.kk', '.k...k...k...k'],
-    ['.....kkkk.....', '....kwwwwk....', '.kkkkwkkwkkkk.', 'kwwwkwwwwkwwwk', 'kwkwkwrrwkwkwk', 'kwwwkkkkkkwwwk', 'kwrwkkkkkkwrwk', '.kkkkkkkkkkkk.', '.kkkkkkkkkkkk.', '..kkkkkkkkkk..', '..kk.kkkk.kk..', '..kk.kk.k.kk..'],
-    ['kkkkkkkkkkkkkk', 'k............k', 'k............k', 'k..kk....kk..k', 'k..kr....rk..k', 'k............k', 'k............k', 'k....kkkk....k', 'k............k', 'kkkkkkkkkkkkkk', '..kk......kk..', '.kkk......kkk.'],
-    ['...kkkkkkkk...', '..kkkkkwwwwk..', '.kkkkkkwwwwwk.', 'kkkkkkkwwwwwwk', 'kkwwkkkwwkkwwk', 'kkwwkkkwwkkwwk', 'kkkkkkkwwwwwwk', 'kkkkkkkwwwwwwk', 'kkkwwwwkkkkwwk', '.kkkkkkwwwwwk.', '..kkkkkwwwwk..', '...kkkkkkkk...'],
-    ['g....kkkkkk...', '.g..kkkkkkkk..', 'g..kkkkkkkkkk.', '..gkkwwkkwwkk.', 'g..kkwrkkwrkk.', '.g.kkkkkkkkkk.', 'g..kkkkkkkkkk.', '..gkkkkrrkkkk.', 'g..kkkkkkkkkk.', '.g.kkkkkkkkkk.', 'g..kk.kkk.kkk.', '..g.k..k...k..'],
-    ['..kkk....kkk..', '.kkkkkkkkkkkk.', 'kkwwkkwwkkwwkk', 'kkwrkkwrkkwrkk', 'kkkkkkkkkkkkkk', 'kwwkkwwkkwwkkk', 'kwrkkwrkkwrkkk', 'kkkkkkkkkkkkkk', 'kkrrrrrrrrrrkk', '.kkkkkkkkkkkk.', '.kk.kk.kk.kk..', '.k..k..k..k...'],
-    ['..............', '.kkkkkkkkkkkk.', '.kwwwwwwwwwwk.', '.kwwwwwwwwwwk.', '.kwwkwwwwkwwk.', '.kwwwwwwwwwwk.', '.kwwwwwwwwwwk.', '.kwwwkkkkwwwk.', '.kwwwwwwwwwwk.', '.kkkkkkkkkkkk.', '...kk....kk...', '...kk....kk...'],
+    ['..kk........kk..', '.krrk......krrk.', '.krrrkkkkkkrrrk.', '..krrrrwwrrrrk..', '.krrrrrrrrrrrrk.', 'krrwwrrrrrrwwrrk', 'krrwkrrrrrrkwrrk', 'krrrrrrrrrrrrrrk', 'krrrkwkwkwkwrrrk', 'krrrwkwkwkwkrrrk', '.krrrrrrrrrrrrk.', '..kkrrrrrrrrkk..', '...kkkk..kkkk...', '...kk......kk...'],
+    ['..kk........kk..', '.kkkk......kkkk.', '.kkkkkkkkkkkkkk.', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', 'kkkwwwkkkkwwwkkk', 'kkkwrwkkkkwrwkkk', 'kkkkkkkkkkkkkkkk', 'kkkwkwkwkwkwkkkk', 'kkkkkkkkkkkkkkkk', '.kkkkkkkkkkkkkk.', '..kkkkkkkkkkkk..', '...kkkk..kkkk...', '...kk......kk...'],
+    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kwkwkwwwwkwkwk.', 'kwwwrwwwwwwrwwwk', 'kwwwwwkwwkwwwwwk', 'kwwwwwwrrwwwwwwk', 'kwkwkwwwwwwkwkwk', 'kwwrwwkwwkwwrwwk', '.kwwwwwkkwwwwwk.', '..kkwwwwwwwwkk..', '...kkkk..kkkk...', '...kk......kk...'],
+    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kwwkkkkkkkkwwk.', 'kwwwkkkkkkkkwwwk', 'kwwwkkkkkkkkwwwk', 'kwrwkkkrkkkkwrwk', 'kwwwkkkkkkkkwwwk', 'kwwwwkkkkkkwwwwk', '.kwwwwwwwwwwwwk.', '..kkwwwwwwwwkk..', '...kkkk..kkkk...', '...kk......kk...'],
+    ['..kk........kk..', '.kkkk......kwwk.', '.kkkkkkkkkkwwwk.', '..kkkkkkwwwwwk..', '.kkkkkkgwwwwwwk.', 'kkkwwkkkgwwkkwwk', 'kkkwrkkgwwwrkwwk', 'kkkkkkkkgwwwwwwk', 'kkkwwwkgwwkkkwwk', 'kkkkkkkkgwwwwwwk', '.kkkkkkkwwwwwwk.', '..kkkkkkwwwwkk..', '...kkkk..kkkk...', '...kk......kk...'],
+    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kwwwwwwwwwwwgk.', 'kwkggwwwwkggwwwk', 'kwkggwwwwkggwwgk', 'kwwwwwwwwwwwwrwk', 'kwwwkkkkgggwwwwk', 'kwwwwrrwwwwwwwwk', '.kwwwwwwwwwwwwk.', '..kkwwwwwwwwkk..', '...kkkk..kkkk...', '...kk......kk...'],
+    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kkkwwkkwwkkwkk.', 'kwkrwwrkwwkrwwwk', 'kwwwwwwwwwwwwwwk', 'kkkwwkkwwkkwwkkk', 'krkwwkrwwrkwwkrk', 'kwwwwwwwwwwwwwwk', '.kwwrrrrrrrrwwk.', '..kkwwwwwwwwkk..', '...kkkk..kkkk...', '...kk......kk...'],
+    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kwwwwwwwwwwwwk.', 'kwwwwwwwwwwwwwwk', 'kwwwkwwwwwwkwwwk', 'kwrwwwwwwwwwwrwk', 'kwwwwwwkkwwwwwwk', 'kwwwwwwwwwwwwwwk', '.kwwwwwwwwwwwwk.', '..kkwwwwwwwwkk..', '...kkkk..kkkk...', '...kk......kk...']
   ];
   function sprite(rows, scale, cls) {
     const w = rows[0].length; const fill = { k: '#111', w: '#fff', r: 'var(--red, #e4002b)', g: '#9a9a9a' };
@@ -2656,7 +2695,7 @@
     el.innerHTML = `<svg viewBox="0 0 ${w} ${rows.length}" width="${w * scale}" height="${rows.length * scale}" shape-rendering="crispEdges">${rects}</svg>`;
     return el;
   }
-  const pxHero = (scale) => h('span', { class: 'pxwalk', style: `width:${12 * scale}px;height:${12 * scale}px` }, sprite(PX_HERO[0], scale, 'f1'), sprite(PX_HERO[1], scale, 'f2'));
+  const pxHero = (scale) => h('span', { class: 'pxwalk', style: `width:${16 * scale}px;height:${16 * scale}px` }, sprite(PX_HERO[0], scale, 'f1'), sprite(PX_HERO[1], scale, 'f2'));
   const weekId = () => dstr(weekStart(new Date()));
   const bossOf = (wid) => BOSSES[[...wid].reduce((x, ch) => x * 31 + ch.charCodeAt(0), 3) % BOSSES.length];
   const bossBeaten = (c) => !!c.boss && c.mode === 'deep' && cardDone(c) && c.unknown.length <= 3;
