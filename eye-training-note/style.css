@@ -953,6 +953,31 @@ html[data-skin="school"] .core .label { color: #fff; opacity: 0.8; font-weight: 
 .burst { position: fixed; left: 50%; bottom: calc(60px + env(safe-area-inset-bottom, 0px)); width: 0; height: 0; z-index: 40; pointer-events: none; }
 .bit { position: absolute; width: 9px; height: 9px; left: -4px; top: -4px; animation: bitFly 1.1s cubic-bezier(0.15, 0.6, 0.3, 1) forwards; }
 .bit.b0 { background: var(--ink); } .bit.b1 { background: var(--red, var(--ink)); } .bit.b2 { background: var(--mark); width: 6px; height: 12px; }
+/* ── 등급, 미션, 보스: 한눈에 (글씨와 딱지는 그대로, 배치만) ── */
+.player { gap: 8px; margin-bottom: 24px; }
+.pline { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; }
+#player .playerlv { font-size: 1.375rem; font-weight: 800; letter-spacing: -0.03em; }
+#player .pxp { white-space: nowrap; }
+#player .pxp .mono { font-size: 1.375rem; font-weight: 700; }
+#player .pxp small { font-size: 0.75rem; font-weight: 700; margin-left: 4px; }
+#player .bartrack { height: 12px; }
+#player .note strong { color: var(--ink); }
+.duo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 32px; align-items: start; }
+@media (min-width: 760px) { .duo { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); } }
+.duo > .sec { gap: 0; }
+.glance { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; }
+.glance .missiontext { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.35; word-break: keep-all; overflow-wrap: anywhere; }
+.glance .note { margin: -4px 0 0; }
+.hp { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; }
+.hp .label { white-space: nowrap; }
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 2px 0 0; border-top: 1px solid var(--line); }
+.facts > div { display: flex; flex-direction: column; gap: 1px; padding: 8px 8px 8px 0; border-bottom: 1px solid var(--line); min-width: 0; }
+.facts dt { font-size: 0.6875rem; color: var(--mute); }
+.facts dd { margin: 0; font-weight: 700; font-size: 0.9375rem; }
+@media (min-width: 480px) { .facts:not(.two) { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+html[data-skin="school"] .facts, html[data-skin="school"] .facts > div { border-color: #dcdcdc; }
+html[data-skin="school"] .facts dt { font-family: var(--tt); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }

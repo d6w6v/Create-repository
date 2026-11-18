@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '34 · 필름 감기';
+  const APP_VERSION = '35 · 한눈에';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -612,14 +612,16 @@
       const ms = (await store.get('meta', 'missions')) || { id: 'missions', done: {} };
       const tid = today();
       const box = h('section', { class: 'sec', id: 'mission' });
+      const fact = (k, v) => h('div', {}, h('dt', {}, k), h('dd', {}, v));
       const drawMission = () => box.replaceChildren(
-        h('header', {}, h('h2', {}, '오늘의 미션'), h('span', { class: 'chip-state' + (ms.done[tid] ? ' done' : '') }, ms.done[tid] ? '완료' : `연속 ${missionStreak(ms.done)}일`)),
-        h('div', { class: 'stepbody', style: 'padding-top:14px' },
+        h('header', {}, h('h2', {}, '오늘의 미션'), h('span', { class: 'chip-state' + (ms.done[tid] ? ' done' : '') }, ms.done[tid] ? '완료' : '오늘 할 일')),
+        h('div', { class: 'glance' },
           h('p', { class: 'missiontext' }, missionOf(tid)),
-          h('div', { class: 'row' },
-            ms.done[tid]
-              ? h('span', { class: 'note' }, `해냈어요. 미션 연속 ${missionStreak(ms.done)}일째예요.`)
-              : h('button', { class: 'btn small', type: 'button', id: 'mission-done', onclick: async () => { ms.done[tid] = Date.now(); await store.put('meta', ms); celebrate('미션 완료 · +25 XP', 18); showList(); } }, '해냈어요  +25 XP'))));
+          h('dl', { class: 'facts two' },
+            fact('보상', ms.done[tid] ? '+25 XP 받음' : '+25 XP'),
+            fact('연속', `${missionStreak(ms.done)}일`)),
+          ms.done[tid] ? null
+            : h('div', { class: 'row' }, h('button', { class: 'btn small', type: 'button', id: 'mission-done', onclick: async () => { ms.done[tid] = Date.now(); await store.put('meta', ms); celebrate('미션 완료 · +25 XP', 18); showList(); } }, '해냈어요'))));
       drawMission();
       const g = await gameState();
       let was = 0; try { was = Number(localStorage.getItem('eye-level') || 0); localStorage.setItem('eye-level', String(g.lv)); } catch (e) { /* 기억 못 해도 진행 */ }
@@ -631,13 +633,17 @@
       const hp = bCard ? bossHp(bCard) : null;
       const bossBox = h('section', { class: 'sec', id: 'boss' },
         h('header', {}, h('h2', {}, '이번 주 보스'), h('span', { class: 'chip-state' + (beaten ? ' done' : '') }, beaten ? '격파' : bCard ? '도전 중' : '도전 전')),
-        h('div', { class: 'stepbody', style: 'padding-top:14px' },
+        h('div', { class: 'glance' },
           h('p', { class: 'missiontext' }, bName),
           h('p', { class: 'note' }, bDesc),
-          h('p', { class: 'note' }, '격파 조건: 이 주제에 맞는 이미지를 직접 골라, 깊게 파기로 11단계를 끝내고 "모르겠음"은 3개 이하. 보상 150 XP.'),
-          bCard ? h('div', { class: 'field' }, h('span', { class: 'label mono' }, beaten ? '보스 체력 0' : `보스 체력 ${hp.left}/${hp.total}`),
+          bCard ? h('div', { class: 'hp' }, h('span', { class: 'label mono' }, beaten ? '체력 0' : `체력 ${hp.left}/${hp.total}`),
             h('span', { class: 'bartrack', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': hp.total, 'aria-valuenow': hp.left, 'aria-label': '보스 체력' },
               h('span', { class: 'barfill', style: `width:${beaten ? 0 : (hp.left / hp.total) * 100}%` }))) : null,
+          h('dl', { class: 'facts' },
+            fact('방식', '깊게 파기'),
+            fact('분량', '11단계 전부'),
+            fact('모르겠음', '3개 이하'),
+            fact('보상', beaten ? '+150 XP 받음' : '+150 XP')),
           h('div', { class: 'row' }, bCard
             ? h('button', { class: 'btn small', type: 'button', id: 'boss-open', onclick: () => { location.hash = 'card-' + bCard.id; } }, beaten ? `격파한 카드 보기 (No.${pad(bCard.no, 3)})` : `이어서 싸우기 (No.${pad(bCard.no, 3)})`)
             : h('button', { class: 'btn small', type: 'button', id: 'boss-new', onclick: () => { pendingBoss = true; location.hash = 'new'; } }, '새 카드로 도전'))));
@@ -647,7 +653,7 @@
         if (film.count % ROLL === 0) celebrate(`롤 ${film.count / ROLL} 현상 완료 · 36컷을 다 찍었어요`, 60);
         else celebrate(`오늘의 컷이 찍혔어요 · ${((film.count - 1) % ROLL) + 1}번째 컷`, 18);
       }
-      wrap.append(film.fig, playerBar(g), box, bossBox);
+      wrap.append(film.fig, playerBar(g), h('div', { class: 'duo' }, box, bossBox));
     }
     if (new Date().getDay() === 0 && cards.length) {
       const wkNote = await store.get('meta', 'week-' + dstr(weekStart(new Date())));
@@ -2658,17 +2664,18 @@
   function playerBar(g) {
     const span = g.next ? g.next[0] - g.floor : 1;
     const pct = g.next ? Math.min(100, ((g.xp - g.floor) / span) * 100) : 100;
+    const xpEl = h('strong', { class: 'mono' });
+    let from = g.xp; try { from = Number(sessionStorage.getItem('eye-xp') ?? g.xp); sessionStorage.setItem('eye-xp', String(g.xp)); } catch (e) { /* 그냥 표시 */ }
+    countUp(xpEl, from, g.xp, (v) => String(v));
     return h('div', { class: 'player', id: 'player' },
-      h('div', { class: 'fieldtop' },
+      h('div', { class: 'pline' },
         h('strong', { class: 'playerlv' }, `Lv.${g.lv + 1} ${g.title}`),
-        (() => {
-          const el = h('span', { class: 'mono label' });
-          let from = g.xp; try { from = Number(sessionStorage.getItem('eye-xp') ?? g.xp); sessionStorage.setItem('eye-xp', String(g.xp)); } catch (e) { /* 그냥 표시 */ }
-          countUp(el, from, g.xp, (v) => (g.combo.streak >= 2 ? `콤보 ${g.combo.streak} · ` : '') + (g.next ? `${v} XP · 다음 "${g.next[1]}"까지 ${Math.max(0, g.next[0] - v)}` : `${v} XP · 최고 등급`));
-          return el;
-        })()),
+        h('span', { class: 'pxp' }, xpEl, h('small', {}, 'XP'))),
       h('span', { class: 'bartrack', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(pct), 'aria-label': '다음 등급까지' },
-        h('span', { class: 'barfill', style: `width:${pct}%` })));
+        h('span', { class: 'barfill', style: `width:${pct}%` })),
+      h('div', { class: 'pline' },
+        h('span', { class: 'note' }, g.next ? `다음 등급 "${g.next[1]}"까지 ` : '최고 등급이에요', g.next ? h('strong', {}, `${Math.max(0, g.next[0] - g.xp)} XP`) : null),
+        g.combo.streak >= 2 ? h('span', { class: 'note' }, '콤보 ', h('strong', {}, String(g.combo.streak))) : null));
   }
 
   /* ───────── 돌아보기: 로드맵 카운터 + 주간 회고 + 취향 지도 ───────── */
