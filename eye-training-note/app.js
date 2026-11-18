@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '38 · 필름 모션 없음';
+  const APP_VERSION = '39 · 밀착 인화지';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -650,8 +650,8 @@
       const film = filmStrip(g);
       let had = film.count; try { had = Number(localStorage.getItem('eye-frames') ?? film.count); localStorage.setItem('eye-frames', String(film.count)); } catch (e) { /* 기억 못 해도 진행 */ }
       if (film.count > had) {
-        if (film.count % ROLL === 0) celebrate(`롤 ${film.count / ROLL} 현상 완료 · 36컷을 다 찍었어요`, 60);
-        else celebrate(`오늘의 컷이 찍혔어요 · ${((film.count - 1) % ROLL) + 1}번째 컷`, 18);
+        if (film.count % ROLL === 0) celebrate(`롤 ${film.count / ROLL} 완성 · 36컷을 다 채웠어요`, 60);
+        else celebrate(`오늘 칸이 채워졌어요 · ${((film.count - 1) % ROLL) + 1}번째 컷`, 18);
       }
       wrap.append(film.fig, playerBar(g), h('div', { class: 'duo' }, box, bossBox));
     }
@@ -2503,55 +2503,42 @@
     const rolls = Math.max(1, Math.ceil((n + (doneToday ? 0 : 1)) / ROLL));
     let roll = rolls; // 보고 있는 롤
     const fig = h('figure', { class: 'film', id: 'film' });
-    const scroller = h('div', { class: 'filmscroll' });
-    const gate = h('div', { class: 'filmgate' }, scroller);
-    const count = h('span', { class: 'filmcount' });
+    const grid = h('div', { class: 'csgrid' });
     const caption = h('figcaption', {});
     const gapDays = (a, b) => Math.round((new Date(b + 'T00:00') - new Date(a + 'T00:00')) / DAY) - 1;
+    const no2 = (k) => pad(k, 2);
 
-    // 움직임 없이, 가장 최근 컷이 오른쪽 끝 가까이에 보이게만 놓는다
-    function place(real, total) {
-      const max = scroller.scrollWidth - scroller.clientWidth;
-      const aim = real[real.length - 1];
-      scroller.scrollLeft = aim ? Math.min(max, Math.max(0, aim.offsetLeft + aim.offsetWidth + 56 - scroller.clientWidth)) : Math.max(0, max);
-      count.textContent = `${total}/${ROLL}컷`;
-    }
-
+    // 밀착 인화지: 흰 종이 위에 작은 컷이 번호순으로 놓인다. 한 줄(12칸)씩 늘어난다
     function paint() {
       const from = (roll - 1) * ROLL;
       const mine = frames.slice(from, from + ROLL);
-      const strip = h('div', { class: 'filmstrip' });
-      mine.forEach((f, i) => {
-        const prev = i ? mine[i - 1] : frames[from - 1];
-        const gap = prev ? gapDays(prev.day, f.day) : 0;
-        if (gap > 0) strip.append(h('span', { class: 'splice' }, `${gap}일 쉼`));
-        const no = ((f.no - 1) % ROLL) + 1;
-        strip.append(h('button', { class: 'frame shot' + (f.day === today ? ' today' : ''), type: 'button', disabled: !f.hash,
-          'aria-label': `${f.day}의 컷`, onclick: () => { if (f.hash) location.hash = f.hash; } },
-          f.src ? h('img', { src: f.src, alt: '', onerror: (e) => e.target.remove() }) : h('span', { class: 'noimg' }, '글로 연습한 날'),
-          h('span', { class: 'fno' }, `${no}`), h('span', { class: 'fday' }, f.day.slice(5).replace('-', '.'))));
-      });
-      const used = n - from;
-      if (roll === rolls) {
-        if (!doneToday && used < ROLL) strip.append(h('span', { class: 'frame blank today shot' }, h('span', { class: 'noimg' }, '오늘의 컷', h('br', {}), '아직 안 찍었어요'), h('span', { class: 'fno' }, `${used + 1}`)));
-        const more = Math.min(3, ROLL - used - (doneToday ? 0 : 1));
-        for (let i = 0; i < more; i++) strip.append(h('span', { class: 'frame blank' }, h('span', { class: 'fno' }, `${used + (doneToday ? 1 : 2) + i}`)));
+      const used = mine.length;
+      const cells = mine.map((f, i) => h('button', { class: 'cscell' + (f.day === today ? ' today' : ''), type: 'button', disabled: !f.hash,
+        'aria-label': `${f.day}의 컷`, onclick: () => { if (f.hash) location.hash = f.hash; } },
+        h('span', { class: 'cspic' }, f.src ? h('img', { src: f.src, alt: '', loading: 'lazy', onerror: (e) => e.target.remove() }) : h('span', { class: 'cstext' }, '글')),
+        h('span', { class: 'csno mono' }, h('span', {}, no2(i + 1)), h('span', { class: 'csday' }, f.day.slice(5).replace('-', '.')))));
+      const last = roll === rolls;
+      const waiting = last && !doneToday && used < ROLL; // 오늘 칸이 비어 있다
+      const show = last ? Math.min(ROLL, Math.max(12, Math.ceil((used + (waiting ? 1 : 0)) / 12) * 12)) : ROLL;
+      for (let k = used + 1; k <= show; k++) {
+        const isToday = waiting && k === used + 1;
+        cells.push(h('span', { class: 'cscell csempty' + (isToday ? ' today' : '') },
+          h('span', { class: 'cspic' }, isToday ? h('span', { class: 'cstext' }, '오늘') : null),
+          h('span', { class: 'csno mono' }, h('span', {}, no2(k)))));
       }
-      scroller.replaceChildren(strip);
-      const total = roll === rolls ? used : ROLL;
+      grid.replaceChildren(...cells);
       const lastGap = n && !doneToday ? gapDays(frames[n - 1].day, today) : 0;
       caption.replaceChildren(
-        h('span', { class: 'figno' }, `내 필름 · 롤 ${roll}`), count, roll === rolls ? null : ' · 현상 완료',
+        h('span', { class: 'figno' }, `내 컷 · 롤 ${roll}`), h('span', { class: 'filmcount' }, `${used}/${ROLL}컷`), last ? null : ' · 다 채움',
         rolls > 1 ? h('span', { class: 'rollpick' }, Array.from({ length: rolls }, (_, i) =>
           h('button', { class: 'linkbtn' + (i + 1 === roll ? ' on' : ''), type: 'button', onclick: () => { roll = i + 1; paint(); } }, `롤 ${i + 1}`))) : null,
         h('br', {}),
-        n === 0 ? '연습한 날마다 그날의 이미지가 한 컷씩 찍혀요. 36컷이 차면 한 롤이 돼요.'
-          : doneToday ? '오늘의 컷이 찍혔어요. 컷을 누르면 그날의 카드가 열려요.'
-            : lastGap > 0 ? `${lastGap}일 쉬었어요. 오늘 한 단계만 써도 다음 컷이 찍혀요.` : '오늘 한 단계만 쓰면 다음 컷이 찍혀요.');
-      requestAnimationFrame(() => place([...strip.querySelectorAll('.frame.shot')], total));
+        n === 0 ? '연습한 날마다 그날의 이미지가 한 칸씩 채워져요. 36칸이 차면 한 롤이 돼요.'
+          : doneToday ? '오늘 칸이 채워졌어요. 컷을 누르면 그날의 카드가 열려요.'
+            : lastGap > 0 ? `${lastGap}일 쉬었어요. 오늘 한 단계만 써도 다음 칸이 채워져요.` : '오늘 한 단계만 쓰면 다음 칸이 채워져요.');
     }
     paint();
-    fig.append(gate, caption);
+    fig.append(grid, caption);
     return { fig, count: n, rollsDone: Math.floor(n / ROLL) };
   }
 

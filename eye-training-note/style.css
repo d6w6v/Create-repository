@@ -982,30 +982,26 @@ html[data-skin="school"] .facts dt { font-family: var(--tt); }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
-/* ── 내 필름: 35mm 필름 띠. 그림을 그리지 않고 내가 분석한 이미지가 그대로 컷이 된다 ── */
-.film { margin: 0 0 18px; }
-.filmscroll { overflow-x: auto; overflow-y: hidden; background: #111; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-.filmscroll::-webkit-scrollbar { display: none; }
-.filmstrip { position: relative; display: inline-flex; align-items: stretch; gap: 10px; padding: 34px 26px; min-width: 100%; background: #111; }
-.filmstrip::before, .filmstrip::after { content: ""; position: absolute; left: 0; right: 0; height: 11px;
-  background: repeating-linear-gradient(90deg, transparent 0 9px, #f4f4f2 9px 21px, transparent 21px 30px); border-radius: 2px; }
-.filmstrip::before { top: 7px; } .filmstrip::after { bottom: 7px; }
-.filmstrip .frame { position: relative; flex: none; width: 150px; height: 112px; padding: 0; border: 0; border-radius: 3px; background: #2a2a2a; overflow: visible; display: block; color: #f4f4f2; }
-.filmstrip .frame img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 3px; }
-.filmstrip .frame:disabled { cursor: default; opacity: 1; }
-.filmstrip .frame .fno, .filmstrip .frame .fday { position: absolute; font-size: 10px; line-height: 1; letter-spacing: 0.06em; color: #ffd84a; font-variant-numeric: tabular-nums; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
-.filmstrip .frame .fno { left: 2px; top: -13px; } .filmstrip .frame .fno::after { content: " ▸"; }
-.filmstrip .frame .fday { right: 2px; bottom: -13px; }
-.filmstrip .frame .noimg { display: flex; align-items: center; justify-content: center; text-align: center; width: 100%; height: 100%; font-size: 11px; line-height: 1.5; color: #9a9a9a; }
-.filmstrip .frame.blank { background: #1d1d1d; }
-.filmstrip .frame.blank.today { outline: 1.5px dashed #ffd84a; outline-offset: -1.5px; }
-.filmstrip .frame.today:not(.blank) { outline: 2px solid var(--red, #e4002b); outline-offset: 2px; }
-.splice { flex: none; align-self: stretch; display: flex; align-items: center; justify-content: center; writing-mode: vertical-rl; width: 18px; background: var(--red, #e4002b); color: #fff; font-size: 10px; letter-spacing: 0.08em; opacity: 0.9; }
-.film figcaption { margin-top: 8px; font-size: 0.875rem; line-height: 1.6; color: var(--mute); }
+/* ── 내 컷: 밀착 인화지. 흰 종이에 작은 컷이 번호순으로 놓인다. 검은 띠와 장식 없음 ── */
+.film { margin: 0 0 26px; }
+.csgrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px 6px; }
+@media (min-width: 900px) { .csgrid { grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px 8px; } }
+.cscell { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 0; border: 0; background: none; text-align: left; color: inherit; font: inherit; }
+.cscell:disabled { cursor: default; opacity: 1; }
+.cspic { display: flex; align-items: center; justify-content: center; aspect-ratio: 3 / 2; background: var(--panel); overflow: hidden; }
+.cspic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cstext { font-size: 0.6875rem; color: var(--mute); }
+.cscell.csempty .cspic { background: none; box-shadow: inset 0 0 0 1px #dcdcdc; }
+.cscell.csempty.today .cspic { box-shadow: none; outline: 1px dashed var(--red, var(--ink)); outline-offset: -1px; }
+.cscell.csempty.today .cstext { color: var(--red, var(--ink)); font-weight: 700; }
+.cscell.today:not(.csempty) .cspic { outline: 2px solid var(--red, var(--ink)); outline-offset: 1px; }
+#film .csno { display: flex; justify-content: space-between; gap: 4px; font-size: 10px; line-height: 1; color: var(--mute); }
+#film .cscell.csempty .csno { color: #b5b5b5; }
+#film .cscell.today .csno { color: var(--red, var(--ink)); }
+.csday { display: none; }
+@media (min-width: 900px) { .csday { display: inline; } }
+.film figcaption { margin-top: 12px; font-size: 0.875rem; line-height: 1.6; color: var(--mute); }
 .rollpick { margin-left: 10px; display: inline-flex; gap: 10px; }
 .rollpick .linkbtn { display: inline; width: auto; padding: 0; font-size: 0.8125rem; color: var(--mute); text-decoration: underline; text-underline-offset: 3px; }
 .rollpick .linkbtn.on { color: var(--ink); font-weight: 700; text-decoration: none; }
-/* ── 필름 띠: 움직임 없음 ── */
-.filmgate { position: relative; overflow: hidden; background: #111; }
-.filmstrip .frame.shot .noimg { background: #2a2a2a; border-radius: 3px; }
 .filmcount { font-variant-numeric: tabular-nums; }
