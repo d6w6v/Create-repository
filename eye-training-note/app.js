@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '47 · 주간 브리프';
+  const APP_VERSION = '48 · 한 덩어리';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -612,7 +612,7 @@
       const ms = (await store.get('meta', 'missions')) || { id: 'missions', done: {} };
       ms.pick = ms.pick || {}; ms.xp = ms.xp || {};
       const tid = today();
-      const box = h('section', { class: 'sec', id: 'mission' });
+      const box = h('section', { class: 'subsec', id: 'mission' });
       const fact = (k, v) => h('div', {}, h('dt', {}, k), h('dd', {}, v));
       const drawMission = () => {
         const done = !!ms.done[tid];
@@ -708,42 +708,41 @@
           drawPuzzle(puzzleKind, cut, beaten);
         } else pic.classList.add('poster'), pic.append(h('strong', { class: 'pname' }, bName), h('span', { class: 'pdesc' }, '이미지 없이 글로 쓰는 중'));
       }
+      // 진행 표시는 이미지 아래 한 줄로 모은다: 01~11 칸, 그 위를 걷는 주인공
+      const bossPx = PX_BOSS[BOSSES.findIndex((x) => x[0] === bName)] || PX_BOSS[0];
+      const lane = bCard ? h('div', { class: 'hlane' + (beaten ? ' won' : ''), id: 'px-stage', 'aria-hidden': 'true' },
+        STEPS.map((st, i) => h('span', { class: 'hl' }, i === Math.min(cut, hp.total - 1) ? pxHero(3) : null))) : null;
       const slices = bCard ? h('div', { class: 'hslices', role: 'img', 'aria-label': `${hp.total}단계 중 ${cut}단계 끝냄` },
         STEPS.map((st, i) => h('span', { class: 'hs' + (i < cut ? ' done' : i === cut && !beaten ? ' next' : '') }, pad(i + 1, 2)))) : null;
       const pzPick = h('div', { class: 'pzpick', id: 'puzzle-pick' });
       const drawPick = () => pzPick.replaceChildren(h('span', { class: 'flabel' }, '퍼즐 모양'),
-        ...PUZZLES.map(([k, name]) => h('button', { class: 'btn small' + (k === puzzleKind ? ' on' : ''), type: 'button', id: 'puzzle-' + k, 'aria-pressed': String(k === puzzleKind),
-          onclick: () => { puzzleKind = k; try { localStorage.setItem('eye-puzzle', k); } catch (e) { /* 이번만 */ } drawPick(); previewPuzzle(k); } }, name)),
-        h('span', { class: 'note' }, '누르면 끝까지 풀리는 모습을 미리 보여 줘요.'));
+        ...PUZZLES.map(([k, name]) => h('button', { class: 'btn small' + (k === puzzleKind ? ' on' : ''), type: 'button', id: 'puzzle-' + k, 'aria-pressed': String(k === puzzleKind), title: '누르면 끝까지 풀리는 모습을 미리 보여 줘요',
+          onclick: () => { puzzleKind = k; try { localStorage.setItem('eye-puzzle', k); } catch (e) { /* 이번만 */ } drawPick(); previewPuzzle(k); } }, name)));
       if (drawPuzzle) drawPick();
+      if (!bCard) pic.append(sprite(bossPx, 3, 'pxboss'));
 
-      // 픽셀 무대: 눈알이 단계를 끝낸 만큼 보스 쪽으로 걸어간다
-      const heroEl = pxHero(4); heroEl.classList.add('pxhero');
-      const stage = h('div', { class: 'pxstage' + (beaten ? ' won' : ''), id: 'px-stage', role: 'img', 'aria-label': bCard ? `끝까지 ${hp.left}단계 남음` : '아직 시작 전' },
-        heroEl, sprite(PX_BOSS[BOSSES.findIndex((x) => x[0] === bName)] || PX_BOSS[0], 4, 'pxboss'));
-      {
-        const total = hp ? hp.total : STEPS.length;
-        let from = cut; try { const m = (localStorage.getItem('eye-boss-walk') || '').split('|'); from = m[0] === wid ? Math.min(cut, Number(m[1]) || 0) : 0; localStorage.setItem('eye-boss-walk', `${wid}|${cut}`); } catch (e) { /* 그냥 표시 */ }
-        heroEl.style.setProperty('--p', String(from / total));
-        if (from !== cut) requestAnimationFrame(() => requestAnimationFrame(() => heroEl.style.setProperty('--p', String(cut / total))));
-      }
-      const bossBox = h('section', { class: 'sec', id: 'boss' },
-        h('header', {}, h('h2', {}, '이번 주 브리프'), h('span', { class: 'chip-state' + (beaten ? ' done' : '') }, beaten ? '완료' : bCard ? '진행 중' : '시작 전')),
-        h('div', { class: 'glance' },
-          h('p', { class: 'missiontext' }, bName, h('span', { class: 'bko' }, bKo), bCard ? h('span', { class: 'hcount mono' }, `${cut}/${hp.total}`) : null),
-          h('p', { class: 'note' }, bCard && !beaten ? '단계를 하나 끝낼 때마다 이미지 한 조각에 색이 돌아와요.' : bDesc),
-          stage,
-          h('dl', { class: 'facts' },
-            fact('방식', '깊게 파기'),
-            fact('분량', '11단계 전부'),
-            fact('모르겠음', '3개 이하'),
-            fact('보상', beaten ? '+150 XP 받음' : '+150 XP')),
-          h('div', { class: 'row' }, bCard
-            ? h('button', { class: 'btn small', type: 'button', id: 'boss-open', onclick: openBoss }, beaten ? `완료한 카드 보기 (No.${pad(bCard.no, 3)})` : `이어서 쓰기 (No.${pad(bCard.no, 3)})`)
-            : h('button', { class: 'btn small', type: 'button', id: 'boss-new', onclick: openBoss }, '새 카드로 시작'))));
-      wrap.append(
-        h('div', { class: 'hero', id: 'hero' }, h('div', { class: 'heroleft' }, pic, slices, drawPuzzle ? pzPick : null), h('div', { class: 'heroright' }, bossBox, box)),
-        playerBar(g));
+      // 한 덩어리: 머리줄 하나, 왼쪽에 이미지와 진행 한 줄, 오른쪽에 할 일(브리프 → 오늘의 미션)
+      const briefSec = h('section', { class: 'sec', id: 'boss' },
+        h('header', {},
+          h('div', { class: 'bhead' }, h('h2', {}, '이번 주 브리프'),
+            bCard ? h('span', { class: 'btitle' }, sprite(bossPx, 2, 'pxboss'), h('strong', {}, bName), h('span', { class: 'bko' }, bKo), h('span', { class: 'hcount mono' }, `${cut}/${hp.total}`)) : null),
+          h('span', { class: 'chip-state' + (beaten ? ' done' : '') }, beaten ? '완료' : bCard ? '진행 중' : '시작 전')),
+        h('div', { class: 'hero', id: 'hero' },
+          h('div', { class: 'heroleft' }, pic, lane, slices, drawPuzzle ? pzPick : null),
+          h('div', { class: 'heroright' },
+            h('div', { class: 'glance', id: 'brief-info' },
+              h('p', { class: 'missiontext' }, bCard ? bDesc : '이 주제에 맞는 이미지를 직접 골라 오면 시작돼요.'),
+              h('p', { class: 'note' }, beaten ? '11단계를 다 끝냈어요.' : '단계를 하나 끝낼 때마다 이미지가 한 조각 풀리고, 아래 줄에서 한 칸 걸어가요.'),
+              h('dl', { class: 'facts' },
+                fact('방식', '깊게 파기'),
+                fact('분량', '11단계 전부'),
+                fact('모르겠음', '3개 이하'),
+                fact('보상', beaten ? '+150 XP 받음' : '+150 XP')),
+              h('div', { class: 'row' }, bCard
+                ? h('button', { class: 'btn small', type: 'button', id: 'boss-open', onclick: openBoss }, beaten ? `완료한 카드 보기 (No.${pad(bCard.no, 3)})` : `이어서 쓰기 (No.${pad(bCard.no, 3)})`)
+                : h('button', { class: 'btn small', type: 'button', id: 'boss-new', onclick: openBoss }, '새 카드로 시작'))),
+            box)));
+      wrap.append(playerBar(g, true), briefSec);
     }
     if (new Date().getDay() === 0 && cards.length) {
       const wkNote = await store.get('meta', 'week-' + dstr(weekStart(new Date())));
@@ -2779,12 +2778,20 @@
     const days = activeDays({ cards, diary, shotlists, missions: ms, study });
     return { days, diary, xp, lv, title: LEVELS[lv][1], floor: LEVELS[lv][0], next: LEVELS[lv + 1] || null, parts, badges, terms, combo, bestAttack, attacks: attacks.length, bossWins, cards };
   }
-  function playerBar(g) {
+  function playerBar(g, slim) {
     const span = g.next ? g.next[0] - g.floor : 1;
     const pct = g.next ? Math.min(100, ((g.xp - g.floor) / span) * 100) : 100;
     const xpEl = h('strong', { class: 'mono' });
     let from = g.xp; try { from = Number(sessionStorage.getItem('eye-xp') ?? g.xp); sessionStorage.setItem('eye-xp', String(g.xp)); } catch (e) { /* 그냥 표시 */ }
     countUp(xpEl, from, g.xp, (v) => String(v));
+    if (slim) { // 목록 맨 위에 한 줄로
+      return h('div', { class: 'player slim', id: 'player' },
+        h('strong', { class: 'playerlv' }, `Lv.${g.lv + 1} ${g.title}`),
+        h('span', { class: 'bartrack', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(pct), 'aria-label': '다음 등급까지' },
+          h('span', { class: 'barfill', style: `width:${pct}%` })),
+        h('span', { class: 'pxp' }, xpEl, h('small', {}, 'XP'),
+          h('span', { class: 'note' }, g.next ? `  다음 "${g.next[1]}"까지 ${Math.max(0, g.next[0] - g.xp)}` : '  최고 등급', g.combo.streak >= 2 ? ` · 콤보 ${g.combo.streak}` : '')));
+    }
     return h('div', { class: 'player', id: 'player' },
       h('div', { class: 'pline' },
         h('strong', { class: 'playerlv' }, `Lv.${g.lv + 1} ${g.title}`),

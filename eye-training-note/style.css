@@ -1068,6 +1068,36 @@ html[data-skin="school"] #similar > .stepbody { padding-top: 14px; gap: 14px; }
 .pxnote { flex: none; align-self: center; margin-left: 12px; color: var(--mute); }
 @media (prefers-reduced-motion: reduce) { .pxstage .pxhero { transition: none; } }
 
+/* ── 목록 맨 위를 한 덩어리로: 등급 한 줄, 브리프 머리줄 하나, 진행 표시 한 줄 ── */
+.player.slim { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 6px 18px; margin-bottom: 20px; }
+#player.slim .playerlv { font-size: 1rem; }
+#player.slim .pxp .mono { font-size: 1rem; }
+#player.slim .pxp .note { margin: 0; font-size: 0.8125rem; }
+#player.slim .bartrack { height: 8px; }
+@media (max-width: 620px) { .player.slim { grid-template-columns: minmax(0, 1fr) auto; } #player.slim .bartrack { grid-column: 1 / -1; order: 3; } }
+#boss > header { align-items: center; }
+.bhead { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 18px; min-width: 0; }
+.btitle { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.btitle strong { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.03em; }
+.btitle .bko, .btitle .hcount { margin-left: 0; }
+.btitle .pxboss { animation: pxBob 0.9s steps(1) infinite; }
+.heropic .pxboss { position: absolute; right: clamp(18px, 3.2vw, 36px); bottom: clamp(18px, 3.2vw, 36px); animation: pxBob 0.9s steps(1) infinite; }
+#boss .hero { margin: 18px 0 0; }
+#boss .heroleft { gap: 0; }
+#boss .heroright { gap: 22px; }
+#brief-info { padding-top: 0; }
+#brief-info .missiontext { font-size: 1.0625rem; }
+.hlane { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); align-items: end; height: 54px; margin-top: 6px; }
+.hl { display: flex; justify-content: center; align-items: flex-end; min-width: 0; height: 100%; }
+.hlane.won .pxwalk { animation: pxJump 0.5s steps(1) infinite; }
+@media (max-width: 620px) { .hlane { height: 38px; } .hlane .pxwalk, .hlane .pxwalk svg { width: 32px !important; height: 32px !important; } }
+#boss .pzpick { justify-content: flex-end; margin-top: 10px; }
+.subsec { display: flex; flex-direction: column; }
+.subsec > header { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 0 10px; border-top: 1px solid var(--ink); border-bottom: 1px solid #dcdcdc; }
+.sec .subsec h2 { font-size: 1rem; margin: 0; }
+.subsec .glance { padding-top: 12px; }
+.subsec .glance .missiontext { font-size: 1.0625rem; }
+
 /* ── 여는 장면: 검은 화면, 가는 줄 두 개(슬레이트를 줄로만 줄인 것), 이름, 작은 정보 한 줄. 장식 없음 ── */
 .slate-ov { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; color: #fff; font-family: var(--grot, var(--font-body)); overflow: hidden;
   --seam: 54%; --out: cubic-bezier(0.83, 0, 0.17, 1); --rise: cubic-bezier(0.16, 1, 0.3, 1); }
