@@ -1090,7 +1090,7 @@ html[data-skin="school"] #similar > .stepbody { padding-top: 14px; gap: 14px; }
 .hlane { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); align-items: end; height: 54px; margin-top: 6px; }
 .hl { display: flex; justify-content: center; align-items: flex-end; min-width: 0; height: 100%; }
 .hlane.won .pxwalk { animation: pxJump 0.5s steps(1) infinite; }
-@media (max-width: 620px) { .hlane { height: 38px; } .hlane .pxwalk, .hlane .pxwalk svg { width: 32px !important; height: 32px !important; } }
+@media (max-width: 620px) { .hlane { height: 38px; } .hlane .pxwalk, .hlane .pxwalk svg { width: 24px !important; height: 40px !important; } }
 #boss .pzpick { justify-content: flex-end; margin-top: 10px; }
 .subsec { display: flex; flex-direction: column; }
 .subsec > header { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 0 10px; border-top: 1px solid var(--ink); border-bottom: 1px solid #dcdcdc; }
@@ -1138,7 +1138,7 @@ html[data-skin="school"] .top h1::after { transform-origin: 50% 100%; animation:
 /* ── 픽셀 친구들을 화면 구석에: 이미지 위로 고개를 내밀고, 이미지 아래 가장자리를 걷고, 미션 머리줄에 깃발 ── */
 #boss .heroleft { position: relative; }
 #boss .heropic { z-index: 1; }
-.pxperch { position: absolute; right: clamp(14px, 4%, 40px); top: -30px; z-index: 0; animation: pxPeek 3.2s steps(1) infinite; }
+.pxperch { position: absolute; right: clamp(14px, 4%, 40px); top: -35px; z-index: 0; animation: pxPeek 3.2s steps(1) infinite; }
 @keyframes pxPeek { 0%, 100% { transform: translateY(0); } 55% { transform: translateY(12px); } 70% { transform: translateY(4px); } }
 #boss .hlane { margin-top: -48px; position: relative; z-index: 2; pointer-events: none; }
 @media (max-width: 620px) { #boss .hlane { margin-top: -32px; } }
@@ -1146,3 +1146,6 @@ html[data-skin="school"] .top h1::after { transform-origin: 50% 100%; animation:
 .mflags { display: inline-flex; align-items: flex-end; gap: 5px; height: 18px; border-bottom: 2px solid var(--ink); padding: 0 3px; }
 .mflag { width: 10px; display: flex; justify-content: center; align-items: flex-end; }
 .mflag:not(.on)::after { content: ""; width: 2px; height: 5px; background: #c8c8c8; }
+
+/* 검은 판 위에서는 정장이 안 보이니 흑백만 뒤집는다 (빨강은 그대로) */
+.heropic.poster .pxboss { filter: invert(1) hue-rotate(180deg); }

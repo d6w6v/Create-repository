@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '50 · 구석구석';
+  const APP_VERSION = '51 · 정장 입은 머리들';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -709,7 +709,7 @@
       // 진행 표시는 이미지 아래 한 줄로 모은다: 01~11 칸, 그 위를 걷는 주인공
       const bossPx = PX_BOSS[BOSSES.findIndex((x) => x[0] === bName)] || PX_BOSS[0];
       const lane = bCard ? h('div', { class: 'hlane' + (beaten ? ' won' : ''), id: 'px-stage', 'aria-hidden': 'true' },
-        STEPS.map((st, i) => h('span', { class: 'hl' }, i === Math.min(cut, hp.total - 1) ? pxHero(3) : null))) : null;
+        STEPS.map((st, i) => h('span', { class: 'hl' }, i === Math.min(cut, hp.total - 1) ? pxHero(4) : null))) : null;
       const slices = bCard ? h('div', { class: 'hslices', role: 'img', 'aria-label': `${hp.total}단계 중 ${cut}단계 끝냄` },
         STEPS.map((st, i) => h('span', { class: 'hs' + (i < cut ? ' done' : i === cut && !beaten ? ' next' : '') }, pad(i + 1, 2)))) : null;
       const pzPick = h('div', { class: 'pzpick', id: 'puzzle-pick' });
@@ -717,7 +717,7 @@
         ...PUZZLES.map(([k, name]) => h('button', { class: 'btn small' + (k === puzzleKind ? ' on' : ''), type: 'button', id: 'puzzle-' + k, 'aria-pressed': String(k === puzzleKind), title: '누르면 끝까지 풀리는 모습을 미리 보여 줘요',
           onclick: () => { puzzleKind = k; try { localStorage.setItem('eye-puzzle', k); } catch (e) { /* 이번만 */ } drawPick(); previewPuzzle(k); } }, name)));
       if (drawPuzzle) drawPick();
-      if (!bCard) pic.append(sprite(bossPx, 3, 'pxboss'));
+      if (!bCard) pic.append(sprite(bossPx, 4, 'pxboss'));
 
       // 한 덩어리: 머리줄 하나, 왼쪽에 이미지와 진행 한 줄, 오른쪽에 할 일(브리프 → 오늘의 미션)
       const briefSec = h('section', { class: 'sec', id: 'boss' },
@@ -726,7 +726,7 @@
             bCard ? h('span', { class: 'btitle' }, h('strong', {}, bName), h('span', { class: 'bko' }, bKo), h('span', { class: 'hcount mono' }, `${cut}/${hp.total}`)) : null),
           h('span', { class: 'chip-state' + (beaten ? ' done' : '') }, beaten ? '완료' : bCard ? '진행 중' : '시작 전')),
         h('div', { class: 'hero', id: 'hero' },
-          h('div', { class: 'heroleft' }, bCard ? h('span', { class: 'pxperch', 'aria-hidden': 'true' }, sprite(bossPx, 3)) : null, pic, lane, slices, drawPuzzle ? pzPick : null),
+          h('div', { class: 'heroleft' }, bCard ? h('span', { class: 'pxperch', 'aria-hidden': 'true' }, sprite(bossPx, 4)) : null, pic, lane, slices, drawPuzzle ? pzPick : null),
           h('div', { class: 'heroright' },
             h('div', { class: 'glance', id: 'brief-info' },
               h('p', { class: 'missiontext' }, bCard ? bDesc : '이 주제에 맞는 이미지를 직접 골라 오면 시작돼요.'),
@@ -2670,19 +2670,19 @@
     ['TOO MUCH', '소품과 색이 넘치는 이미지. 스무 가지가 넘는 것 중 기둥을 가려내요.', '과잉'],
     ['NOTHING SPECIAL', '특별한 게 없어 보이는데 끌리는 이미지. "틀린 것"을 찾기가 가장 어려워요.', '평범함'],
   ];
-  /* 픽셀 그림: 글자 한 칸이 점 하나. k 검정, w 흰색, r 빨강, g 회색, . 빈 칸 */
-  const PX_HERO = [['..kk........kk..', '.kwwk......k.wk.', '.kwwwkkkkkkwwwk.', '..kwwkkkkkkwwk..', '.kwwkwwrrwwkwwk.', '.kwkwwrkkrwwkwk.', 'kwwkwwrkkrwwkwwk', 'kwwwkwwrrwwkwwwk', 'kwwwwkkkkkkwwwwk', 'kwkwwwwwwwwwkkwk', 'kwrwwwwwwwwwrkwk', 'kwrkwkwkwkwkwwwk', '.kwwkwkwkwkwwwk.', '..kkwwrwwwwwkk..', '...kkkr..kkkk...', '...kk......kk...'],
-    ['..kk........kk..', '.kwwk......k.wk.', '.kwwwkkkkkkwwwk.', '..kwwkkkkkkwwk..', '.kwwkwwrrwwkwwk.', '.kwkwrkkrwwwkwk.', 'kwwkwrkkrwwwkwwk', 'kwwwkwwrrwwkwwwk', 'kwwwwkkkkkkwwwwk', 'kwkwwwwwwwwwkkwk', 'kwrwwwwwwwwwrkwk', 'kwrkwkwkwkwkwwwk', '.kwwkwkwkwkwwwk.', '..kkwwrwwwwwkk..', '...kkk...kkkk...', '.....kkr.kk.....']];
+  /* 픽셀 그림(정장 입은 사람 몸에 머리만 다른 것들): 글자 한 칸이 점 하나. k 검정, w 흰색, r 빨강, g 회색, . 빈 칸 */
+  const PX_HERO = [['...kkkkkk...', '..kwwwwwwk..', '.kwwwrrwwwk.', '.kwwrkkrwwk.', '.kwwrkkrwwk.', '.kwrwrrwwwk.', '..kwwwwwwk..', '...kkkkkk...', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..'],
+    ['...kkkkkk...', '..kwwwwwwk..', '.kwwwwrrwwk.', '.kwwwrkkrwk.', '.kwwwrkkrwk.', '.kwrwwrrwwk.', '..kwwrwwwk..', '...kkkkkk...', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kkkkkk...', '...kk..kk...', '..kk....kk..', '.kkk....kkk.']];
   const PX_FLAG = ['krrr.', 'krrrr', 'krrr.', 'k....', 'k....', 'k....', 'k....', 'kkk..'];
   const PX_BOSS = [
-    ['..kk........kk..', '.krrk......krrk.', '.krrrkkkkkkrrrk.', '..krrrrrrrrrrk..', '.kkkkrrrrrrkkkk.', 'krkwkrrrrrrkwkrk', 'krkkkrrrrrrkkkrk', 'krrkkkkkkkkkkrrk', 'krrwkwkwkwkwkrrk', 'krrkwkwkwkwkwrrk', '.krkkkkkkkkkkrk.', '..kkrrrrrrrrkk..', '...kkkkrrkkkk...', '...kk..r....k...'],
-    ['..kk........kk..', '.kkkk......kkkk.', '.kkkkkkkkkkkkkk.', '..kkkkkkkkkkkk..', '.kkwrkkkkkkrwkk.', 'kkkkkkkwrkkkkkkk', 'kkrkkkkkkkkkwrkk', 'kkkkkrwkkkkkkkkk', 'kkkwkwkwkwkwkkkk', 'kkkkwkwkwkwkwkkk', '.kkkkkkkkrkkkkk.', '..kkkkkkkkkkkk..', '...kkrk..kkkk...', '...kkr.....kk...'],
-    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kkwkwwwwwkwkwk.', 'kwkrkwkwkwkrkwwk', 'kwwkwwkkkwwkwwwk', 'kwwwwwkrkwwwwwwk', 'kkwkwwkkkwwwkwkk', 'kkrkwwwwwwwwkrkk', '.kwwwwkwkwwwwwk.', '..kkwwwrwwwwkk..', '...kkkk..kkkk...', '...kk......kk...'],
-    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkkwwk.', '..kwwkwwwwwwwk..', '.kwwkkkkkkkkwwk.', 'kwwkkkkkkkkkkwwk', 'kwwkkkkkkkkkkwwk', 'kwwkkkkrkkkkkwwk', 'kwwkkkkkkkkkkwwk', 'kwwwkkkkkkkkwwwk', '.kwwwwkwwrwwwwk.', '..kkwwkwwrwwkk..', '...kkkk..rkkk...', '...kk......kk...'],
-    ['..kk........kk..', '.kkkk......kwwk.', '.kkkkkkkkkkwwwk.', '..kkkkkkwwwwwk..', '.kkkkkkgkwwwwwk.', 'kkkwwkkkgwkwkwwk', 'kkkwrkkgkwwkwwwk', 'kkkkkkkkgwkwkwwk', 'kkwkwkwgkwwwwwwk', 'kkkkkkkkgkwkwkwk', '.kkkkkkgkwwwrwk.', '..kkkkkkwwwwrk..', '...kkkk..kkkk...', '...kk......kk...'],
-    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwg..', '.kkkgggwkkgggwk.', 'kwkrgggwkrgggwwk', 'kwkkgggwkkgggwwk', 'kwwwwwwwwwwwwwgk', 'kwkkkkkkgggggwwk', 'kwwkwkwkgggggwwk', '.kwkkkkkggggwwk.', '..kkwwwwwwwwkg..', '...kkkk..kkkk...', '...kk......kk...'],
-    ['..kk........kk..', '.krkk......kkrk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kkkkwkkkwkkkwk.', 'kwkrkwkkrwrkkwwk', 'kkkwwwwwwwwwwkkk', 'krkwkkkwkkkwwkrk', 'kwwwkrkwkrkwwwwk', 'kwkkkkkkkkkkkkwk', '.kwkwkwkwkwkwkk.', '..kkrrrrrrrrkk..', '...kkkk..kkkk...', '...kk......kk...'],
-    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kwwwwwwwwwwwwk.', 'kwwwkwwwwwwkwwwk', 'kwrwwwwwwwwwwrwk', 'kwwwwwwwwwwwwwwk', 'kkkkkkkkkkkkkkkk', 'kwwkwkwkwkwkwkwk', '.kkkkkkkkkkkkkk.', '..kkwwwwwwwwkk..', '...kkkk..kkkk...', '...kk......kk...']
+    ['r...kkkk...r', '...kwwwwk...', 'r.kwwwwwwk.r', '..kwwrrwwk..', '..kwwrrwwk..', '...kwwwwk...', '....kggk....', '....kggk....', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..'],
+    ['...kkkkkk...', '..kkkkkkkk..', '.kkkkkkkkkk.', '.kkwrkkrwkk.', '.kkkkkkkkkk.', '.kkkkkkkkkk.', '..kkkkkkkk..', '...kkkkkk...', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..'],
+    ['....kkkk....', '...kwwwwk...', 'kkkkwkkwkkkk', 'kwwkwwwwkwwk', 'kkwkwrrwkwkk', 'kwwkkkkkkwwk', '.kkk.kk.kkk.', '....kwwk....', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..'],
+    ['............', '............', '....gggg....', '...g....g...', '...g....g...', '....gggg....', '............', '............', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..'],
+    ['...kkkkkk...', '..kkkkwwwk..', '.kkkkkwwwwk.', '.kwkkkwwkwk.', '.kkkkkwwwwk.', '.kkwwkwkkwk.', '..kkkkwwwk..', '...kkkkkk...', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..'],
+    ['..kkkkkggg..', '.kwwwwkgggg.', '.kwkwwkgggg.', '.kwwwwkgggg.', '.kwrrwkgggg.', '.kwwwwkgggg.', '..kkkkkggg..', '............', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..'],
+    ['...kkkkkk...', '..kwkwwkwk..', '.kwrwkwrwkk.', '.kkwkwrwkwk.', '.kwrwkwkwrk.', '.kwkwrwkwkk.', '..kwkwwkwk..', '...kkkkkk...', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..'],
+    ['..kkkkkkkk..', '..kwwwwwwk..', '..kwkwwkwk..', '..kwwwwwwk..', '..kkkkkkkk..', '..kwkwkwkk..', '..kwwwwwwk..', '..kkkkkkkk..', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..']
   ];
   function sprite(rows, scale, cls) {
     const w = rows[0].length; const fill = { k: '#111', w: '#fff', r: 'var(--red, #e4002b)', g: '#9a9a9a' };
@@ -2692,7 +2692,7 @@
     el.innerHTML = `<svg viewBox="0 0 ${w} ${rows.length}" width="${w * scale}" height="${rows.length * scale}" shape-rendering="crispEdges">${rects}</svg>`;
     return el;
   }
-  const pxHero = (scale) => h('span', { class: 'pxwalk', style: `width:${16 * scale}px;height:${16 * scale}px` }, sprite(PX_HERO[0], scale, 'f1'), sprite(PX_HERO[1], scale, 'f2'));
+  const pxHero = (scale) => h('span', { class: 'pxwalk', style: `width:${PX_HERO[0][0].length * scale}px;height:${PX_HERO[0].length * scale}px` }, sprite(PX_HERO[0], scale, 'f1'), sprite(PX_HERO[1], scale, 'f2'));
   const weekId = () => dstr(weekStart(new Date()));
   const bossOf = (wid) => BOSSES[[...wid].reduce((x, ch) => x * 31 + ch.charCodeAt(0), 3) % BOSSES.length];
   const bossBeaten = (c) => !!c.boss && c.mode === 'deep' && cardDone(c) && c.unknown.length <= 3;
