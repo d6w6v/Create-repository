@@ -1007,33 +1007,16 @@ html[data-skin="school"] .facts dt { font-family: var(--tt); }
 .rollpick { margin-left: 10px; display: inline-flex; gap: 10px; }
 .rollpick .linkbtn { display: inline; width: auto; padding: 0; font-size: 0.8125rem; color: var(--mute); text-decoration: underline; text-underline-offset: 3px; }
 .rollpick .linkbtn.on { color: var(--ink); font-weight: 700; text-decoration: none; }
-@keyframes develop { 0% { filter: brightness(0) contrast(2); opacity: 0.2; } 35% { filter: brightness(0.35) contrast(1.6) sepia(1); opacity: 1; } 70% { filter: brightness(0.8) contrast(1.15) sepia(0.4); } 100% { filter: none; } }
-@keyframes frameIn { from { opacity: 0; transform: translateX(26px); } to { opacity: 1; transform: none; } }
-.filmstrip .frame, .filmstrip .splice { animation: frameIn 0.4s ease-out both; }
-.frame.develop img { animation: develop 2.2s ease-out 0.5s both; }
-
-/* ── 필름 감기 모션 ── */
+/* ── 필름 현상 모션: 네거티브로 놓인 컷 위를 빨간 선이 지나가며 제 색이 된다 ── */
 .filmgate { position: relative; overflow: hidden; background: #111; }
-.filmgate.winding .filmstrip { filter: url(#filmblur) brightness(1.15) contrast(1.05); will-change: filter; }
-.filmgate.winding .filmscroll { scroll-behavior: auto; }
 .filmgate::before, .filmgate::after { content: ""; position: absolute; top: 0; bottom: 0; width: 46px; z-index: 2; pointer-events: none; }
 .filmgate::before { left: 0; background: linear-gradient(90deg, #111, rgba(17, 17, 17, 0)); }
 .filmgate::after { right: 0; background: linear-gradient(270deg, #111, rgba(17, 17, 17, 0)); }
-.filmleak { position: absolute; top: 0; bottom: 0; left: 0; width: 55%; z-index: 3; pointer-events: none; opacity: 0; mix-blend-mode: screen;
-  background: linear-gradient(100deg, transparent 0%, rgba(255, 90, 20, 0.0) 20%, rgba(255, 120, 30, 0.75) 45%, rgba(255, 220, 120, 0.9) 52%, rgba(228, 0, 43, 0.6) 62%, transparent 85%); }
-@keyframes leakSweep { 0% { transform: translateX(-70%); opacity: 0; } 12% { opacity: 1; } 55% { opacity: 0.8; } 100% { transform: translateX(210%); opacity: 0; } }
-.filmflash { position: absolute; inset: 0; z-index: 4; pointer-events: none; background: #fff; opacity: 0; }
-.filmflash.go { animation: shutter 0.5s ease-out; }
-@keyframes shutter { 0% { opacity: 0.95; } 12% { opacity: 0.1; } 22% { opacity: 0.6; } 100% { opacity: 0; } }
-.filmstrip.settle { animation: settle 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
-@keyframes settle { 0% { transform: translateX(-26px); } 55% { transform: translateX(7px); } 100% { transform: none; } }
-.frame.snap { animation: snap 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.5); z-index: 1; }
-@keyframes snap { 0% { transform: scale(1.14); } 60% { transform: scale(0.98); } 100% { transform: none; } }
-.filmstrip .frame, .filmstrip .splice { animation: none; }
-.filmstrip .frame.snap { animation: snap 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.5); }
-.frame.leader { background: #1d1d1d; display: flex; align-items: center; justify-content: center; }
-.frame.leader .cd { width: 78px; height: 78px; border-radius: 50%; border: 2px solid #8a8a8a; display: flex; align-items: center; justify-content: center; color: #cfcfcf; font-size: 44px; font-weight: 800; font-family: var(--font-body);
-  background: linear-gradient(#8a8a8a, #8a8a8a) center / 100% 1.5px no-repeat, linear-gradient(#8a8a8a, #8a8a8a) center / 1.5px 100% no-repeat; }
+.frame.shot .noimg { background: #2a2a2a; border-radius: 3px; }
+.frame img, .frame .noimg { transition: filter 0.55s ease-out, transform 0.18s; }
+.frame.neg img, .frame.neg .noimg { filter: invert(1) sepia(0.35) contrast(0.92); transition: none; }
+.filmscan { position: absolute; top: 0; bottom: 0; left: -2px; width: 2px; z-index: 3; pointer-events: none; background: var(--red, #e4002b); opacity: 0; transition: opacity 0.3s; will-change: transform; }
+.filmscan.on { opacity: 1; transition: none; }
 .filmcount { font-variant-numeric: tabular-nums; }
 .film .rewind { display: inline; width: auto; padding: 0; margin-left: 12px; font-size: 0.8125rem; color: var(--mute); text-decoration: underline; text-underline-offset: 3px; }
-@media (prefers-reduced-motion: reduce) { .filmleak, .filmflash { display: none; } }
+@media (prefers-reduced-motion: reduce) { .filmscan { display: none; } }
