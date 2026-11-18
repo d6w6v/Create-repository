@@ -1016,6 +1016,24 @@ html[data-skin="school"] .facts dt { font-family: var(--tt); }
 .facts.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (prefers-reduced-motion: reduce) { .heropic .hcolor { transition: none; } }
 
+/* ── 내 컷 찾기: 필터 판, 비슷한 컷 (버튼과 글씨는 기존 것 그대로) ── */
+.searchrow { display: flex; gap: 8px; align-items: stretch; }
+.searchrow .text { flex: 1; min-width: 0; }
+.searchrow .btn { flex: none; white-space: nowrap; }
+.fpanel { display: flex; flex-direction: column; gap: 16px; padding: 14px 0 16px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.fpanel[hidden] { display: none; }
+.fgroup { display: flex; flex-direction: column; gap: 8px; }
+.frow { display: grid; grid-template-columns: 8em minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.flabel { font-size: 0.75rem; color: var(--mute); }
+@media (max-width: 560px) { .frow { grid-template-columns: minmax(0, 1fr); gap: 5px; } }
+.simgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px; }
+.simcard { display: flex; flex-direction: column; gap: 6px; padding: 0; border: 0; background: none; text-align: left; color: inherit; font: inherit; min-width: 0; }
+.simcard img, .simnopic { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; display: block; background: var(--panel); }
+.simnopic { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--mute); }
+.simcard:hover strong { text-decoration: underline; text-underline-offset: 3px; }
+html[data-skin="school"] .fpanel { border-color: #dcdcdc; }
+html[data-skin="school"] #similar > .stepbody { padding-top: 14px; gap: 14px; }
+
 /* ── 여는 장면: 검은 화면, 가는 줄 두 개(슬레이트를 줄로만 줄인 것), 이름, 작은 정보 한 줄. 장식 없음 ── */
 .slate-ov { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; color: #fff; font-family: var(--grot, var(--font-body)); overflow: hidden;
   --seam: 54%; --out: cubic-bezier(0.83, 0, 0.17, 1); --rise: cubic-bezier(0.16, 1, 0.3, 1); }

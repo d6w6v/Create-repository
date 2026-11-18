@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '43 · 여는 장면';
+  const APP_VERSION = '44 · 필터와 비슷한 컷';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -705,6 +705,56 @@
       const search = h('input', { class: 'text', id: 'search', type: 'search', placeholder: '검색: 태그나 내가 쓴 단어 (예: 역광, #90s)', value: listQuery,
         'aria-label': '카드 검색', oninput: () => { listQuery = search.value; draw(); } });
       const terms = () => listQuery.toLowerCase().split(/\s+/).filter(Boolean);
+      const facets = facetList().map((fc) => {
+        const m = new Map();
+        for (const c of cards) for (const v of facetVals(c, fc)) m.set(v, (m.get(v) || 0) + 1);
+        return { ...fc, opts: fc.f.options.filter((o) => m.has(o)).map((o) => [o, m.get(o)]) };
+      }).filter((fc) => fc.opts.length);
+      const facetById = new Map(facets.map((fc) => [fc.id, fc]));
+      const colorOpts = tally(cards.flatMap(colorNames));
+      for (const id of Object.keys(listFilters)) { // 지워진 카드의 값은 필터에서도 뺀다
+        const ok = id === 'color' ? colorOpts.map((x) => x[0]) : (facetById.get(id) || { opts: [] }).opts.map((x) => x[0]);
+        listFilters[id] = listFilters[id].filter((v) => ok.includes(v));
+        if (!listFilters[id].length) delete listFilters[id];
+      }
+      const passFilters = (c) => Object.entries(listFilters).every(([id, vals]) => {
+        const have = id === 'color' ? colorNames(c) : facetVals(c, facetById.get(id));
+        return vals.some((v) => have.includes(v));
+      });
+      const toggleFilter = (id, v) => {
+        const cur = listFilters[id] || [];
+        const next = cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v];
+        if (next.length) listFilters[id] = next; else delete listFilters[id];
+        draw();
+      };
+      const filterBtn = h('button', { class: 'btn', type: 'button', id: 'filter-toggle', 'aria-expanded': String(filterOpen), onclick: () => { filterOpen = !filterOpen; draw(); } });
+      const activeBox = h('div', { class: 'tags', id: 'filter-active' });
+      const panel = h('div', { class: 'fpanel', id: 'filters' });
+      const optBtn = (id, v, n) => { const on = (listFilters[id] || []).includes(v);
+        return h('button', { class: 'btn small' + (on ? ' on' : ''), type: 'button', 'aria-pressed': String(on), onclick: () => toggleFilter(id, v) }, `${v} `, h('span', { class: 'mono' }, n)); };
+      function drawFilters() {
+        const nOn = Object.values(listFilters).reduce((a, v) => a + v.length, 0);
+        filterBtn.replaceChildren(filterOpen ? '필터 닫기' : '필터', nOn ? h('span', { class: 'mono' }, ` ${nOn}`) : null);
+        filterBtn.classList.toggle('on', filterOpen);
+        filterBtn.setAttribute('aria-expanded', String(filterOpen));
+        activeBox.hidden = !nOn;
+        activeBox.replaceChildren(...Object.entries(listFilters).flatMap(([id, vals]) => vals.map((v) =>
+          h('button', { class: 'btn small on', type: 'button', 'aria-label': `${v} 필터 빼기`, onclick: () => toggleFilter(id, v) }, `${id === 'color' ? '색' : facetById.get(id).label} · ${v}  ×`))),
+          nOn ? h('button', { class: 'btn small quiet', type: 'button', id: 'filter-clear', onclick: () => { listFilters = {}; draw(); } }, '모두 지우기') : null);
+        panel.hidden = !filterOpen;
+        if (!filterOpen) return;
+        const groups = new Map();
+        for (const fc of facets) { if (!groups.has(fc.st)) groups.set(fc.st, []); groups.get(fc.st).push(fc); }
+        panel.replaceChildren(
+          h('p', { class: 'note' }, facets.length || colorOpts.length
+            ? '카드를 쓰면서 내가 고른 값으로 걸러요. 같은 줄에서는 하나라도 맞으면, 다른 줄끼리는 모두 맞아야 나와요. 숫자는 그 값을 고른 카드 수예요.'
+            : '아직 고른 값이 없어요. 카드의 2단계부터 버튼을 고르면 여기에 필터로 쌓여요.'),
+          colorOpts.length ? h('div', { class: 'fgroup' }, h('span', { class: 'label' }, '색'),
+            h('div', { class: 'frow' }, h('span', { class: 'flabel' }, '내가 적은 색'), h('div', { class: 'tags' }, colorOpts.map(([v, n]) => optBtn('color', v, n))))) : null,
+          [...groups].map(([st, list]) => h('div', { class: 'fgroup' },
+            h('span', { class: 'label' }, st === VIDEO_STEP ? '영상' : `${pad(stepNo(st))} ${st.title}`),
+            list.map((fc) => h('div', { class: 'frow' }, h('span', { class: 'flabel' }, fc.label), h('div', { class: 'tags' }, fc.opts.map(([v, n]) => optBtn(fc.id, v, n))))))));
+      }
       const videos = new Map();
       for (const c of cards) { const k = videoKey(c); if (k) { const v = videos.get(k) || { name: videoName(c), n: 0 }; v.n++; videos.set(k, v); } }
       if (listVideo && !videos.has(listVideo)) listVideo = '';
@@ -715,13 +765,14 @@
         const hit = (listVideo ? cards.filter((c) => videoKey(c) === listVideo).sort((a, b) => tcSec(a) - tcSec(b)) : cards).filter((c) => {
           const text = cardText(c);
           return ts.every((t) => t.startsWith('#') ? c.tags.some((x) => x.toLowerCase() === t.slice(1)) : text.includes(t));
-        });
+        }).filter(passFilters);
+        drawFilters();
         sheet.replaceChildren(...hit.map(tile));
-        count.hidden = !ts.length && !listVideo;
+        count.hidden = !ts.length && !listVideo && !Object.keys(listFilters).length;
         vidBox.replaceChildren(...[...videos].map(([key, v]) => h('button', { class: 'btn small' + (listVideo === key ? ' on' : ''), type: 'button', 'aria-pressed': String(listVideo === key),
           onclick: () => { listVideo = listVideo === key ? '' : key; draw(); } }, `${v.name} `, h('span', { class: 'mono' }, `${v.n}컷`))));
         vidRow.hidden = !videos.size;
-        count.textContent = hit.length ? `${hit.length}장 찾았어요.` : '맞는 카드가 없어요. 다른 단어로 찾아보세요.';
+        count.textContent = hit.length ? `${hit.length}장 찾았어요.` : '맞는 카드가 없어요. 단어나 필터를 바꿔 보세요.';
         tagBox.replaceChildren(...[...tagCount].sort((a, b) => b[1] - a[1]).map(([t, n]) => {
           const on = ts.includes('#' + t.toLowerCase());
           return h('button', { class: 'btn small' + (on ? ' on' : ''), type: 'button', 'aria-pressed': String(on),
@@ -732,13 +783,38 @@
         }));
       }
       draw();
-      wrap.append(h('div', { class: 'searchbar' }, search, tagBox, vidRow, count), sheet);
+      wrap.append(h('div', { class: 'searchbar' }, h('div', { class: 'searchrow' }, search, filterBtn), activeBox, panel, tagBox, vidRow, count), sheet);
     }
     app.replaceChildren(wrap);
     window.scrollTo(0, 0);
   }
   let listQuery = '';
   let listVideo = '';
+  /* 내 컷 찾기: 분석하면서 내가 고른 값으로 거르기, 비슷한 컷 찾기 */
+  let listFilters = {}; // { '단계.칸': ['값', ...], color: ['색 이름', ...] }
+  let filterOpen = false;
+  const shortLabel = (l) => l.replace(/\s*[(:].*$/, '');
+  const facetList = () => { // 버튼으로 고르는 칸 전부
+    const out = [];
+    for (const st of [...STEPS, VIDEO_STEP]) for (const f of st.fields) {
+      if ((f.type === 'choice' || f.type === 'choices') && f.options) out.push({ id: st.id + '.' + f.k, st, f, label: shortLabel(f.label) });
+    }
+    return out;
+  };
+  const facetVals = (c, fc) => [].concat(((c.steps || {})[fc.st.id] || {})[fc.f.k] || []).filter((v) => typeof v === 'string' && v);
+  const colorNames = (c) => (((c.steps || {}).s4 || {}).colors || []).map((r) => String((r && r.name) || '').trim()).filter(Boolean);
+  function similarCards(c, all) { // 내가 고른 값이 많이 겹치는 순서
+    const feats = (x) => {
+      const m = new Map();
+      for (const fc of facetList()) for (const v of facetVals(x, fc)) if (!DEX_SKIP.has(v)) m.set(fc.id + '=' + v, v);
+      for (const n of colorNames(x)) m.set('color=' + n, n);
+      return m;
+    };
+    const mine = feats(c);
+    if (mine.size < 3) return [];
+    return all.filter((x) => x.id !== c.id).map((x) => { const f = feats(x); return { card: x, shared: [...mine.keys()].filter((k) => f.has(k)).map((k) => mine.get(k)) }; })
+      .filter((r) => r.shared.length >= 3).sort((a, b) => b.shared.length - a.shared.length).slice(0, 3);
+  }
   function cardText(c) {
     const out = [c.date, c.source.text, ...c.tags];
     (function walk(v) {
@@ -1134,7 +1210,8 @@
     let knownTerms = new Set(); let myTerms = cardTerms(c); let doneBefore = null; let bossWasBeaten = bossBeaten(c);
     if (otherTerms && otherTerms.then) otherTerms.then((t) => { knownTerms = t; });
     let otherCards = [];
-    if (ctx && ctx.others) ctx.others.then((list) => { otherCards = list; drawGameRow(); });
+    let drawSimilar = () => {};
+    if (ctx && ctx.others) ctx.others.then((list) => { otherCards = list; drawGameRow(); drawSimilar(); });
     let drawGameRow = () => {};
     const form = h('div', { class: 'form' });
     let refresh = () => {};
@@ -1459,6 +1536,22 @@
         h('p', { class: 'note' }, '이 카드를 레퍼런스로 5샷짜리 샷리스트를 짜고, PDF 한 장으로 뽑아요.'),
         h('div', {}, h('button', { class: 'btn', type: 'button', id: 'go-shots', onclick: () => { location.hash = 'shots-' + c.id; } }, hasShots ? '샷리스트 열기' : '5샷 샷리스트 만들기'))));
     if (!pass2) form.append(rvSec, agSec, rsSec, shSec);
+    if (!pass2) { // 다 쓴 뒤에만 보여 준다. 쓰는 도중에 예전 카드가 답처럼 보이지 않게
+      const simHost = h('div', { id: 'similar-host' });
+      drawSimilar = () => {
+        const sims = cardDone(c) ? similarCards(c, otherCards) : [];
+        simHost.replaceChildren(sims.length ? h('section', { class: 'sec step', id: 'similar' },
+          h('header', {}, h('h2', {}, '비슷한 내 컷'), h('span', { class: 'chip-state done' }, `${sims.length}장`)),
+          h('div', { class: 'stepbody' },
+            h('p', { class: 'note' }, '이 카드와 내가 고른 값이 많이 겹치는 카드예요. 앱이 이미지를 본 게 아니라, 내가 적은 것끼리 맞춰 본 거예요.'),
+            h('div', { class: 'simgrid' }, sims.map(({ card, shared }) => h('button', { class: 'simcard', type: 'button', onclick: () => { location.hash = 'card-' + card.id; } },
+              cardSrc(card) ? h('img', { src: cardSrc(card), alt: '', loading: 'lazy' }) : h('span', { class: 'simnopic' }, '이미지 없음'),
+              h('strong', { class: 'mono' }, `No.${pad(card.no, 3)} · ${shared.length}개 겹침`),
+              h('span', { class: 'note' }, shared.slice(0, 6).join(' · ') + (shared.length > 6 ? ' …' : ''))))))) : null);
+      };
+      drawSimilar();
+      form.append(simHost);
+    }
 
     refresh = () => {
       let blocked = false;
@@ -2469,7 +2562,7 @@
         for (const o of f.options) {
           if (DEX_SKIP.has(o)) continue;
           const n = cards.filter((c) => [].concat((c.steps[st.id] || {})[f.k] || []).includes(o)).length;
-          terms.push({ term: o, n });
+          terms.push({ term: o, n, id: st.id + '.' + f.k });
         }
       }
       return { st, terms };
@@ -2772,7 +2865,7 @@
         dex.map((g) => h('div', { class: 'field' },
           h('span', { class: 'label' }, `${pad(stepNo(g.st))} ${g.st.title}  ${g.terms.filter((t) => t.n).length}/${g.terms.length}`),
           h('div', { class: 'tags' }, g.terms.map((t) => t.n
-            ? h('button', { class: 'btn small on', type: 'button', onclick: () => { listQuery = t.term; listVideo = ''; location.hash = 'list'; } }, `${t.term} `, h('span', { class: 'mono' }, t.n))
+            ? h('button', { class: 'btn small on', type: 'button', onclick: () => { listQuery = ''; listVideo = ''; listFilters = { [t.id]: [t.term] }; filterOpen = false; location.hash = 'list'; } }, `${t.term} `, h('span', { class: 'mono' }, t.n))
             : h('span', { class: 'chip-state dexoff' }, t.term)))))));
 
     /* 취향 지도 */
