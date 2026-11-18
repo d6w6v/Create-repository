@@ -1188,3 +1188,44 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 .heropic .hcolor.fade { opacity: var(--o); }
 @media (prefers-reduced-motion: reduce) { .heropic .hcolor.soft { transition: none; } }
 #boss .pzpick { gap: 6px; }
+
+/* ── 돌아다니는 것들: 매끈한 도형 캐릭터 (픽셀 아님) ── */
+.crt { display: block; line-height: 0; color: var(--ink); }
+.crt svg { display: block; overflow: visible; }
+.crb { fill: currentColor; }
+.crb2 { fill: currentColor; }
+.creye { fill: var(--cr-eye, #fff); }
+.crpup { fill: var(--red, #e4002b); }
+.crlegs line, .crline { stroke: currentColor; stroke-width: 3; stroke-linecap: round; }
+.crline { stroke-width: 2.2; }
+.crhollow { fill: none; stroke: currentColor; stroke-width: 2.6; stroke-dasharray: 4.4 4.4; }
+.crmouth { stroke: var(--cr-eye, #fff); stroke-width: 2; stroke-linecap: round; }
+.crl1 { animation: crStep 0.46s steps(1) infinite; }
+.crl2 { animation: crStep 0.46s steps(1) -0.23s infinite; }
+@keyframes crStep { 0% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.crbody { animation: crBob 0.46s ease-in-out infinite; }
+@keyframes crBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.2px); } }
+.cre { transform-box: fill-box; transform-origin: center; animation: crBlink 4.4s infinite; }
+@keyframes crBlink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+/* 브리프 캐릭터: 이미지 윗변 위를 끝에서 끝까지 걸어 다닌다. 끝에 닿으면 돌아선다 */
+.crroam { position: absolute; left: 0; right: 0; top: -34px; height: 34px; z-index: 0; pointer-events: none; }
+.crroam .crt { position: absolute; bottom: -1px; left: 0; animation: crRoam 30s linear infinite; }
+@keyframes crRoam { 0% { left: 0; transform: scaleX(1); } 49.9% { left: calc(100% - 30px); transform: scaleX(1); } 50% { left: calc(100% - 30px); transform: scaleX(-1); } 99.9% { left: 0; transform: scaleX(-1); } 100% { left: 0; transform: scaleX(1); } }
+/* 주인공: 이미지 아래 가장자리, 지금 단계 칸 위에서 서성인다. 어두운 이미지 위에서도 보이게 흰 테를 두른다 */
+#boss .hlane .crt { filter: drop-shadow(1.5px 0 0 #fff) drop-shadow(-1.5px 0 0 #fff) drop-shadow(0 1.5px 0 #fff) drop-shadow(0 -1.5px 0 #fff); animation: crPace 5s ease-in-out infinite; }
+@keyframes crPace { 0%, 100% { transform: translateX(-7px) scaleX(1); } 48% { transform: translateX(7px) scaleX(1); } 50% { transform: translateX(7px) scaleX(-1); } 98% { transform: translateX(-7px) scaleX(-1); } }
+#boss .hlane.won .crt { animation: pxJump 0.5s steps(1) infinite; }
+@media (max-width: 620px) { #boss .hlane .crt svg { width: 28px; height: 31px; } }
+/* 시작 전 검은 판: 흰 캐릭터가 오른쪽 아래를 오간다 */
+.heropic.poster .crt { position: absolute; bottom: clamp(18px, 3.2vw, 36px); left: 62%; color: #fff; --cr-eye: #111; animation: crRoamP 16s linear infinite; }
+@keyframes crRoamP { 0% { left: 60%; transform: scaleX(1); } 49.9% { left: calc(100% - 80px); transform: scaleX(1); } 50% { left: calc(100% - 80px); transform: scaleX(-1); } 99.9% { left: 60%; transform: scaleX(-1); } 100% { left: 60%; transform: scaleX(1); } }
+/* 미션 연속: 작은 네모 일곱 칸 */
+.mflags { border-bottom: 0; height: auto; gap: 4px; padding: 0; align-items: center; }
+.mdot { width: 8px; height: 8px; box-shadow: inset 0 0 0 1px #bdbdbd; }
+.mdot.on { background: var(--red, #e4002b); box-shadow: none; }
+/* ── 로고 끝: 녹화 표시. 빨간 점이 깜빡이고 옆에 작게 REC ── */
+.lgrec { display: inline-flex; align-items: center; gap: 0.1em; margin-left: 0.1em; vertical-align: baseline; letter-spacing: 0; }
+.lgrec i { display: block; width: 0.22em; height: 0.22em; border-radius: 50%; background: var(--red, #e4002b); animation: recBlink 1.5s steps(1) infinite; }
+.lgrec small { font-family: var(--tt, ui-monospace, "SF Mono", Menlo, Consolas, monospace); font-size: 0.2em; font-weight: 700; letter-spacing: 0.12em; color: var(--red, #e4002b); line-height: 1; }
+@keyframes recBlink { 0% { opacity: 1; } 60% { opacity: 0.18; } }
+.sldot.lgrec { width: auto; height: auto; background: none; margin: 0 0 0.3em 0.1em; }

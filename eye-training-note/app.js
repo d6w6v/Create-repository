@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '55 · 감기는 눈';
+  const APP_VERSION = '56 · 돌아다니는 것들';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -624,7 +624,7 @@
         const streak = missionStreak(ms.done);
         const flags = Math.min(7, streak);
         const flagRow = h('span', { class: 'mflags', id: 'px-track', role: 'img', 'aria-label': `미션 연속 ${streak}일` },
-          Array.from({ length: 7 }, (_, i) => h('span', { class: 'mflag' + (i < flags ? ' on' : '') }, i < flags ? sprite(PX_FLAG, 2) : null)));
+          Array.from({ length: 7 }, (_, i) => h('span', { class: 'mdot' + (i < flags ? ' on' : '') })));
         box.replaceChildren(
           h('header', {}, h('h2', {}, '오늘의 미션'), h('span', { class: 'mright' }, flagRow, h('span', { class: 'chip-state' + (done ? ' done' : '') }, done ? '완료' : tier ? '진행 중' : '하나 고르기'))),
           !tier && !old
@@ -724,9 +724,9 @@
         } else pic.classList.add('poster'), pic.append(h('strong', { class: 'pname' }, bName), h('span', { class: 'pdesc' }, '이미지 없이 글로 쓰는 중'));
       }
       // 진행 표시는 이미지 아래 한 줄로 모은다: 01~11 칸, 그 위를 걷는 주인공
-      const bossPx = PX_BOSS[BOSSES.findIndex((x) => x[0] === bName)] || PX_BOSS[0];
+      const bossKind = Math.max(0, BOSSES.findIndex((x) => x[0] === bName));
       const lane = bCard ? h('div', { class: 'hlane' + (beaten ? ' won' : ''), id: 'px-stage', 'aria-hidden': 'true' },
-        STEPS.map((st, i) => h('span', { class: 'hl' }, i === Math.min(cut, hp.total - 1) ? pxHero(4) : null))) : null;
+        STEPS.map((st, i) => h('span', { class: 'hl' }, i === Math.min(cut, hp.total - 1) ? creature('hero', 38) : null))) : null;
       const slices = bCard ? h('div', { class: 'hslices', role: 'img', 'aria-label': `${hp.total}단계 중 ${cut}단계 끝냄` },
         STEPS.map((st, i) => h('span', { class: 'hs' + (i < cut ? ' done' : i === cut && !beaten ? ' next' : '') }, pad(i + 1, 2)))) : null;
       const pzPick = h('div', { class: 'pzpick', id: 'puzzle-pick' });
@@ -734,7 +734,7 @@
         ...PUZZLES.map(([k, name]) => h('button', { class: 'btn small' + (k === puzzleKind ? ' on' : ''), type: 'button', id: 'puzzle-' + k, 'aria-pressed': String(k === puzzleKind), title: '누르면 끝까지 풀리는 모습을 미리 보여 줘요',
           onclick: () => { puzzleKind = k; try { localStorage.setItem('eye-puzzle', k); } catch (e) { /* 이번만 */ } drawPick(); previewPuzzle(k); } }, name)));
       if (drawPuzzle) drawPick();
-      if (!bCard) pic.append(sprite(bossPx, 4, 'pxboss'));
+      if (!bCard) pic.append(creature(bossKind, 44));
 
       // 한 덩어리: 머리줄 하나, 왼쪽에 이미지와 진행 한 줄, 오른쪽에 할 일(브리프 → 오늘의 미션)
       const briefSec = h('section', { class: 'sec', id: 'boss' },
@@ -743,7 +743,7 @@
             bCard ? h('span', { class: 'btitle' }, h('strong', {}, bName), h('span', { class: 'bko' }, bKo), h('span', { class: 'hcount mono' }, `${cut}/${hp.total}`)) : null),
           h('span', { class: 'chip-state' + (beaten ? ' done' : '') }, beaten ? '완료' : bCard ? '진행 중' : '시작 전')),
         h('div', { class: 'hero', id: 'hero' },
-          h('div', { class: 'heroleft' }, bCard ? h('span', { class: 'pxperch', 'aria-hidden': 'true' }, sprite(bossPx, 4)) : null, pic, lane, slices, drawPuzzle ? pzPick : null),
+          h('div', { class: 'heroleft' }, bCard ? h('span', { class: 'crroam', 'aria-hidden': 'true' }, creature(bossKind, 30)) : null, pic, lane, slices, drawPuzzle ? pzPick : null),
           h('div', { class: 'heroright' },
             h('div', { class: 'glance', id: 'brief-info' },
               h('p', { class: 'missiontext' }, bCard ? bDesc : '이 주제에 맞는 이미지를 직접 골라 오면 시작돼요.'),
@@ -2687,29 +2687,26 @@
     ['TOO MUCH', '소품과 색이 넘치는 이미지. 스무 가지가 넘는 것 중 기둥을 가려내요.', '과잉'],
     ['NOTHING SPECIAL', '특별한 게 없어 보이는데 끌리는 이미지. "틀린 것"을 찾기가 가장 어려워요.', '평범함'],
   ];
-  /* 픽셀 그림(긴 검은 머리에 창백한 얼굴, 머리카락 끝으로 걷는다): 글자 한 칸이 점 하나. k 검정, w 흰색, r 빨강, g 회색, . 빈 칸 */
-  const PX_HERO = [['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwwwwwkkk.', 'kkkwwkwkwkwwwkkk', 'kkwwkkkkkkkkwwkk', 'kkwkwwrrrrwwkwkk', 'kkwkwwrkkrwwkwkk', 'kkwkwwrrrrwwkwkk', 'kkwwkkkkkkkkwwkk', 'kkkwggwrwwggwkkk', 'kkkkwwwrwwwwkkkk', 'kkkkkwwkkwwkkkkk', 'kk.kkkkkkkkkk.kk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k'],
-    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwwwwwkkk.', 'kkkwwkwkwkwwwkkk', 'kkwwkkkkkkkkwwkk', 'kkwkwwwrrrrwkwkk', 'kkwkwwwrkkrwkwkk', 'kkwkwwwrrrrwkwkk', 'kkwwkkkkkkkkwwkk', 'kkkwggwrwwggwkkk', 'kkkkwwwrwwwwkkkk', 'kkkkkwwrkwwkkkkk', 'kk.kkkkkkkkkk.kk', 'kk.k..k..k..k.kk', 'k..k...kk...k..k']];
-  const PX_FLAG = ['krrr.', 'krrrr', 'krrr.', 'k....', 'k....', 'k....', 'k....', 'kkk..'];
-  const PX_BOSS = [
-    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwwwwwkkk.', 'kkkwwwwwwwwwwkkk', 'kkwrrrrwwrrrrwkk', 'kkwrwwrwwrwwrwkk', 'kkwrwwrwwrwwrwkk', 'kkwrrrrwwrrrrwkk', 'kkgwwwwwwwwwwgkk', 'kkkwwrrrrrrwwkkk', 'kkkkwrwwwwrwkkkk', 'kkkkkwrrrrwkkkkk', 'kk.kkkkkkkkkk.kk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k'],
-    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkkkkkkkkkkkk.', 'kkkkgkkkkkkgkkkk', 'kkkkkgkkkkkkkkkk', 'kkkkgkkwwwwkgkkk', 'kkkkkkkwrkwkkkkk', 'kkkkkkkwwwwkkkkk', 'kkkkkgkkkkkgkkkk', 'kkkkkkgkkkkkkkkk', 'kkkkkgkkkgkkkkkk', 'kkkkkkkkkkkkkkkk', 'kk.kkkkkkkkkk.kk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k'],
-    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwwwwwkkk.', 'kkkkwkwkwkwkwkkk', 'kkwwrwwwrwwwrwkk', 'kkggggggggggggkk', 'kkwkwkkkkkkwkwkk', 'kkwwrwkwrkwrwwkk', 'kkgggwkkkkwgggkk', 'kkkwkwkwwkwkwkkk', 'kkkkwrwwwwrwkkkk', 'kkkkkwwwwwwkkkkk', 'kk.kkkkkkkkkk.kk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k'],
-    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwwwwwkkk.', 'kkkwwwwwkwwwwkkk', 'kkwwwwwkwwwwwwkk', 'kkwwggwwkwggwwkk', 'kkwwgwwkwwwgwwkk', 'kkwwwwwwkwwwwwkk', 'kkwwwwwwkrwwwwkk', 'kkkwwwwwwrwwwkkk', 'kkkkwwwwwrwwkkkk', 'kkkkkwwwwwwkkkkk', 'kk.kkkkkkkkkk.kk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k'],
-    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwgkkkkkk.', 'kkkwwwwwgkkkkkkk', 'kkwwwwwwgwwwkkkk', 'kkwwkkkwkwkwkkkk', 'kkwwkrkwkwkwkkkk', 'kkwwgggwkwwwkkkk', 'kkwwwwwwwkkkkkkk', 'kkkwwwwwwkwkwkkk', 'kkkkkkkkkwkwkkkk', 'kkkkkwwwgkkkkkkk', 'kk.kkkkkkkkkk.kk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k'],
-    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwwwwwkkk.', 'kkkwwwwwwwwwwgkk', 'kkwkkkkwwkkwwwkk', 'kkwkrkkggkkggwkk', 'kkwkkkkggggwwwkk', 'kkwwwwwwwwwwwggk', 'kkwkkkkkkkgggwkk', 'kkkwwkwkwkgggkkk', 'kkkkwkkkkkggkkkk', 'kkkkkwwwwwwkggkk', 'kk.kkkkkkkkkkgkk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k'],
-    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwwwwwkkk.', 'kkkwkkwwkkwkkkkk', 'kkwwkrwwkrwkrwkk', 'kkkkwwkkwwkkwwkk', 'kkkrwwkrwwkrwwkk', 'kkwwkkwwkkwwkkkk', 'kkwwkrwwkrwwkrkk', 'kkkwwkkwwkkwwkkk', 'kkkkwkrwwkrwkkkk', 'kkkkkwwwwwwkkkkk', 'kk.kkkkkkkkkk.kk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k'],
-    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwwwwwkkk.', 'kkkwwwwwwwwwwkkk', 'kkwkkkkwwkkkkwkk', 'kkwwkkwwwwkkwwkk', 'kkwwkwwwwwwkwwkk', 'kkwwwwwwwwwkwwkk', 'kkkwwwwwwwwwwkkk', 'kkkkkkkkkkkkkkkk', 'kkkwkwkwkwkwkkkk', 'kkkkkrrrrrrkkkkk', 'kk.kkkkkkkkkk.kk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k']
-  ];
-  function sprite(rows, scale, cls) {
-    const w = rows[0].length; const fill = { k: '#111', w: '#fff', r: 'var(--red, #e4002b)', g: '#9a9a9a' };
-    let rects = '';
-    rows.forEach((row, y) => { let x = 0; while (x < w) { const ch = row[x]; let n = 1; while (x + n < w && row[x + n] === ch) n++; if (ch !== '.') rects += `<rect x="${x}" y="${y}" width="${n}" height="1" style="fill:${fill[ch]}"/>`; x += n; } });
-    const el = h('span', { class: 'px ' + (cls || ''), 'aria-hidden': 'true' });
-    el.innerHTML = `<svg viewBox="0 0 ${w} ${rows.length}" width="${w * scale}" height="${rows.length * scale}" shape-rendering="crispEdges">${rects}</svg>`;
+  /* 돌아다니는 것들: 픽셀이 아니라 매끈한 도형. 검은 몸에 눈, 짧은 다리 둘. 브리프마다 생김새가 다르다 */
+  function creature(kind, size) {
+    const eye = (x, y, r, pup) => `<g class="cre"><circle class="creye" cx="${x}" cy="${y}" r="${r}"/>${pup === false ? '' : `<circle class="crpup" cx="${(x + r * 0.32).toFixed(1)}" cy="${y}" r="${(r * 0.42).toFixed(1)}"/>`}</g>`;
+    const body = '<circle class="crb" cx="20" cy="19" r="15"/>';
+    const rays = Array.from({ length: 8 }, (_, i) => { const t = (i * Math.PI) / 4; const c = Math.cos(t); const d = Math.sin(t); return `<line class="crline" x1="${(20 + c * 17.5).toFixed(1)}" y1="${(19 + d * 17.5).toFixed(1)}" x2="${(20 + c * 21).toFixed(1)}" y2="${(19 + d * 21).toFixed(1)}"/>`; }).join('');
+    const shapes = {
+      hero: body + eye(24, 17, 7.2),
+      0: rays + '<circle class="crb" cx="20" cy="19" r="12.5"/>' + eye(23, 18, 5.6),                                     // LIGHTS: 빛살
+      1: body + '<g class="cre"><ellipse class="creye" cx="17" cy="17" rx="3.6" ry="1.5"/><ellipse class="creye" cx="27.5" cy="17" rx="3.6" ry="1.5"/><circle class="crpup" cx="18" cy="17" r="1"/><circle class="crpup" cx="28.5" cy="17" r="1"/></g>', // LOW KEY: 실눈
+      2: '<circle class="crb" cx="11" cy="24" r="9.5"/><circle class="crb" cx="29" cy="24" r="9.5"/><circle class="crb" cx="20" cy="11" r="9.5"/>' + eye(13, 23, 3.4) + eye(31, 23, 3.4) + eye(22, 10, 3.4), // CROWD: 셋이 한 몸
+      3: '<circle class="crhollow" cx="20" cy="19" r="14"/>',                                                             // NO ONE: 테두리만
+      4: body + '<path class="creye" d="M20 5.2 A13.8 13.8 0 0 1 20 32.8 Z"/><circle class="creye" cx="14" cy="17" r="2.6"/><circle class="crb2" cx="26" cy="17" r="2.6"/>', // MONO: 반반
+      5: '<line class="crline" x1="-6" y1="12" x2="2" y2="12"/><line class="crline" x1="-9" y1="19" x2="1" y2="19"/><line class="crline" x1="-6" y1="26" x2="2" y2="26"/><ellipse class="crb" cx="22" cy="19" rx="18" ry="12"/>' + eye(29, 17, 5.4), // BLUR: 끌린 자국
+      6: body + eye(13, 13, 3.2) + eye(24, 11, 3.6) + eye(28, 21, 3.2) + eye(17, 23, 3.8) + eye(10, 22, 2.4),              // TOO MUCH: 눈이 여럿
+      7: body + '<circle class="creye" cx="25" cy="16" r="1.9"/><line class="crmouth" x1="18" y1="24" x2="28" y2="24"/>',   // NOTHING SPECIAL: 점 하나, 선 하나
+    };
+    const el = h('span', { class: 'crt', 'aria-hidden': 'true' });
+    el.innerHTML = `<svg viewBox="0 0 40 44" width="${size}" height="${Math.round(size * 1.1)}"><g class="crlegs"><line class="crl1" x1="14" y1="30" x2="14" y2="41"/><line class="crl2" x1="26" y1="30" x2="26" y2="41"/></g><g class="crbody">${shapes[kind] || shapes.hero}</g></svg>`;
     return el;
   }
-  const pxHero = (scale) => h('span', { class: 'pxwalk', style: `width:${PX_HERO[0][0].length * scale}px;height:${PX_HERO[0].length * scale}px` }, sprite(PX_HERO[0], scale, 'f1'), sprite(PX_HERO[1], scale, 'f2'));
   const weekId = () => dstr(weekStart(new Date()));
   const bossOf = (wid) => BOSSES[[...wid].reduce((x, ch) => x * 31 + ch.charCodeAt(0), 3) % BOSSES.length];
   const bossBeaten = (c) => !!c.boss && c.mode === 'deep' && cardDone(c) && c.unknown.length <= 3;
@@ -3372,7 +3369,7 @@
       'aria-current': active === key ? 'page' : null, onclick: () => { location.hash = hash; } }, name);
     return h('div', { class: 'top' },
       h('div', {},
-        h('h1', { class: 'logo', 'aria-label': 'DOPEYE' }, 'd', eyeO(), 'p', h('span', { class: 'lge1' }, 'e'), 'y', h('span', { class: 'lge2' }, 'e'), h('span', { class: 'lglid' })),
+        h('h1', { class: 'logo', 'aria-label': 'DOPEYE' }, 'd', eyeO(), 'p', h('span', { class: 'lge1' }, 'e'), 'y', h('span', { class: 'lge2' }, 'e'), h('span', { class: 'lgrec' }, h('i', {}), h('small', {}, 'REC'))),
         h('div', { class: 'sub' }, sub, h('span', { class: 'ver' }, `  v${APP_VERSION.split(' ')[0]}`))),
       h('div', { class: 'row' },
         h('nav', { class: 'tabs', 'aria-label': '화면 이동' }, tab('book', '교과서', 'book'), tab('list', '카드', 'list'), tab('series', '시리즈', 'series'), tab('diary', '일기', 'diary'), tab('look', '돌아보기', 'look'), tab('backup', '백업', 'backup')),
@@ -3441,7 +3438,7 @@
       h('div', { class: 'slup' },
         h('strong', { class: 'sltitle' },
           [...'dopeye'].map((ch, i) => h('span', { class: 'slch' + (i === 3 ? ' lge1' : i === 5 ? ' lge2' : '') }, h('span', { style: `transition-delay:${i * 38}ms` }, i === 1 ? eyeO() : ch))),
-          h('span', { class: 'sldot lglid' }))),
+          h('span', { class: 'sldot lgrec' }, h('i', {}), h('small', {}, 'REC')))),
       h('div', { class: 'sldown' },
         h('div', { class: 'slmetas' }, meta('ROLL', roll), meta('SCENE', scene), meta('TAKE', take),
           meta('DATE', h('span', { class: 'slnum' }, `${d.getFullYear()}.${pad(d.getMonth() + 1, 2)}.${pad(d.getDate(), 2)}`)))),
