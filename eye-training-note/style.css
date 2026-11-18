@@ -1000,23 +1000,12 @@ html[data-skin="school"] .facts dt { font-family: var(--tt); }
 .filmstrip .frame.blank { background: #1d1d1d; }
 .filmstrip .frame.blank.today { outline: 1.5px dashed #ffd84a; outline-offset: -1.5px; }
 .filmstrip .frame.today:not(.blank) { outline: 2px solid var(--red, #e4002b); outline-offset: 2px; }
-.filmstrip .frame:not(:disabled):hover img { transform: scale(1.04); }
-.filmstrip .frame img { transition: transform 0.18s; }
 .splice { flex: none; align-self: stretch; display: flex; align-items: center; justify-content: center; writing-mode: vertical-rl; width: 18px; background: var(--red, #e4002b); color: #fff; font-size: 10px; letter-spacing: 0.08em; opacity: 0.9; }
 .film figcaption { margin-top: 8px; font-size: 0.875rem; line-height: 1.6; color: var(--mute); }
 .rollpick { margin-left: 10px; display: inline-flex; gap: 10px; }
 .rollpick .linkbtn { display: inline; width: auto; padding: 0; font-size: 0.8125rem; color: var(--mute); text-decoration: underline; text-underline-offset: 3px; }
 .rollpick .linkbtn.on { color: var(--ink); font-weight: 700; text-decoration: none; }
-/* ── 필름 현상 모션: 네거티브로 놓인 컷 위를 빨간 선이 지나가며 제 색이 된다 ── */
+/* ── 필름 띠: 움직임 없음 ── */
 .filmgate { position: relative; overflow: hidden; background: #111; }
-.filmgate::before, .filmgate::after { content: ""; position: absolute; top: 0; bottom: 0; width: 46px; z-index: 2; pointer-events: none; }
-.filmgate::before { left: 0; background: linear-gradient(90deg, #111, rgba(17, 17, 17, 0)); }
-.filmgate::after { right: 0; background: linear-gradient(270deg, #111, rgba(17, 17, 17, 0)); }
 .filmstrip .frame.shot .noimg { background: #2a2a2a; border-radius: 3px; }
-.filmstrip .frame img, .filmstrip .frame .noimg { transition: filter 0.55s ease-out, transform 0.18s; }
-.filmstrip .frame.neg img, .filmstrip .frame.neg .noimg { filter: invert(1) sepia(0.35) contrast(0.92); transition: none; }
-.filmscan { position: absolute; top: 0; bottom: 0; left: -2px; width: 2px; z-index: 3; pointer-events: none; background: var(--red, #e4002b); opacity: 0; transition: opacity 0.3s; will-change: transform; }
-.filmscan.on { opacity: 1; transition: none; }
 .filmcount { font-variant-numeric: tabular-nums; }
-.film .rewind { display: inline; width: auto; padding: 0; margin-left: 12px; font-size: 0.8125rem; color: var(--mute); text-decoration: underline; text-underline-offset: 3px; }
-@media (prefers-reduced-motion: reduce) { .filmscan { display: none; } }

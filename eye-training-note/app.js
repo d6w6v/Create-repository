@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '37 · 큰 이미지';
+  const APP_VERSION = '38 · 필름 모션 없음';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -2502,54 +2502,22 @@
     const doneToday = g.days.has(today);
     const rolls = Math.max(1, Math.ceil((n + (doneToday ? 0 : 1)) / ROLL));
     let roll = rolls; // 보고 있는 롤
-    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const fig = h('figure', { class: 'film', id: 'film' });
     const scroller = h('div', { class: 'filmscroll' });
-    const scan = h('div', { class: 'filmscan', 'aria-hidden': 'true' });
-    const gate = h('div', { class: 'filmgate' }, scroller, scan);
+    const gate = h('div', { class: 'filmgate' }, scroller);
     const count = h('span', { class: 'filmcount' });
     const caption = h('figcaption', {});
     const gapDays = (a, b) => Math.round((new Date(b + 'T00:00') - new Date(a + 'T00:00')) / DAY) - 1;
-    let raf = 0; let finish = () => {};
-    const stop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; finish(); };
-    ['pointerdown', 'wheel', 'touchstart'].forEach((ev) => scroller.addEventListener(ev, stop, { passive: true }));
 
-    // 현상: 네거티브로 놓여 있던 컷 위를 빨간 선이 지나가면 그 자리부터 제 색이 된다
-    function develop(real, total, play) {
+    // 움직임 없이, 가장 최근 컷이 오른쪽 끝 가까이에 보이게만 놓는다
+    function place(real, total) {
       const max = scroller.scrollWidth - scroller.clientWidth;
       const aim = real[real.length - 1];
-      // 가장 최근 컷이 오른쪽 끝 가까이에 오게 놓는다. 그래야 지난 컷들이 한 화면에 많이 보인다
       scroller.scrollLeft = aim ? Math.min(max, Math.max(0, aim.offsetLeft + aim.offsetWidth + 56 - scroller.clientWidth)) : Math.max(0, max);
-      const setCount = (k) => { count.textContent = `${k}/${ROLL}컷`; };
-      const shots = real.filter((f) => !f.classList.contains('blank'));
-      if (raf) cancelAnimationFrame(raf); raf = 0;
-      finish = () => { shots.forEach((f) => f.classList.remove('neg')); scan.classList.remove('on'); setCount(total); finish = () => {}; };
-      if (still || !play || !shots.length) { finish(); return; }
-      const w = gate.clientWidth;
-      const left = scroller.scrollLeft;
-      const mid = (f) => f.offsetLeft + f.offsetWidth / 2 - left;
-      shots.forEach((f) => f.classList.toggle('neg', mid(f) > 0)); // 화면 왼쪽 밖의 컷은 이미 현상된 것으로 둔다
-      const before = shots.filter((f) => !f.classList.contains('neg')).length;
-      setCount(before);
-      scan.style.transform = 'translateX(0px)'; scan.classList.add('on');
-      const lastShot = shots[shots.length - 1];
-      const far = Math.min(w, lastShot.offsetLeft + lastShot.offsetWidth - left + 6); // 마지막 컷의 오른쪽 끝에서 선이 멈춘다
-      const dur = Math.min(2200, Math.max(1000, far * 1.7));
-      const t0 = performance.now() + 350; // 네거티브 상태를 잠깐 보여 주고 출발
-      const tick = (t) => {
-        const k = Math.min(1, Math.max(0, (t - t0) / dur));
-        const x = far * (k * k * (3 - 2 * k));
-        scan.style.transform = `translateX(${x.toFixed(1)}px)`;
-        let done = 0;
-        for (const f of shots) { if (mid(f) <= x) { f.classList.remove('neg'); done++; } }
-        setCount(Math.min(total, done));
-        if (k < 1) { raf = requestAnimationFrame(tick); return; }
-        raf = 0; finish();
-      };
-      raf = requestAnimationFrame(tick);
+      count.textContent = `${total}/${ROLL}컷`;
     }
 
-    function paint(play) {
+    function paint() {
       const from = (roll - 1) * ROLL;
       const mine = frames.slice(from, from + ROLL);
       const strip = h('div', { class: 'filmstrip' });
@@ -2558,7 +2526,7 @@
         const gap = prev ? gapDays(prev.day, f.day) : 0;
         if (gap > 0) strip.append(h('span', { class: 'splice' }, `${gap}일 쉼`));
         const no = ((f.no - 1) % ROLL) + 1;
-        strip.append(h('button', { class: 'frame shot' + (play && !still ? ' neg' : '') + (f.day === today ? ' today' : ''), type: 'button', disabled: !f.hash,
+        strip.append(h('button', { class: 'frame shot' + (f.day === today ? ' today' : ''), type: 'button', disabled: !f.hash,
           'aria-label': `${f.day}의 컷`, onclick: () => { if (f.hash) location.hash = f.hash; } },
           f.src ? h('img', { src: f.src, alt: '', onerror: (e) => e.target.remove() }) : h('span', { class: 'noimg' }, '글로 연습한 날'),
           h('span', { class: 'fno' }, `${no}`), h('span', { class: 'fday' }, f.day.slice(5).replace('-', '.'))));
@@ -2575,15 +2543,14 @@
       caption.replaceChildren(
         h('span', { class: 'figno' }, `내 필름 · 롤 ${roll}`), count, roll === rolls ? null : ' · 현상 완료',
         rolls > 1 ? h('span', { class: 'rollpick' }, Array.from({ length: rolls }, (_, i) =>
-          h('button', { class: 'linkbtn' + (i + 1 === roll ? ' on' : ''), type: 'button', onclick: () => { roll = i + 1; paint(true); } }, `롤 ${i + 1}`))) : null,
-        used ? h('button', { class: 'linkbtn rewind', type: 'button', id: 'film-rewind', onclick: () => paint(true) }, '다시 현상하기') : null,
+          h('button', { class: 'linkbtn' + (i + 1 === roll ? ' on' : ''), type: 'button', onclick: () => { roll = i + 1; paint(); } }, `롤 ${i + 1}`))) : null,
         h('br', {}),
         n === 0 ? '연습한 날마다 그날의 이미지가 한 컷씩 찍혀요. 36컷이 차면 한 롤이 돼요.'
           : doneToday ? '오늘의 컷이 찍혔어요. 컷을 누르면 그날의 카드가 열려요.'
             : lastGap > 0 ? `${lastGap}일 쉬었어요. 오늘 한 단계만 써도 다음 컷이 찍혀요.` : '오늘 한 단계만 쓰면 다음 컷이 찍혀요.');
-      requestAnimationFrame(() => develop([...strip.querySelectorAll('.frame.shot')], total, play));
+      requestAnimationFrame(() => place([...strip.querySelectorAll('.frame.shot')], total));
     }
-    paint(true);
+    paint();
     fig.append(gate, caption);
     return { fig, count: n, rollsDone: Math.floor(n / ROLL) };
   }
