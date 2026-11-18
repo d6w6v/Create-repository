@@ -1149,3 +1149,17 @@ html[data-skin="school"] .top h1::after { transform-origin: 50% 100%; animation:
 
 /* 검은 판 위에서는 정장이 안 보이니 흑백만 뒤집는다 (빨강은 그대로) */
 .heropic.poster .pxboss { filter: drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff); }
+
+/* ── 색이 번져 들어오는 방식: 조각으로 자르지 않고 경계를 흐리게 ── */
+@property --p { syntax: "<percentage>"; inherits: false; initial-value: 0%; }
+@property --o { syntax: "<number>"; inherits: false; initial-value: 0; }
+.heropic .hgray { filter: grayscale(1) contrast(0.82) brightness(0.8); }
+.heropic .hcolor.soft { transition: --p 0.9s cubic-bezier(0.4, 0, 0.2, 1), --o 0.9s ease; }
+/* 번짐: 왼쪽에서 오른쪽으로, 경계가 넓게 풀린다 */
+.heropic .hcolor.wash { -webkit-mask-image: linear-gradient(90deg, #000 calc(var(--p) * 1.3 - 30%), transparent calc(var(--p) * 1.3)); mask-image: linear-gradient(90deg, #000 calc(var(--p) * 1.3 - 30%), transparent calc(var(--p) * 1.3)); }
+/* 퍼짐: 내가 처음 본 자리에서 둥글게 */
+.heropic .hcolor.bloom { -webkit-mask-image: radial-gradient(circle farthest-corner at var(--at, 50% 50%), #000 calc(var(--p) * 1.35 - 35%), transparent calc(var(--p) * 1.35)); mask-image: radial-gradient(circle farthest-corner at var(--at, 50% 50%), #000 calc(var(--p) * 1.35 - 35%), transparent calc(var(--p) * 1.35)); }
+/* 서서히: 전체가 한꺼번에 조금씩 */
+.heropic .hcolor.fade { opacity: var(--o); }
+@media (prefers-reduced-motion: reduce) { .heropic .hcolor.soft { transition: none; } }
+#boss .pzpick { gap: 6px; }

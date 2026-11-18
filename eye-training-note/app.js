@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '52 · 긴 머리 얼굴들';
+  const APP_VERSION = '53 · 번지는 색';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -654,8 +654,9 @@
       const openBoss = () => { if (bCard) location.hash = 'card-' + bCard.id; else { pendingBoss = true; location.hash = 'new'; } };
 
       // 왼쪽: 보스 이미지. 흑백으로 시작해서, 단계를 끝낼 때마다 한 조각씩 색이 돌아온다
-      const PUZZLES = [['strips', '띠'], ['grid', '격자'], ['cover', '가림막'], ['mix', '뒤섞임']];
-      let puzzleKind = 'strips'; try { const k = localStorage.getItem('eye-puzzle'); if (PUZZLES.some((x) => x[0] === k)) puzzleKind = k; } catch (e) { /* 기본값 */ }
+      const PUZZLES = [['wash', '번짐'], ['bloom', '퍼짐'], ['fade', '서서히'], ['strips', '띠'], ['grid', '격자'], ['cover', '가림막'], ['mix', '뒤섞임']];
+      const SOFT = ['wash', 'bloom', 'fade']; // 조각으로 자르지 않고 색이 번져 들어오는 방식
+      let puzzleKind = 'wash'; try { const k = localStorage.getItem('eye-puzzle'); if (PUZZLES.some((x) => x[0] === k)) puzzleKind = k; } catch (e) { /* 기본값 */ }
       let drawPuzzle = null; let previewPuzzle = null;
       const pic = h('button', { class: 'heropic' + (bCard ? '' : ' poster'), type: 'button', id: 'boss-pic', onclick: openBoss, 'aria-label': bCard ? '브리프 카드 열기' : '새 카드로 이번 주 브리프 시작' });
       if (!bCard) {
@@ -671,9 +672,25 @@
           const cellBox = (i) => `left:${(i % 4) * 25}%;top:${Math.floor(i / 4) * 33.3334}%;width:25%;height:33.3334%`;
           let source = null; let timer = 0;
           const colorImg = h('img', { class: 'hcolor', src, alt: '' });
+          const grayImg = h('img', { class: 'hgray', src, alt: '' });
+          const pin = (((bCard.steps || {}).s2 || {}).gaze || []).find((r) => r && r.x != null); // 내가 처음 찍은 시선 핀에서 색이 퍼지기 시작한다
+          const origin = pin ? `${(pin.x * 100).toFixed(1)}% ${(pin.y * 100).toFixed(1)}%` : '50% 50%';
           drawPuzzle = (kind, n, done) => {
             const solved = done ? 12 : n; // 열두 번째 조각은 브리프를 완료해야 풀린다
+            const same = pic.dataset.puzzle === kind;
             pic.dataset.puzzle = kind;
+            colorImg.className = 'hcolor' + (SOFT.includes(kind) ? ' soft ' + kind : '');
+            colorImg.style.cssText = '';
+            if (SOFT.includes(kind)) {
+              const k = done ? 1 : n / total;
+              colorImg.style.setProperty('--p', `${(k * 100).toFixed(2)}%`);
+              colorImg.style.setProperty('--o', String(k));
+              colorImg.style.setProperty('--at', origin);
+              const stamp = pic.querySelector('.hstamp');
+              if (same && grayImg.isConnected) { if (done && !stamp) pic.append(h('span', { class: 'hstamp' }, 'WRAP')); if (!done && stamp) stamp.remove(); return; }
+              pic.replaceChildren(grayImg, colorImg, done ? h('span', { class: 'hstamp' }, 'WRAP') : null);
+              return;
+            }
             const kids = [];
             if (kind === 'mix') {
               const cv = h('canvas', { class: 'hcanvas', width: 1200, height: 800 });
