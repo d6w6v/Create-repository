@@ -1229,3 +1229,48 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 .lgrec small { font-family: var(--tt, ui-monospace, "SF Mono", Menlo, Consolas, monospace); font-size: 0.2em; font-weight: 700; letter-spacing: 0.12em; color: var(--red, #e4002b); line-height: 1; }
 @keyframes recBlink { 0% { opacity: 1; } 60% { opacity: 0.18; } }
 .sldot.lgrec { width: auto; height: auto; background: none; margin: 0 0 0.3em 0.1em; }
+
+/* ── 여는 장면 시안들 (슬레이트 말고): 눈 뜨기, 녹화 시작, o 속으로, 플래시 컷 ── */
+.intro { position: fixed; inset: 0; z-index: 90; color: #fff; overflow: hidden; font-family: var(--grot, var(--font-body)); --ink: #fff; }
+.incenter { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.35s ease; }
+.intro.show .incenter { opacity: 1; }
+.inlogo { display: inline-block; white-space: nowrap; font-size: clamp(3rem, 16vw, 9.5rem); font-weight: 800; letter-spacing: -0.065em; line-height: 1.16; }
+.inhole { position: absolute; border-radius: 50%; box-shadow: 0 0 0 220vmax #0b0b0b; transform: translate(-50%, -50%); pointer-events: none; }
+/* 눈 뜨기 */
+.in-eye .inhole { left: 50%; top: 50%; width: 200vmax; height: 0; transition: height 0.2s cubic-bezier(0.4, 0, 0.6, 1); }
+.in-eye.squint .inhole { height: 15vh; transition: height 0.3s cubic-bezier(0.3, 0, 0.3, 1); }
+.in-eye.open .inhole { height: 200vmax; transition: height 0.85s cubic-bezier(0.7, 0, 0.2, 1); }
+.in-eye.squint .incenter, .in-eye.open .incenter { opacity: 0; transition: opacity 0.18s; }
+/* 녹화 시작 */
+.in-rec { background: #0b0b0b; }
+.in-rec.out { opacity: 0; transition: opacity 0.12s; }
+.incorner { position: absolute; width: 5.5vmin; height: 5.5vmin; border: 2px solid #fff; opacity: 0.9; transition: transform 0.14s ease-in; }
+.incorner.c1 { left: 5vmin; top: 5vmin; border-right: 0; border-bottom: 0; }
+.incorner.c2 { right: 5vmin; top: 5vmin; border-left: 0; border-bottom: 0; }
+.incorner.c3 { left: 5vmin; bottom: 5vmin; border-right: 0; border-top: 0; }
+.incorner.c4 { right: 5vmin; bottom: 5vmin; border-left: 0; border-top: 0; }
+.in-rec.out .incorner.c1 { transform: translate(-3vmin, -3vmin); } .in-rec.out .incorner.c2 { transform: translate(3vmin, -3vmin); }
+.in-rec.out .incorner.c3 { transform: translate(-3vmin, 3vmin); } .in-rec.out .incorner.c4 { transform: translate(3vmin, 3vmin); }
+.instate, .intc, .inmeta { position: absolute; font-family: var(--tt, ui-monospace, "SF Mono", Menlo, Consolas, monospace); font-size: clamp(11px, 1.5vw, 14px); letter-spacing: 0.14em; }
+.instate { left: calc(5vmin + 18px); top: calc(5vmin + 14px); display: inline-flex; align-items: center; gap: 8px; color: rgba(255, 255, 255, 0.55); }
+.in-rec.rolling .instate { color: var(--red, #e4002b); font-weight: 700; }
+.instate i { width: 0.8em; height: 0.8em; border-radius: 50%; background: var(--red, #e4002b); animation: recBlink 1s steps(1) infinite; }
+.intc { right: calc(5vmin + 18px); top: calc(5vmin + 14px); font-variant-numeric: tabular-nums; }
+.inmeta { bottom: calc(5vmin + 14px); color: rgba(255, 255, 255, 0.6); white-space: pre; }
+.inmeta.bl { left: calc(5vmin + 18px); } .inmeta.br { right: calc(5vmin + 18px); }
+.inmeta .slnum { color: #fff; }
+@media (max-width: 560px) { .inmeta.br { display: none; } }
+/* o 속으로 */
+.in-iris { background: #0b0b0b; }
+.in-iris.hole { background: none; }
+.in-iris:not(.hole) .inhole { display: none; }
+.in-iris .eyehole { animation: none; }
+.in-iris .inlogo { transition: transform 0.95s cubic-bezier(0.75, 0, 0.9, 0.35), opacity 0.5s ease 0.35s; }
+.in-iris.grow .inhole { width: 320vmax !important; height: 320vmax !important; transition: width 0.95s cubic-bezier(0.75, 0, 0.9, 0.35), height 0.95s cubic-bezier(0.75, 0, 0.9, 0.35); }
+.in-iris.grow .inlogo { transform: scale(46); opacity: 0; }
+/* 플래시 컷 */
+.in-flash { background: #0b0b0b; }
+.in-flash.out { opacity: 0; transition: opacity 0.1s; }
+.inflash { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
+.in-flash.cutting .inflash { display: block; }
+.in-flash .incenter { transition: none; }

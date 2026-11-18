@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '56 · 돌아다니는 것들';
+  const APP_VERSION = '57 · 여는 장면 고르기';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -2553,6 +2553,12 @@
             h('div', { class: 'seg', role: 'group', 'aria-label': '디자인 고르기' }, SKINS.map(([key, name]) =>
               h('button', { class: 'btn' + ((document.documentElement.dataset.skin || '') === key ? ' on' : ''), type: 'button', id: 'skin-' + (key || 'clean'),
                 onclick: () => { setSkin(key); showBackup(); } }, name))))),
+        h('section', { class: 'sec', id: 'intros' }, h('header', {}, h('h2', {}, '여는 장면')),
+          h('div', { class: 'stepbody', style: 'padding-top:18px' },
+            h('p', { class: 'note' }, '앱을 열 때 나오는 장면이에요. 누르면 바로 틀어 보여 주고, 그걸로 정해져요. 장면 도중에 화면을 누르면 넘어가요.'),
+            h('div', { class: 'seg', role: 'group', 'aria-label': '여는 장면 고르기' }, INTROS.map(([key, name]) =>
+              h('button', { class: 'btn' + (introKind() === key ? ' on' : ''), type: 'button', id: 'intro-' + key,
+                onclick: () => { try { localStorage.setItem('eye-intro', key); } catch (e) { /* 이번만 */ } showBackup(); feedIntro(playIntro(key)); } }, name))))),
         h('section', { class: 'sec', id: 'buzz' }, h('header', {}, h('h2', {}, '진동')),
           h('div', { class: 'stepbody', style: 'padding-top:18px' },
             h('p', { class: 'note' }, '예측을 맞히거나 미션을 끝냈을 때 폰이 짧게 떨려요. 컴퓨터에서는 아무 일도 일어나지 않아요.'),
@@ -3462,11 +3468,83 @@
   }
 
   window.addEventListener('hashchange', route);
-  const fillSlate = slateIntro();
-  openDB().then(async () => {
-    route();
-    if (fillSlate) { try { fillSlate(await gameState()); } catch (e) { /* 숫자 없이도 열린다 */ } }
-  });
+  /* ───────── 여는 장면 여러 가지: 백업 탭에서 고르고 바로 틀어 볼 수 있다 ───────── */
+  const INTROS = [['slate', '슬레이트'], ['eye', '눈 뜨기'], ['rec', '녹화 시작'], ['iris', 'o 속으로'], ['flash', '플래시 컷'], ['none', '없음']];
+  const introKind = () => { try { const k = localStorage.getItem('eye-intro'); if (INTROS.some((x) => x[0] === k)) return k; } catch (e) { /* 기본값 */ } return 'slate'; };
+  const introLogo = () => h('strong', { class: 'inlogo' }, 'd', eyeO(), 'p', h('span', { class: 'lge1' }, 'e'), 'y', h('span', { class: 'lge2' }, 'e'), h('span', { class: 'lgrec' }, h('i', {}), h('small', {}, 'REC')));
+  function playIntro(kind) {
+    document.querySelectorAll('#slate').forEach((e) => e.remove());
+    if (kind === 'none' || matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
+    if (kind === 'slate') { const fill = slateIntro(); return fill ? { fill, feed() {} } : null; }
+    const ov = h('div', { class: 'intro in-' + kind, id: 'slate', 'aria-hidden': 'true' });
+    const timers = []; let gone = false; let raf = 0;
+    const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+    const end = (ms) => { if (gone) return; gone = true; timers.forEach(clearTimeout); cancelAnimationFrame(raf); ov.classList.add('out'); setTimeout(() => ov.remove(), ms); };
+    ov.addEventListener('pointerdown', () => end(160));
+    const logo = introLogo();
+    const center = h('div', { class: 'incenter' }, logo);
+    let fill = () => {}; let feed = () => {};
+
+    if (kind === 'eye') { // 감긴 눈 안쪽 같은 검은 화면 → 실눈 → 다시 감김 → 번쩍 뜬다
+      ov.append(h('span', { class: 'inhole' }), center);
+      at(60, () => ov.classList.add('show'));
+      at(950, () => ov.classList.add('squint'));
+      at(1330, () => ov.classList.remove('squint'));
+      at(1560, () => ov.classList.add('open'));
+      at(2450, () => end(0));
+    } else if (kind === 'rec') { // 카메라 화면: 대기 → 녹화 시작, 타임코드가 돈다 → 컷
+      const num = () => h('span', { class: 'slnum' }, '--');
+      const roll = num(); const scene = num(); const take = num();
+      const d = new Date();
+      const tc = h('span', { class: 'intc' }, '00:00:00:00');
+      const state = h('span', { class: 'instate' }, 'STBY');
+      ov.append(h('i', { class: 'incorner c1' }), h('i', { class: 'incorner c2' }), h('i', { class: 'incorner c3' }), h('i', { class: 'incorner c4' }),
+        state, tc, h('span', { class: 'inmeta bl' }, 'ROLL ', roll, '  SCENE ', scene, '  TAKE ', take),
+        h('span', { class: 'inmeta br' }, `${d.getFullYear()}.${pad(d.getMonth() + 1, 2)}.${pad(d.getDate(), 2)}`), center);
+      fill = (g) => { const day = g.days.size + (g.days.has(dstr(new Date())) ? 0 : 1); roll.textContent = pad(Math.max(1, Math.ceil(day / ROLL)), 2); scene.textContent = pad(g.cards.length, 2); take.textContent = pad(day, 2); };
+      at(60, () => ov.classList.add('show'));
+      at(620, () => { ov.classList.add('rolling'); state.replaceChildren(h('i', {}), 'REC');
+        const t0 = performance.now();
+        const tick = (t) => { const f = Math.floor(((t - t0) / 1000) * 24); tc.textContent = `00:00:${pad(Math.floor(f / 24), 2)}:${pad(f % 24, 2)}`; raf = requestAnimationFrame(tick); };
+        raf = requestAnimationFrame(tick); });
+      at(1950, () => end(140));
+    } else if (kind === 'iris') { // 로고의 o 구멍으로 빨려 들어가듯, 구멍이 커지면서 페이지가 드러난다
+      const hole = h('span', { class: 'inhole' });
+      ov.append(hole, center);
+      at(60, () => ov.classList.add('show'));
+      at(1050, () => {
+        const clip = logo.querySelector('.eyeclip').getBoundingClientRect();
+        const lr = logo.getBoundingClientRect();
+        if (!clip.width) { end(200); return; }
+        const cx = clip.left + clip.width / 2; const cy = clip.top + clip.height / 2;
+        const size = Math.min(clip.width, clip.height) * 0.62;
+        hole.style.cssText = `left:${cx}px;top:${cy}px;width:${size}px;height:${size}px`;
+        logo.style.transformOrigin = `${cx - lr.left}px ${cy - lr.top}px`;
+        ov.classList.add('hole');
+        requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('grow')));
+      });
+      at(2150, () => end(0));
+    } else if (kind === 'flash') { // 내가 분해한 이미지들이 탁탁탁 지나가고, 이름에서 멈춘다
+      const img = h('img', { class: 'inflash', alt: '' });
+      ov.append(img, center);
+      const moves = ['scale(1.05)', 'scale(1.6) translate(8%, -6%)', 'scale(1.25) translate(-6%, 4%)', 'scale(2) translate(-10%, 8%)', 'scale(1.1) translate(3%, 0)', 'scale(1.8) translate(6%, 10%)', 'scale(1.35) translate(-4%, -8%)', 'scale(1.5)', 'scale(1.15) translate(0, 5%)', 'scale(2.2) translate(12%, -4%)'];
+      let started = false;
+      const run = (list) => {
+        if (started || gone) return; started = true;
+        const n = list.length ? Math.max(8, Math.min(12, list.length)) : 0;
+        for (let i = 0; i < n; i++) at(i * 85, () => { img.src = list[i % list.length]; img.style.transform = moves[i % moves.length]; ov.classList.add('cutting'); });
+        at(n * 85, () => { ov.classList.remove('cutting'); ov.classList.add('show'); });
+        at(n * 85 + 850, () => end(120));
+      };
+      feed = run;
+      at(700, () => run([])); // 이미지를 못 받으면 이름만 보여 주고 연다
+    }
+    document.body.append(ov);
+    return { fill, feed };
+  }
+  const feedIntro = async (it) => { if (!it) return; try { const g = await gameState(); it.fill(g); it.feed(g.cards.map(cardSrc).filter(Boolean)); } catch (e) { /* 숫자와 이미지 없이도 열린다 */ } };
+  const firstIntro = playIntro(introKind());
+  openDB().then(() => { route(); feedIntro(firstIntro); });
   if (!PREVIEW && 'serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
