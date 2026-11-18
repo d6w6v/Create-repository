@@ -1128,3 +1128,9 @@ html[data-skin="school"] #similar > .stepbody { padding-top: 14px; gap: 14px; }
 .slmeta { display: inline-flex; gap: 8px; align-items: baseline; font-family: var(--tt, ui-monospace, "SF Mono", Menlo, Consolas, monospace); font-size: 11px; letter-spacing: 0.14em; }
 .sllabel { color: rgba(255, 255, 255, 0.45); }
 .slnum { color: #fff; font-variant-numeric: tabular-nums; }
+
+/* ── 로고: 마지막 E를 뒤집어 E Y Ǝ 가 대칭이 되게. 빨간 네모는 눈처럼 가끔 깜빡인다 ── */
+.flipE { display: inline-block; transform: scaleX(-1); margin-left: 0.035em; }
+@keyframes eyeBlink { 0%, 91%, 100% { transform: scaleY(1); } 94%, 96% { transform: scaleY(0.08); } }
+html[data-skin="school"] .top h1::after { transform-origin: 50% 100%; animation: eyeBlink 4.6s ease-in-out infinite; }
+.slate-ov.title .sldot { animation: eyeBlink 4.6s ease-in-out 1s infinite; transform-origin: 50% 100%; }
