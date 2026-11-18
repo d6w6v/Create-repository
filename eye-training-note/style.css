@@ -1130,11 +1130,25 @@ html[data-skin="school"] #similar > .stepbody { padding-top: 14px; gap: 14px; }
 .slnum { color: #fff; font-variant-numeric: tabular-nums; }
 
 /* ── 로고: 소문자 dopeye. e 두 개는 바깥으로 살짝 눕고, o는 눈처럼 깜빡이고, 빨간 네모는 눈꺼풀이 반쯤 덮였다 ── */
-.lge1, .lge2, .lgo { display: inline-block; }
+.lge1, .lge2 { display: inline-block; }
 .lge1 { transform: rotate(-14deg); transform-origin: 50% 70%; }
 .lge2 { transform: rotate(14deg); transform-origin: 50% 70%; }
-.lgo { transform-origin: 50% 64%; animation: oBlink 5.2s ease-in-out infinite; }
-@keyframes oBlink { 0%, 88%, 100% { transform: scaleY(1); } 91% { transform: scaleY(0.08); } 94% { transform: scaleY(1); } 96% { transform: scaleY(0.08); } 98% { transform: scaleY(1); } }
+/* o는 납작해지지 않는다. 글자 속 구멍 위로 눈꺼풀이 내려와 감기고, 아래 눈꺼풀이 조금 올라와 만난다 */
+.eyeo { position: relative; display: inline-block; }
+.eyeclip { position: absolute; overflow: hidden; border-radius: 50%; pointer-events: none; }
+/* 뜬 눈은 둥근 구멍. 위아래 눈꺼풀이 다가와 아몬드 모양으로 좁아지다가 한 줄로 닫힌다 */
+.eyehole { position: absolute; left: -12%; width: 124%; top: -12%; height: 124%; border-radius: 50%; box-shadow: 0 0 0 999px currentColor; animation: eyeShut 5.6s infinite; }
+/* 빠르게 감고(약 0.1초) 잠깐 머물고 조금 느리게 뜬다. 한 번, 그리고 바로 한 번 더 */
+@keyframes eyeShut {
+  0%, 84%, 100% { top: -12%; height: 124%; animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.5); }
+  86% { top: 64%; height: 0%; }
+  87.2% { top: 64%; height: 0%; animation-timing-function: cubic-bezier(0.2, 0.6, 0.4, 1); }
+  90.5% { top: -12%; height: 124%; }
+  92.5% { top: -12%; height: 124%; animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.5); }
+  94.3% { top: 64%; height: 0%; }
+  95.2% { top: 64%; height: 0%; animation-timing-function: cubic-bezier(0.2, 0.6, 0.4, 1); }
+  98.5% { top: -12%; height: 124%; }
+}
 .lglid { display: inline-block; position: relative; width: 0.3em; height: 0.3em; margin-left: 0.1em; background: var(--red, #e4002b); }
 .lglid::before { content: ""; position: absolute; left: -0.035em; right: -0.035em; top: -0.035em; height: 54%; background: currentColor; }
 html[data-skin="school"] .top h1.logo { letter-spacing: -0.065em; line-height: 1; padding-bottom: 0.06em; }
@@ -1142,9 +1156,8 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 /* 여는 장면 속 로고 */
 .sltitle { letter-spacing: -0.065em; line-height: 1.16; }
 .slup { padding-bottom: 0; }
-.slch.lge1, .slch.lge2, .slch.lgo { clip-path: inset(-0.2em -0.3em -0.2em -0.3em); }
-.slate-ov:not(.title) .slch.lgo { animation: none; }
-.slate-ov.title .slch.lgo { animation-delay: 1.4s; }
+.slch.lge1, .slch.lge2 { clip-path: inset(-0.2em -0.3em -0.2em -0.3em); }
+.slate-ov:not(.title) .eyehole { animation: none; }
 .sldot.lglid { width: 0.28em; height: 0.28em; margin: 0 0 0.232em 0.09em; }
 
 /* ── 픽셀 친구들을 화면 구석에: 이미지 위로 고개를 내밀고, 이미지 아래 가장자리를 걷고, 미션 머리줄에 깃발 ── */

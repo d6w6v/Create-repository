@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '54 · 새 로고';
+  const APP_VERSION = '55 · 감기는 눈';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -3372,7 +3372,7 @@
       'aria-current': active === key ? 'page' : null, onclick: () => { location.hash = hash; } }, name);
     return h('div', { class: 'top' },
       h('div', {},
-        h('h1', { class: 'logo', 'aria-label': 'DOPEYE' }, 'd', h('span', { class: 'lgo' }, 'o'), 'p', h('span', { class: 'lge1' }, 'e'), 'y', h('span', { class: 'lge2' }, 'e'), h('span', { class: 'lglid' })),
+        h('h1', { class: 'logo', 'aria-label': 'DOPEYE' }, 'd', eyeO(), 'p', h('span', { class: 'lge1' }, 'e'), 'y', h('span', { class: 'lge2' }, 'e'), h('span', { class: 'lglid' })),
         h('div', { class: 'sub' }, sub, h('span', { class: 'ver' }, `  v${APP_VERSION.split(' ')[0]}`))),
       h('div', { class: 'row' },
         h('nav', { class: 'tabs', 'aria-label': '화면 이동' }, tab('book', '교과서', 'book'), tab('list', '카드', 'list'), tab('series', '시리즈', 'series'), tab('diary', '일기', 'diary'), tab('look', '돌아보기', 'look'), tab('backup', '백업', 'backup')),
@@ -3404,6 +3404,32 @@
     if (name.startsWith('compare-')) return showCompare(name.slice(8));
     return showList();
   }
+  /* ───────── 로고의 o: 글자 속 구멍 위로 눈꺼풀이 내려와 감긴다 ───────── */
+  function fitEye(o) { // 지금 쓰이는 글꼴에서 o 글자의 자리를 재서, 눈꺼풀을 구멍 위에 정확히 얹는다
+    if (!o.isConnected) return;
+    const cs = getComputedStyle(o);
+    const cv = document.createElement('canvas').getContext('2d');
+    cv.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const m = cv.measureText('o');
+    if (!(m.actualBoundingBoxAscent > 0)) return;
+    const probe = h('span', { style: 'display:inline-block;width:0;height:0' });
+    o.prepend(probe); const base = probe.offsetTop; probe.remove(); // 글자가 놓인 밑줄의 높이
+    const w = m.actualBoundingBoxLeft + m.actualBoundingBoxRight; const hgt = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+    const cx = (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2; const cy = base + (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2;
+    const clip = o.querySelector('.eyeclip');
+    const cw = w * 0.6; const ch = hgt * 0.62; // 구멍보다 조금 크게. 넘치는 부분은 글자 획에 가려 안 보인다
+    clip.style.cssText = `left:${(cx - cw / 2).toFixed(2)}px;top:${(cy - ch / 2).toFixed(2)}px;width:${cw.toFixed(2)}px;height:${ch.toFixed(2)}px`;
+  }
+  function eyeO() {
+    const o = h('span', { class: 'eyeo' }, 'o', h('span', { class: 'eyeclip', 'aria-hidden': 'true' }, h('i', { class: 'eyehole' })));
+    const tryFit = (left) => { if (o.isConnected) fitEye(o); else if (left > 0) setTimeout(() => tryFit(left - 1), 50); }; // 화면에 붙은 뒤에 잰다
+    requestAnimationFrame(() => tryFit(80));
+    return o;
+  }
+  const refitEyes = () => document.querySelectorAll('.eyeo').forEach(fitEye);
+  window.addEventListener('resize', refitEyes);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(refitEyes);
+
   /* ───────── 여는 장면: 가는 줄 두 개가 딱 붙고, 그 자리에서 이름이 올라온 뒤 위아래로 열린다 ───────── */
   function slateIntro() {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
@@ -3414,7 +3440,7 @@
     const ov = h('div', { class: 'slate-ov', id: 'slate', 'aria-hidden': 'true' },
       h('div', { class: 'slup' },
         h('strong', { class: 'sltitle' },
-          [...'dopeye'].map((ch, i) => h('span', { class: 'slch' + (i === 1 ? ' lgo' : i === 3 ? ' lge1' : i === 5 ? ' lge2' : '') }, h('span', { style: `transition-delay:${i * 38}ms` }, ch))),
+          [...'dopeye'].map((ch, i) => h('span', { class: 'slch' + (i === 3 ? ' lge1' : i === 5 ? ' lge2' : '') }, h('span', { style: `transition-delay:${i * 38}ms` }, i === 1 ? eyeO() : ch))),
           h('span', { class: 'sldot lglid' }))),
       h('div', { class: 'sldown' },
         h('div', { class: 'slmetas' }, meta('ROLL', roll), meta('SCENE', scene), meta('TAKE', take),
