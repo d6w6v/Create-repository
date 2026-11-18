@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '53 · 번지는 색';
+  const APP_VERSION = '54 · 새 로고';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -3372,7 +3372,7 @@
       'aria-current': active === key ? 'page' : null, onclick: () => { location.hash = hash; } }, name);
     return h('div', { class: 'top' },
       h('div', {},
-        h('h1', { 'aria-label': 'DOPEYE' }, 'DOPEY', h('span', { class: 'flipE', 'aria-hidden': 'true' }, 'E')),
+        h('h1', { class: 'logo', 'aria-label': 'DOPEYE' }, 'd', h('span', { class: 'lgo' }, 'o'), 'p', h('span', { class: 'lge1' }, 'e'), 'y', h('span', { class: 'lge2' }, 'e'), h('span', { class: 'lglid' })),
         h('div', { class: 'sub' }, sub, h('span', { class: 'ver' }, `  v${APP_VERSION.split(' ')[0]}`))),
       h('div', { class: 'row' },
         h('nav', { class: 'tabs', 'aria-label': '화면 이동' }, tab('book', '교과서', 'book'), tab('list', '카드', 'list'), tab('series', '시리즈', 'series'), tab('diary', '일기', 'diary'), tab('look', '돌아보기', 'look'), tab('backup', '백업', 'backup')),
@@ -3414,8 +3414,8 @@
     const ov = h('div', { class: 'slate-ov', id: 'slate', 'aria-hidden': 'true' },
       h('div', { class: 'slup' },
         h('strong', { class: 'sltitle' },
-          [...'DOPEYE'].map((ch, i) => h('span', { class: 'slch' + (i === 5 ? ' flipE' : '') }, h('span', { style: `transition-delay:${i * 38}ms` }, ch))),
-          h('span', { class: 'sldot' }))),
+          [...'dopeye'].map((ch, i) => h('span', { class: 'slch' + (i === 1 ? ' lgo' : i === 3 ? ' lge1' : i === 5 ? ' lge2' : '') }, h('span', { style: `transition-delay:${i * 38}ms` }, ch))),
+          h('span', { class: 'sldot lglid' }))),
       h('div', { class: 'sldown' },
         h('div', { class: 'slmetas' }, meta('ROLL', roll), meta('SCENE', scene), meta('TAKE', take),
           meta('DATE', h('span', { class: 'slnum' }, `${d.getFullYear()}.${pad(d.getMonth() + 1, 2)}.${pad(d.getDate(), 2)}`)))),
