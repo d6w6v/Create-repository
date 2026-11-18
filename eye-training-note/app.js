@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '44 · 필터와 비슷한 컷';
+  const APP_VERSION = '45 · 픽셀';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -621,6 +621,11 @@
         const tier = old ? null : MISSION_TIERS[picked];
         const text = old ? missionOf(tid) : tier ? missionFor(tid, picked) : '';
         const xp = old ? 25 : tier ? tier.xp : 0;
+        const streak = missionStreak(ms.done);
+        const flags = Math.min(7, streak);
+        const track = h('div', { class: 'pxtrack', id: 'px-track', role: 'img', 'aria-label': `미션 연속 ${streak}일` },
+          Array.from({ length: 7 }, (_, i) => h('span', { class: 'pxslot' + (i < flags ? ' on' : '') }, i < flags ? sprite(PX_FLAG, 3) : null, i === flags ? pxHero(3) : null)),
+          h('span', { class: 'mono pxnote' }, `연속 ${streak}/7`));
         box.replaceChildren(
           h('header', {}, h('h2', {}, '오늘의 미션'), h('span', { class: 'chip-state' + (done ? ' done' : '') }, done ? '완료' : tier ? '진행 중' : '하나 고르기')),
           !tier && !old
@@ -635,7 +640,8 @@
                 fact('연속', `${missionStreak(ms.done)}일`)),
               done ? null : h('div', { class: 'row' },
                 h('button', { class: 'btn small', type: 'button', id: 'mission-done', onclick: async () => { ms.done[tid] = Date.now(); ms.xp[tid] = xp; await store.put('meta', ms); celebrate(`미션 완료 · +${xp} XP`, 18); showList(); } }, '해냈어요'),
-                h('button', { class: 'btn small quiet', type: 'button', id: 'mission-repick', onclick: async () => { delete ms.pick[tid]; await store.put('meta', ms); drawMission(); } }, '다시 고르기'))));
+                h('button', { class: 'btn small quiet', type: 'button', id: 'mission-repick', onclick: async () => { delete ms.pick[tid]; await store.put('meta', ms); drawMission(); } }, '다시 고르기'))),
+          track);
       };
       drawMission();
       const g = await gameState();
@@ -669,11 +675,22 @@
       const slices = bCard ? h('div', { class: 'hslices', role: 'img', 'aria-label': `${hp.total}단계 중 ${cut}단계 끝냄` },
         STEPS.map((st, i) => h('span', { class: 'hs' + (i < cut ? ' done' : i === cut && !beaten ? ' next' : '') }, pad(i + 1, 2)))) : null;
 
+      // 픽셀 무대: 눈알이 단계를 끝낸 만큼 보스 쪽으로 걸어간다
+      const heroEl = pxHero(4); heroEl.classList.add('pxhero');
+      const stage = h('div', { class: 'pxstage' + (beaten ? ' won' : ''), id: 'px-stage', role: 'img', 'aria-label': bCard ? `보스까지 ${hp.left}단계 남음` : '보스가 기다리는 중' },
+        heroEl, sprite(PX_BOSS[BOSSES.findIndex((x) => x[0] === bName)] || PX_BOSS[0], 4, 'pxboss'));
+      {
+        const total = hp ? hp.total : STEPS.length;
+        let from = cut; try { const m = (localStorage.getItem('eye-boss-walk') || '').split('|'); from = m[0] === wid ? Math.min(cut, Number(m[1]) || 0) : 0; localStorage.setItem('eye-boss-walk', `${wid}|${cut}`); } catch (e) { /* 그냥 표시 */ }
+        heroEl.style.setProperty('--p', String(from / total));
+        if (from !== cut) requestAnimationFrame(() => requestAnimationFrame(() => heroEl.style.setProperty('--p', String(cut / total))));
+      }
       const bossBox = h('section', { class: 'sec', id: 'boss' },
         h('header', {}, h('h2', {}, '이번 주 보스'), h('span', { class: 'chip-state' + (beaten ? ' done' : '') }, beaten ? '격파' : bCard ? '도전 중' : '도전 전')),
         h('div', { class: 'glance' },
           h('p', { class: 'missiontext' }, bName, bCard ? h('span', { class: 'hcount mono' }, `${cut}/${hp.total}`) : null),
           h('p', { class: 'note' }, bCard && !beaten ? '단계를 하나 끝낼 때마다 이미지 한 조각에 색이 돌아와요.' : bDesc),
+          stage,
           h('dl', { class: 'facts' },
             fact('방식', '깊게 파기'),
             fact('분량', '11단계 전부'),
@@ -2614,6 +2631,32 @@
     ['과잉의 보스', '소품과 색이 넘치는 이미지. 스무 가지가 넘는 것 중 기둥을 가려내야 해요.'],
     ['평범함의 보스', '아무것도 특별해 보이지 않는데 끌리는 이미지. "틀린 것"을 찾기가 가장 어려워요.'],
   ];
+  /* 픽셀 그림: 글자 한 칸이 점 하나. k 검정, w 흰색, r 빨강, g 회색, . 빈 칸 */
+  const PX_HERO = [[
+    '....kkkk....', '..kkwwwwkk..', '.kwwwwwwwwk.', '.kwwwkkwwwk.', 'kwwwkrrkwwwk', 'kwwwkrrkwwwk',
+    '.kwwwkkwwwk.', '.kwwwwwwwwk.', '..kkwwwwkk..', '....kkkk....', '...k....k...', '..kk....kk..'], [
+    '....kkkk....', '..kkwwwwkk..', '.kwwwwwwwwk.', '.kwwwkkwwwk.', 'kwwwkrrkwwwk', 'kwwwkrrkwwwk',
+    '.kwwwkkwwwk.', '.kwwwwwwwwk.', '..kkwwwwkk..', '....kkkk....', '....k..k....', '...kk..kk...']];
+  const PX_FLAG = ['krrr.', 'krrrr', 'krrr.', 'k....', 'k....', 'k....', 'k....', 'kkk..'];
+  const PX_BOSS = [
+    ['......kk......', '.k....kk....k.', '..k..rrrr..k..', '....rrrrrr....', '...rrwrrwrr...', 'kk.rrkrrkrr.kk', 'kk.rrrrrrrr.kk', '...rrrkkrrr...', '....rrrrrr....', '..k..rrrr..k..', '.k....kk....k.', '......kk......'],
+    ['....kkkkkk....', '..kkkkkkkkkk..', '.kkkkkkkkkkkk.', 'kkkkkkkkkkkkkk', 'kkwwkkkkkkwwkk', 'kkwrkkkkkkrwkk', 'kkkkkkkkkkkkkk', 'kkkkkkkkkkkkkk', 'kkkkkrrrrkkkkk', '.kkkkkkkkkkkk.', '.kk.kkk.kkk.kk', '.k...k...k...k'],
+    ['.....kkkk.....', '....kwwwwk....', '.kkkkwkkwkkkk.', 'kwwwkwwwwkwwwk', 'kwkwkwrrwkwkwk', 'kwwwkkkkkkwwwk', 'kwrwkkkkkkwrwk', '.kkkkkkkkkkkk.', '.kkkkkkkkkkkk.', '..kkkkkkkkkk..', '..kk.kkkk.kk..', '..kk.kk.k.kk..'],
+    ['kkkkkkkkkkkkkk', 'k............k', 'k............k', 'k..kk....kk..k', 'k..kr....rk..k', 'k............k', 'k............k', 'k....kkkk....k', 'k............k', 'kkkkkkkkkkkkkk', '..kk......kk..', '.kkk......kkk.'],
+    ['...kkkkkkkk...', '..kkkkkwwwwk..', '.kkkkkkwwwwwk.', 'kkkkkkkwwwwwwk', 'kkwwkkkwwkkwwk', 'kkwwkkkwwkkwwk', 'kkkkkkkwwwwwwk', 'kkkkkkkwwwwwwk', 'kkkwwwwkkkkwwk', '.kkkkkkwwwwwk.', '..kkkkkwwwwk..', '...kkkkkkkk...'],
+    ['g....kkkkkk...', '.g..kkkkkkkk..', 'g..kkkkkkkkkk.', '..gkkwwkkwwkk.', 'g..kkwrkkwrkk.', '.g.kkkkkkkkkk.', 'g..kkkkkkkkkk.', '..gkkkkrrkkkk.', 'g..kkkkkkkkkk.', '.g.kkkkkkkkkk.', 'g..kk.kkk.kkk.', '..g.k..k...k..'],
+    ['..kkk....kkk..', '.kkkkkkkkkkkk.', 'kkwwkkwwkkwwkk', 'kkwrkkwrkkwrkk', 'kkkkkkkkkkkkkk', 'kwwkkwwkkwwkkk', 'kwrkkwrkkwrkkk', 'kkkkkkkkkkkkkk', 'kkrrrrrrrrrrkk', '.kkkkkkkkkkkk.', '.kk.kk.kk.kk..', '.k..k..k..k...'],
+    ['..............', '.kkkkkkkkkkkk.', '.kwwwwwwwwwwk.', '.kwwwwwwwwwwk.', '.kwwkwwwwkwwk.', '.kwwwwwwwwwwk.', '.kwwwwwwwwwwk.', '.kwwwkkkkwwwk.', '.kwwwwwwwwwwk.', '.kkkkkkkkkkkk.', '...kk....kk...', '...kk....kk...'],
+  ];
+  function sprite(rows, scale, cls) {
+    const w = rows[0].length; const fill = { k: '#111', w: '#fff', r: 'var(--red, #e4002b)', g: '#9a9a9a' };
+    let rects = '';
+    rows.forEach((row, y) => { let x = 0; while (x < w) { const ch = row[x]; let n = 1; while (x + n < w && row[x + n] === ch) n++; if (ch !== '.') rects += `<rect x="${x}" y="${y}" width="${n}" height="1" style="fill:${fill[ch]}"/>`; x += n; } });
+    const el = h('span', { class: 'px ' + (cls || ''), 'aria-hidden': 'true' });
+    el.innerHTML = `<svg viewBox="0 0 ${w} ${rows.length}" width="${w * scale}" height="${rows.length * scale}" shape-rendering="crispEdges">${rects}</svg>`;
+    return el;
+  }
+  const pxHero = (scale) => h('span', { class: 'pxwalk', style: `width:${12 * scale}px;height:${12 * scale}px` }, sprite(PX_HERO[0], scale, 'f1'), sprite(PX_HERO[1], scale, 'f2'));
   const weekId = () => dstr(weekStart(new Date()));
   const bossOf = (wid) => BOSSES[[...wid].reduce((x, ch) => x * 31 + ch.charCodeAt(0), 3) % BOSSES.length];
   const bossBeaten = (c) => !!c.boss && c.mode === 'deep' && cardDone(c) && c.unknown.length <= 3;

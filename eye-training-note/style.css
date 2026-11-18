@@ -1034,6 +1034,29 @@ html[data-skin="school"] .facts dt { font-family: var(--tt); }
 html[data-skin="school"] .fpanel { border-color: #dcdcdc; }
 html[data-skin="school"] #similar > .stepbody { padding-top: 14px; gap: 14px; }
 
+/* ── 픽셀 그림: 눈알 주인공, 주마다 다른 보스, 깃발. 검정·흰색·빨강만 ── */
+.px { display: block; line-height: 0; }
+.px svg { display: block; }
+.pxwalk { position: relative; display: block; flex: none; }
+.pxwalk > .px { position: absolute; left: 0; top: 0; }
+.pxwalk > .f2 { opacity: 0; }
+.pxwalk > .f1 { animation: pxA 0.44s steps(1) infinite; }
+.pxwalk > .f2 { animation: pxB 0.44s steps(1) infinite; }
+@keyframes pxA { 0% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes pxB { 0% { opacity: 0; } 50% { opacity: 1; } }
+@keyframes pxBob { 0% { transform: none; } 50% { transform: translateY(-4px); } }
+@keyframes pxJump { 0% { transform: none; } 50% { transform: translateY(-12px); } }
+.pxstage { position: relative; height: 62px; margin: 2px 0 0; border-bottom: 2px solid var(--ink); overflow: hidden; }
+.pxstage .pxhero { position: absolute; bottom: 0; left: calc((100% - 136px) * var(--p, 0)); transition: left 1.6s steps(16); }
+.pxstage .pxboss { position: absolute; bottom: 0; right: 0; animation: pxBob 0.9s steps(1) infinite; }
+.pxstage.won .pxboss { animation: none; transform: scaleY(0.3); transform-origin: 50% 100%; opacity: 0.35; }
+.pxstage.won .pxhero { animation: pxJump 0.5s steps(1) infinite; }
+.pxtrack { display: flex; align-items: flex-end; gap: 0; margin-top: 14px; border-bottom: 2px solid var(--ink); min-height: 40px; }
+.pxslot { flex: 1; min-width: 0; height: 38px; display: flex; align-items: flex-end; justify-content: center; position: relative; }
+.pxslot:not(.on):empty::after { content: ""; width: 3px; height: 6px; background: #c8c8c8; }
+.pxnote { flex: none; align-self: center; margin-left: 12px; color: var(--mute); }
+@media (prefers-reduced-motion: reduce) { .pxstage .pxhero { transition: none; } }
+
 /* ── 여는 장면: 검은 화면, 가는 줄 두 개(슬레이트를 줄로만 줄인 것), 이름, 작은 정보 한 줄. 장식 없음 ── */
 .slate-ov { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; color: #fff; font-family: var(--grot, var(--font-body)); overflow: hidden;
   --seam: 54%; --out: cubic-bezier(0.83, 0, 0.17, 1); --rise: cubic-bezier(0.16, 1, 0.3, 1); }
