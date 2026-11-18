@@ -1223,12 +1223,13 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 .mflags { border-bottom: 0; height: auto; gap: 4px; padding: 0; align-items: center; }
 .mdot { width: 8px; height: 8px; box-shadow: inset 0 0 0 1px #bdbdbd; }
 .mdot.on { background: var(--red, #e4002b); box-shadow: none; }
-/* ── 로고 끝: 녹화 표시. 빨간 점이 깜빡이고 옆에 작게 REC ── */
-.lgrec { display: inline-flex; align-items: center; gap: 0.1em; margin-left: 0.1em; vertical-align: baseline; letter-spacing: 0; }
-.lgrec i { display: block; width: 0.22em; height: 0.22em; border-radius: 50%; background: var(--red, #e4002b); animation: recBlink 1.5s steps(1) infinite; }
-.lgrec small { font-family: var(--tt, ui-monospace, "SF Mono", Menlo, Consolas, monospace); font-size: 0.2em; font-weight: 700; letter-spacing: 0.12em; color: var(--red, #e4002b); line-height: 1; }
+/* ── 로고 끝: 글자 없이 빨간 점 하나. 마침표 자리에 앉아 녹화 램프처럼 천천히 숨 쉰다 ── */
+.lgrec { display: inline-block; margin-left: 0.07em; letter-spacing: 0; }
+.lgrec i { display: inline-block; width: 0.19em; height: 0.19em; border-radius: 50%; background: var(--red, #e4002b); animation: recPulse 2.6s ease-in-out infinite; }
+@keyframes recPulse { 0%, 55%, 100% { opacity: 1; } 78% { opacity: 0.22; } }
 @keyframes recBlink { 0% { opacity: 1; } 60% { opacity: 0.18; } }
-.sldot.lgrec { width: auto; height: auto; background: none; margin: 0 0 0.3em 0.1em; }
+.sldot.lgrec { width: auto; height: auto; background: none; margin: 0 0 0.232em 0.07em; line-height: 0; }
+.sldot.lgrec i { display: block; }
 
 /* ── 여는 장면 시안들 (슬레이트 말고): 눈 뜨기, 녹화 시작, o 속으로, 플래시 컷 ── */
 .intro { position: fixed; inset: 0; z-index: 90; color: #fff; overflow: hidden; font-family: var(--grot, var(--font-body)); --ink: #fff; }
