@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '49 · 로고';
+  const APP_VERSION = '50 · 구석구석';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -623,11 +623,10 @@
         const xp = old ? 25 : tier ? tier.xp : 0;
         const streak = missionStreak(ms.done);
         const flags = Math.min(7, streak);
-        const track = h('div', { class: 'pxtrack', id: 'px-track', role: 'img', 'aria-label': `미션 연속 ${streak}일` },
-          Array.from({ length: 7 }, (_, i) => h('span', { class: 'pxslot' + (i < flags ? ' on' : '') }, i < flags ? sprite(PX_FLAG, 3) : null, i === flags ? pxHero(2) : null)),
-          h('span', { class: 'mono pxnote' }, `연속 ${streak}/7`));
+        const flagRow = h('span', { class: 'mflags', id: 'px-track', role: 'img', 'aria-label': `미션 연속 ${streak}일` },
+          Array.from({ length: 7 }, (_, i) => h('span', { class: 'mflag' + (i < flags ? ' on' : '') }, i < flags ? sprite(PX_FLAG, 2) : null)));
         box.replaceChildren(
-          h('header', {}, h('h2', {}, '오늘의 미션'), h('span', { class: 'chip-state' + (done ? ' done' : '') }, done ? '완료' : tier ? '진행 중' : '하나 고르기')),
+          h('header', {}, h('h2', {}, '오늘의 미션'), h('span', { class: 'mright' }, flagRow, h('span', { class: 'chip-state' + (done ? ' done' : '') }, done ? '완료' : tier ? '진행 중' : '하나 고르기'))),
           !tier && !old
             ? h('div', { class: 'mopts' }, MISSION_TIERS.map((t, i) => h('button', { class: 'mopt', type: 'button', id: 'mission-pick-' + i,
               onclick: async () => { ms.pick[tid] = i; await store.put('meta', ms); tick(); drawMission(); } },
@@ -640,8 +639,7 @@
                 fact('연속', `${missionStreak(ms.done)}일`)),
               done ? null : h('div', { class: 'row' },
                 h('button', { class: 'btn small', type: 'button', id: 'mission-done', onclick: async () => { ms.done[tid] = Date.now(); ms.xp[tid] = xp; await store.put('meta', ms); celebrate(`미션 완료 · +${xp} XP`, 18); showList(); } }, '해냈어요'),
-                h('button', { class: 'btn small quiet', type: 'button', id: 'mission-repick', onclick: async () => { delete ms.pick[tid]; await store.put('meta', ms); drawMission(); } }, '다시 고르기'))),
-          track);
+                h('button', { class: 'btn small quiet', type: 'button', id: 'mission-repick', onclick: async () => { delete ms.pick[tid]; await store.put('meta', ms); drawMission(); } }, '다시 고르기'))));
       };
       drawMission();
       const g = await gameState();
@@ -725,10 +723,10 @@
       const briefSec = h('section', { class: 'sec', id: 'boss' },
         h('header', {},
           h('div', { class: 'bhead' }, h('h2', {}, '이번 주 브리프'),
-            bCard ? h('span', { class: 'btitle' }, sprite(bossPx, 2, 'pxboss'), h('strong', {}, bName), h('span', { class: 'bko' }, bKo), h('span', { class: 'hcount mono' }, `${cut}/${hp.total}`)) : null),
+            bCard ? h('span', { class: 'btitle' }, h('strong', {}, bName), h('span', { class: 'bko' }, bKo), h('span', { class: 'hcount mono' }, `${cut}/${hp.total}`)) : null),
           h('span', { class: 'chip-state' + (beaten ? ' done' : '') }, beaten ? '완료' : bCard ? '진행 중' : '시작 전')),
         h('div', { class: 'hero', id: 'hero' },
-          h('div', { class: 'heroleft' }, pic, lane, slices, drawPuzzle ? pzPick : null),
+          h('div', { class: 'heroleft' }, bCard ? h('span', { class: 'pxperch', 'aria-hidden': 'true' }, sprite(bossPx, 3)) : null, pic, lane, slices, drawPuzzle ? pzPick : null),
           h('div', { class: 'heroright' },
             h('div', { class: 'glance', id: 'brief-info' },
               h('p', { class: 'missiontext' }, bCard ? bDesc : '이 주제에 맞는 이미지를 직접 골라 오면 시작돼요.'),
@@ -2673,18 +2671,18 @@
     ['NOTHING SPECIAL', '특별한 게 없어 보이는데 끌리는 이미지. "틀린 것"을 찾기가 가장 어려워요.', '평범함'],
   ];
   /* 픽셀 그림: 글자 한 칸이 점 하나. k 검정, w 흰색, r 빨강, g 회색, . 빈 칸 */
-  const PX_HERO = [['................', '..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kwwwwkkkkwwwwk.', '.kwwwkwrrwkwwwk.', 'kwwwwkwrrwkwwwwk', 'kwwwwwkkkkwwwwwk', 'kwkwwwwwwwwwwkwk', 'kwwrwwkwwkwwrwwk', 'kwwwwwwkkwwwwwwk', '.kwwwwwwwwwwwwk.', '..kkwwwwwwwwkk..', '...kkkk..kkkk...', '...kk......kk...'],
-    ['................', '..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kwwwwkkkkwwwwk.', '.kwwwkwrrwkwwwk.', 'kwwwwkwrrwkwwwwk', 'kwwwwwkkkkwwwwwk', 'kwkwwwwwwwwwwkwk', 'kwgrwwkwwkwwrwwk', 'kwwwwwwkkwwwwwwk', '.kwwwwwwwwwwwwk.', '..kkwwwwwwwwkk..', '...kkkk..kkkk...', '.....kk..kk.....']];
+  const PX_HERO = [['..kk........kk..', '.kwwk......k.wk.', '.kwwwkkkkkkwwwk.', '..kwwkkkkkkwwk..', '.kwwkwwrrwwkwwk.', '.kwkwwrkkrwwkwk.', 'kwwkwwrkkrwwkwwk', 'kwwwkwwrrwwkwwwk', 'kwwwwkkkkkkwwwwk', 'kwkwwwwwwwwwkkwk', 'kwrwwwwwwwwwrkwk', 'kwrkwkwkwkwkwwwk', '.kwwkwkwkwkwwwk.', '..kkwwrwwwwwkk..', '...kkkr..kkkk...', '...kk......kk...'],
+    ['..kk........kk..', '.kwwk......k.wk.', '.kwwwkkkkkkwwwk.', '..kwwkkkkkkwwk..', '.kwwkwwrrwwkwwk.', '.kwkwrkkrwwwkwk.', 'kwwkwrkkrwwwkwwk', 'kwwwkwwrrwwkwwwk', 'kwwwwkkkkkkwwwwk', 'kwkwwwwwwwwwkkwk', 'kwrwwwwwwwwwrkwk', 'kwrkwkwkwkwkwwwk', '.kwwkwkwkwkwwwk.', '..kkwwrwwwwwkk..', '...kkk...kkkk...', '.....kkr.kk.....']];
   const PX_FLAG = ['krrr.', 'krrrr', 'krrr.', 'k....', 'k....', 'k....', 'k....', 'kkk..'];
   const PX_BOSS = [
-    ['..kk........kk..', '.krrk......krrk.', '.krrrkkkkkkrrrk.', '..krrrrwwrrrrk..', '.krrrrrrrrrrrrk.', 'krrwwrrrrrrwwrrk', 'krrwkrrrrrrkwrrk', 'krrrrrrrrrrrrrrk', 'krrrkwkwkwkwrrrk', 'krrrwkwkwkwkrrrk', '.krrrrrrrrrrrrk.', '..kkrrrrrrrrkk..', '...kkkk..kkkk...', '...kk......kk...'],
-    ['..kk........kk..', '.kkkk......kkkk.', '.kkkkkkkkkkkkkk.', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', 'kkkwwwkkkkwwwkkk', 'kkkwrwkkkkwrwkkk', 'kkkkkkkkkkkkkkkk', 'kkkwkwkwkwkwkkkk', 'kkkkkkkkkkkkkkkk', '.kkkkkkkkkkkkkk.', '..kkkkkkkkkkkk..', '...kkkk..kkkk...', '...kk......kk...'],
-    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kwkwkwwwwkwkwk.', 'kwwwrwwwwwwrwwwk', 'kwwwwwkwwkwwwwwk', 'kwwwwwwrrwwwwwwk', 'kwkwkwwwwwwkwkwk', 'kwwrwwkwwkwwrwwk', '.kwwwwwkkwwwwwk.', '..kkwwwwwwwwkk..', '...kkkk..kkkk...', '...kk......kk...'],
-    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kwwkkkkkkkkwwk.', 'kwwwkkkkkkkkwwwk', 'kwwwkkkkkkkkwwwk', 'kwrwkkkrkkkkwrwk', 'kwwwkkkkkkkkwwwk', 'kwwwwkkkkkkwwwwk', '.kwwwwwwwwwwwwk.', '..kkwwwwwwwwkk..', '...kkkk..kkkk...', '...kk......kk...'],
-    ['..kk........kk..', '.kkkk......kwwk.', '.kkkkkkkkkkwwwk.', '..kkkkkkwwwwwk..', '.kkkkkkgwwwwwwk.', 'kkkwwkkkgwwkkwwk', 'kkkwrkkgwwwrkwwk', 'kkkkkkkkgwwwwwwk', 'kkkwwwkgwwkkkwwk', 'kkkkkkkkgwwwwwwk', '.kkkkkkkwwwwwwk.', '..kkkkkkwwwwkk..', '...kkkk..kkkk...', '...kk......kk...'],
-    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kwwwwwwwwwwwgk.', 'kwkggwwwwkggwwwk', 'kwkggwwwwkggwwgk', 'kwwwwwwwwwwwwrwk', 'kwwwkkkkgggwwwwk', 'kwwwwrrwwwwwwwwk', '.kwwwwwwwwwwwwk.', '..kkwwwwwwwwkk..', '...kkkk..kkkk...', '...kk......kk...'],
-    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kkkwwkkwwkkwkk.', 'kwkrwwrkwwkrwwwk', 'kwwwwwwwwwwwwwwk', 'kkkwwkkwwkkwwkkk', 'krkwwkrwwrkwwkrk', 'kwwwwwwwwwwwwwwk', '.kwwrrrrrrrrwwk.', '..kkwwwwwwwwkk..', '...kkkk..kkkk...', '...kk......kk...'],
-    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kwwwwwwwwwwwwk.', 'kwwwwwwwwwwwwwwk', 'kwwwkwwwwwwkwwwk', 'kwrwwwwwwwwwwrwk', 'kwwwwwwkkwwwwwwk', 'kwwwwwwwwwwwwwwk', '.kwwwwwwwwwwwwk.', '..kkwwwwwwwwkk..', '...kkkk..kkkk...', '...kk......kk...']
+    ['..kk........kk..', '.krrk......krrk.', '.krrrkkkkkkrrrk.', '..krrrrrrrrrrk..', '.kkkkrrrrrrkkkk.', 'krkwkrrrrrrkwkrk', 'krkkkrrrrrrkkkrk', 'krrkkkkkkkkkkrrk', 'krrwkwkwkwkwkrrk', 'krrkwkwkwkwkwrrk', '.krkkkkkkkkkkrk.', '..kkrrrrrrrrkk..', '...kkkkrrkkkk...', '...kk..r....k...'],
+    ['..kk........kk..', '.kkkk......kkkk.', '.kkkkkkkkkkkkkk.', '..kkkkkkkkkkkk..', '.kkwrkkkkkkrwkk.', 'kkkkkkkwrkkkkkkk', 'kkrkkkkkkkkkwrkk', 'kkkkkrwkkkkkkkkk', 'kkkwkwkwkwkwkkkk', 'kkkkwkwkwkwkwkkk', '.kkkkkkkkrkkkkk.', '..kkkkkkkkkkkk..', '...kkrk..kkkk...', '...kkr.....kk...'],
+    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kkwkwwwwwkwkwk.', 'kwkrkwkwkwkrkwwk', 'kwwkwwkkkwwkwwwk', 'kwwwwwkrkwwwwwwk', 'kkwkwwkkkwwwkwkk', 'kkrkwwwwwwwwkrkk', '.kwwwwkwkwwwwwk.', '..kkwwwrwwwwkk..', '...kkkk..kkkk...', '...kk......kk...'],
+    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkkwwk.', '..kwwkwwwwwwwk..', '.kwwkkkkkkkkwwk.', 'kwwkkkkkkkkkkwwk', 'kwwkkkkkkkkkkwwk', 'kwwkkkkrkkkkkwwk', 'kwwkkkkkkkkkkwwk', 'kwwwkkkkkkkkwwwk', '.kwwwwkwwrwwwwk.', '..kkwwkwwrwwkk..', '...kkkk..rkkk...', '...kk......kk...'],
+    ['..kk........kk..', '.kkkk......kwwk.', '.kkkkkkkkkkwwwk.', '..kkkkkkwwwwwk..', '.kkkkkkgkwwwwwk.', 'kkkwwkkkgwkwkwwk', 'kkkwrkkgkwwkwwwk', 'kkkkkkkkgwkwkwwk', 'kkwkwkwgkwwwwwwk', 'kkkkkkkkgkwkwkwk', '.kkkkkkgkwwwrwk.', '..kkkkkkwwwwrk..', '...kkkk..kkkk...', '...kk......kk...'],
+    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwg..', '.kkkgggwkkgggwk.', 'kwkrgggwkrgggwwk', 'kwkkgggwkkgggwwk', 'kwwwwwwwwwwwwwgk', 'kwkkkkkkgggggwwk', 'kwwkwkwkgggggwwk', '.kwkkkkkggggwwk.', '..kkwwwwwwwwkg..', '...kkkk..kkkk...', '...kk......kk...'],
+    ['..kk........kk..', '.krkk......kkrk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kkkkwkkkwkkkwk.', 'kwkrkwkkrwrkkwwk', 'kkkwwwwwwwwwwkkk', 'krkwkkkwkkkwwkrk', 'kwwwkrkwkrkwwwwk', 'kwkkkkkkkkkkkkwk', '.kwkwkwkwkwkwkk.', '..kkrrrrrrrrkk..', '...kkkk..kkkk...', '...kk......kk...'],
+    ['..kk........kk..', '.kwwk......kwwk.', '.kwwwkkkkkkwwwk.', '..kwwwwwwwwwwk..', '.kwwwwwwwwwwwwk.', 'kwwwkwwwwwwkwwwk', 'kwrwwwwwwwwwwrwk', 'kwwwwwwwwwwwwwwk', 'kkkkkkkkkkkkkkkk', 'kwwkwkwkwkwkwkwk', '.kkkkkkkkkkkkkk.', '..kkwwwwwwwwkk..', '...kkkk..kkkk...', '...kk......kk...']
   ];
   function sprite(rows, scale, cls) {
     const w = rows[0].length; const fill = { k: '#111', w: '#fff', r: 'var(--red, #e4002b)', g: '#9a9a9a' };
