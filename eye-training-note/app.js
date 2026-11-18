@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '41 · 슬레이트 2';
+  const APP_VERSION = '42 · 오늘의 한 판';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -610,18 +610,33 @@
 
     {
       const ms = (await store.get('meta', 'missions')) || { id: 'missions', done: {} };
+      ms.pick = ms.pick || {}; ms.xp = ms.xp || {};
       const tid = today();
       const box = h('section', { class: 'sec', id: 'mission' });
       const fact = (k, v) => h('div', {}, h('dt', {}, k), h('dd', {}, v));
-      const drawMission = () => box.replaceChildren(
-        h('header', {}, h('h2', {}, '오늘의 미션'), h('span', { class: 'chip-state' + (ms.done[tid] ? ' done' : '') }, ms.done[tid] ? '완료' : '오늘 할 일')),
-        h('div', { class: 'glance' },
-          h('p', { class: 'missiontext' }, missionOf(tid)),
-          h('dl', { class: 'facts two' },
-            fact('보상', ms.done[tid] ? '+25 XP 받음' : '+25 XP'),
-            fact('연속', `${missionStreak(ms.done)}일`)),
-          ms.done[tid] ? null
-            : h('div', { class: 'row' }, h('button', { class: 'btn small', type: 'button', id: 'mission-done', onclick: async () => { ms.done[tid] = Date.now(); await store.put('meta', ms); celebrate('미션 완료 · +25 XP', 18); showList(); } }, '해냈어요'))));
+      const drawMission = () => {
+        const done = !!ms.done[tid];
+        const picked = ms.pick[tid];
+        const old = done && picked == null; // 고르기가 생기기 전에 끝낸 날
+        const tier = old ? null : MISSION_TIERS[picked];
+        const text = old ? missionOf(tid) : tier ? missionFor(tid, picked) : '';
+        const xp = old ? 25 : tier ? tier.xp : 0;
+        box.replaceChildren(
+          h('header', {}, h('h2', {}, '오늘의 미션'), h('span', { class: 'chip-state' + (done ? ' done' : '') }, done ? '완료' : tier ? '진행 중' : '하나 고르기')),
+          !tier && !old
+            ? h('div', { class: 'mopts' }, MISSION_TIERS.map((t, i) => h('button', { class: 'mopt', type: 'button', id: 'mission-pick-' + i,
+              onclick: async () => { ms.pick[tid] = i; await store.put('meta', ms); tick(); drawMission(); } },
+              h('span', { class: 'mtier mono' }, t.name), h('span', { class: 'mtext' }, missionFor(tid, i)), h('span', { class: 'mxp mono' }, `+${t.xp}`))))
+            : h('div', { class: 'glance' },
+              h('p', { class: 'missiontext' }, text),
+              h('dl', { class: 'facts' + (tier ? ' three' : ' two') },
+                tier ? fact('난이도', tier.name) : null,
+                fact('보상', done ? `+${xp} XP 받음` : `+${xp} XP`),
+                fact('연속', `${missionStreak(ms.done)}일`)),
+              done ? null : h('div', { class: 'row' },
+                h('button', { class: 'btn small', type: 'button', id: 'mission-done', onclick: async () => { ms.done[tid] = Date.now(); ms.xp[tid] = xp; await store.put('meta', ms); celebrate(`미션 완료 · +${xp} XP`, 18); showList(); } }, '해냈어요'),
+                h('button', { class: 'btn small quiet', type: 'button', id: 'mission-repick', onclick: async () => { delete ms.pick[tid]; await store.put('meta', ms); drawMission(); } }, '다시 고르기'))));
+      };
       drawMission();
       const g = await gameState();
       let was = 0; try { was = Number(localStorage.getItem('eye-level') || 0); localStorage.setItem('eye-level', String(g.lv)); } catch (e) { /* 기억 못 해도 진행 */ }
@@ -631,29 +646,45 @@
       const bCard = g.cards.find((x) => x.boss === wid);
       const beaten = bCard && bossBeaten(bCard);
       const hp = bCard ? bossHp(bCard) : null;
+      const cut = hp ? hp.total - hp.left : 0; // 끝낸 단계 수 = 색이 돌아온 조각 수
+      const openBoss = () => { if (bCard) location.hash = 'card-' + bCard.id; else { pendingBoss = true; location.hash = 'new'; } };
+
+      // 왼쪽: 보스 이미지. 흑백으로 시작해서, 단계를 끝낼 때마다 한 조각씩 색이 돌아온다
+      const pic = h('button', { class: 'heropic' + (bCard ? '' : ' poster'), type: 'button', id: 'boss-pic', onclick: openBoss, 'aria-label': bCard ? '보스 카드 열기' : '새 카드로 보스에 도전' });
+      if (!bCard) {
+        pic.append(h('span', { class: 'plabel mono' }, 'THIS WEEK / BOSS'), h('strong', { class: 'pname' }, bName), h('span', { class: 'pdesc' }, bDesc),
+          h('span', { class: 'pgo' }, '이미지를 골라 도전 →'));
+      } else {
+        const src = await cardImage(bCard).catch(() => '') || cardSrc(bCard);
+        if (src) {
+          const color = h('img', { class: 'hcolor', src, alt: '' });
+          let seen = cut; try { const m = (localStorage.getItem('eye-boss-seen') || '').split('|'); if (m[0] === wid) seen = Math.min(cut, Number(m[1]) || 0); else seen = 0; localStorage.setItem('eye-boss-seen', `${wid}|${cut}`); } catch (e) { /* 그냥 표시 */ }
+          const clip = (k) => `inset(0 ${beaten ? 0 : (100 - (k / hp.total) * 100).toFixed(3)}% 0 0)`;
+          color.style.clipPath = clip(seen);
+          pic.append(h('img', { class: 'hgray', src, alt: '' }), color, beaten ? null : h('span', { class: 'hlines', 'aria-hidden': 'true' }));
+          if (seen !== cut) requestAnimationFrame(() => requestAnimationFrame(() => { color.style.clipPath = clip(cut); }));
+        } else pic.classList.add('poster'), pic.append(h('strong', { class: 'pname' }, bName), h('span', { class: 'pdesc' }, '이미지 없이 글로 싸우는 중'));
+        if (beaten) pic.append(h('span', { class: 'hstamp' }, '격파'));
+      }
+      const slices = bCard ? h('div', { class: 'hslices', role: 'img', 'aria-label': `${hp.total}단계 중 ${cut}단계 끝냄` },
+        STEPS.map((st, i) => h('span', { class: 'hs' + (i < cut ? ' done' : i === cut && !beaten ? ' next' : '') }, pad(i + 1, 2)))) : null;
+
       const bossBox = h('section', { class: 'sec', id: 'boss' },
         h('header', {}, h('h2', {}, '이번 주 보스'), h('span', { class: 'chip-state' + (beaten ? ' done' : '') }, beaten ? '격파' : bCard ? '도전 중' : '도전 전')),
         h('div', { class: 'glance' },
-          h('p', { class: 'missiontext' }, bName),
-          h('p', { class: 'note' }, bDesc),
-          bCard ? h('div', { class: 'hp' }, h('span', { class: 'label mono' }, beaten ? '체력 0' : `체력 ${hp.left}/${hp.total}`),
-            h('span', { class: 'bartrack', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': hp.total, 'aria-valuenow': hp.left, 'aria-label': '보스 체력' },
-              h('span', { class: 'barfill', style: `width:${beaten ? 0 : (hp.left / hp.total) * 100}%` }))) : null,
+          h('p', { class: 'missiontext' }, bName, bCard ? h('span', { class: 'hcount mono' }, `${cut}/${hp.total}`) : null),
+          h('p', { class: 'note' }, bCard && !beaten ? '단계를 하나 끝낼 때마다 이미지 한 조각에 색이 돌아와요.' : bDesc),
           h('dl', { class: 'facts' },
             fact('방식', '깊게 파기'),
             fact('분량', '11단계 전부'),
             fact('모르겠음', '3개 이하'),
             fact('보상', beaten ? '+150 XP 받음' : '+150 XP')),
           h('div', { class: 'row' }, bCard
-            ? h('button', { class: 'btn small', type: 'button', id: 'boss-open', onclick: () => { location.hash = 'card-' + bCard.id; } }, beaten ? `격파한 카드 보기 (No.${pad(bCard.no, 3)})` : `이어서 싸우기 (No.${pad(bCard.no, 3)})`)
-            : h('button', { class: 'btn small', type: 'button', id: 'boss-new', onclick: () => { pendingBoss = true; location.hash = 'new'; } }, '새 카드로 도전'))));
-      const film = filmStrip(g);
-      let had = film.count; try { had = Number(localStorage.getItem('eye-frames') ?? film.count); localStorage.setItem('eye-frames', String(film.count)); } catch (e) { /* 기억 못 해도 진행 */ }
-      if (film.count > had) {
-        if (film.count % ROLL === 0) celebrate(`롤 ${film.count / ROLL} 완성 · 36컷을 다 채웠어요`, 60);
-        else celebrate(`오늘 칸이 채워졌어요 · ${((film.count - 1) % ROLL) + 1}번째 컷`, 18);
-      }
-      wrap.append(film.fig, playerBar(g), h('div', { class: 'duo' }, box, bossBox));
+            ? h('button', { class: 'btn small', type: 'button', id: 'boss-open', onclick: openBoss }, beaten ? `격파한 카드 보기 (No.${pad(bCard.no, 3)})` : `이어서 싸우기 (No.${pad(bCard.no, 3)})`)
+            : h('button', { class: 'btn small', type: 'button', id: 'boss-new', onclick: openBoss }, '새 카드로 도전'))));
+      wrap.append(
+        h('div', { class: 'hero', id: 'hero' }, h('div', { class: 'heroleft' }, pic, slices), h('div', { class: 'heroright' }, bossBox, box)),
+        playerBar(g));
     }
     if (new Date().getDay() === 0 && cards.length) {
       const wkNote = await store.get('meta', 'week-' + dstr(weekStart(new Date())));
@@ -2396,6 +2427,29 @@
     '레시피의 "렌즈와 거리"와 "조리개와 셔터"를 숫자로 적기',
     '교과서 한 단원을 읽고 확인 문제 다 맞히기',
   ];
+  const MISSION_TIERS = [
+    { name: '쉬움', xp: 15, list: [
+      '핀 세 개를 5초 안에 찍기. 생각하지 않고 눈이 간 대로',
+      '눈을 가늘게 뜨고 색 비율 세 가지를 10초 안에 적기',
+      '이미지를 크게 보기로 8배까지 키워 입자와 반사광 확인하기',
+      '도감에 없는 용어 하나를 획득하기',
+      '빠른 버전으로 5분 안에 한 장 끝내기' ] },
+    { name: '보통', xp: 25, list: [
+      '그림자만 본다. 3단계(빛)의 방향과 높이를 근거까지 채우기',
+      '지우기 테스트의 예측을 적중시키기',
+      '최종 문장을 "예쁘다" 같은 판정하는 말 없이 쓰기',
+      '소품을 하나도 빠뜨리지 않고 열 개 이상 적기',
+      '레시피의 "렌즈와 거리"와 "조리개와 셔터"를 숫자로 적기',
+      '교과서 한 단원을 읽고 확인 문제 다 맞히기' ] },
+    { name: '어려움', xp: 40, list: [
+      '"모르겠음" 없이 카드 한 장 완주하기',
+      '오늘 고른 이미지에서 "일부러 틀린 것"을 두 개 찾고 더 센 쪽을 적기',
+      '어제와 전혀 다른 장르의 이미지로 카드 만들기',
+      '깊게 파기로 한 장을 끝까지 쓰기',
+      '3일 지난 카드를 다시 쓰고 처음 것과 나란히 비교하기' ] },
+  ];
+  const dayHash = (str, seed) => [...str].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 100003, seed);
+  const missionFor = (dateStr, tier) => { const l = MISSION_TIERS[tier].list; return l[dayHash(dateStr, 11 + tier * 17) % l.length]; };
   const missionOf = (dateStr) => MISSIONS[[...dateStr].reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7) % MISSIONS.length];
   function missionStreak(done) {
     const d = new Date();
@@ -2485,63 +2539,6 @@
     d.shotlists.forEach((x) => add(x.createdAt));
     return days;
   }
-  function filmFrames(g) { // 날짜마다 그날의 이미지 한 장을 고른다
-    const pic = new Map();
-    const put = (t, src, hash) => { if (!t || !src) return; const k = typeof t === 'string' ? t : dstr(new Date(t)); if (!pic.has(k)) pic.set(k, { src, hash }); };
-    for (const c of [...g.cards].sort((a, b) => b.createdAt - a.createdAt)) {
-      const src = cardSrc(c);
-      put(c.createdAt, src, 'card-' + c.id); put(c.doneAt, src, 'card-' + c.id); put(c.updatedAt, src, 'card-' + c.id);
-    }
-    for (const e of g.diary) if (entryDone(e)) put(e.id, e.img, 'diary');
-    return [...g.days].sort().map((day, i) => ({ day, no: i + 1, ...(pic.get(day) || { src: '', hash: '' }) }));
-  }
-  function filmStrip(g) {
-    const frames = filmFrames(g);
-    const n = frames.length;
-    const today = dstr(new Date());
-    const doneToday = g.days.has(today);
-    const rolls = Math.max(1, Math.ceil((n + (doneToday ? 0 : 1)) / ROLL));
-    let roll = rolls; // 보고 있는 롤
-    const fig = h('figure', { class: 'film', id: 'film' });
-    const grid = h('div', { class: 'csgrid' });
-    const caption = h('figcaption', {});
-    const gapDays = (a, b) => Math.round((new Date(b + 'T00:00') - new Date(a + 'T00:00')) / DAY) - 1;
-    const no2 = (k) => pad(k, 2);
-
-    // 밀착 인화지: 흰 종이 위에 작은 컷이 번호순으로 놓인다. 한 줄(12칸)씩 늘어난다
-    function paint() {
-      const from = (roll - 1) * ROLL;
-      const mine = frames.slice(from, from + ROLL);
-      const used = mine.length;
-      const cells = mine.map((f, i) => h('button', { class: 'cscell' + (f.day === today ? ' today' : ''), type: 'button', disabled: !f.hash,
-        'aria-label': `${f.day}의 컷`, onclick: () => { if (f.hash) location.hash = f.hash; } },
-        h('span', { class: 'cspic' }, f.src ? h('img', { src: f.src, alt: '', loading: 'lazy', onerror: (e) => e.target.remove() }) : h('span', { class: 'cstext' }, '글')),
-        h('span', { class: 'csno mono' }, h('span', {}, no2(i + 1)), h('span', { class: 'csday' }, f.day.slice(5).replace('-', '.')))));
-      const last = roll === rolls;
-      const waiting = last && !doneToday && used < ROLL; // 오늘 칸이 비어 있다
-      const show = last ? Math.min(ROLL, Math.max(12, Math.ceil((used + (waiting ? 1 : 0)) / 12) * 12)) : ROLL;
-      for (let k = used + 1; k <= show; k++) {
-        const isToday = waiting && k === used + 1;
-        cells.push(h('span', { class: 'cscell csempty' + (isToday ? ' today' : '') },
-          h('span', { class: 'cspic' }, isToday ? h('span', { class: 'cstext' }, '오늘') : null),
-          h('span', { class: 'csno mono' }, h('span', {}, no2(k)))));
-      }
-      grid.replaceChildren(...cells);
-      const lastGap = n && !doneToday ? gapDays(frames[n - 1].day, today) : 0;
-      caption.replaceChildren(
-        h('span', { class: 'figno' }, `내 컷 · 롤 ${roll}`), h('span', { class: 'filmcount' }, `${used}/${ROLL}컷`), last ? null : ' · 다 채움',
-        rolls > 1 ? h('span', { class: 'rollpick' }, Array.from({ length: rolls }, (_, i) =>
-          h('button', { class: 'linkbtn' + (i + 1 === roll ? ' on' : ''), type: 'button', onclick: () => { roll = i + 1; paint(); } }, `롤 ${i + 1}`))) : null,
-        h('br', {}),
-        n === 0 ? '연습한 날마다 그날의 이미지가 한 칸씩 채워져요. 36칸이 차면 한 롤이 돼요.'
-          : doneToday ? '오늘 칸이 채워졌어요. 컷을 누르면 그날의 카드가 열려요.'
-            : lastGap > 0 ? `${lastGap}일 쉬었어요. 오늘 한 단계만 써도 다음 칸이 채워져요.` : '오늘 한 단계만 쓰면 다음 칸이 채워져요.');
-    }
-    paint();
-    fig.append(grid, caption);
-    return { fig, count: n, rollsDone: Math.floor(n / ROLL) };
-  }
-
   /* ───────── 게임: 경험치, 레벨, 업적 ───────── */
   const LEVELS = [[0, '구경꾼'], [100, '현장 막내'], [250, '그립'], [450, '조명팀'], [700, '포커스 풀러'], [1000, '카메라 오퍼레이터'], [1400, '촬영감독'], [1900, '조감독'], [2500, '디렉터'], [3300, 'DOPE EYE']];
   const STEP_XP = { quick: 10, full: 15, deep: 25 };
@@ -2570,7 +2567,7 @@
       ['단계 완료', cards.reduce((a, c) => a + stepsDone(c) * (STEP_XP[c.mode] || 15), 0)],
       ['용어 획득', terms.size * 15],
       ['예측 적중', gs.hit * 30],
-      ['오늘의 미션', Object.keys(ms.done).length * 25],
+      ['오늘의 미션', Object.keys(ms.done).reduce((n, day) => n + ((ms.xp || {})[day] || 25), 0)],
       ['세 줄 일기', diary.filter(entryDone).length * 10],
       ['재현 촬영', cards.filter((c) => c.reshoot && c.reshoot.has).length * 50],
       ['다시 쓰기', cards.filter((c) => c.second && c.second.newSeen.some(has)).length * 40],

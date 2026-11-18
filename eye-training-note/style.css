@@ -982,29 +982,39 @@ html[data-skin="school"] .facts dt { font-family: var(--tt); }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
-/* ── 내 컷: 밀착 인화지. 흰 종이에 작은 컷이 번호순으로 놓인다. 검은 띠와 장식 없음 ── */
-.film { margin: 0 0 26px; }
-.csgrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px 6px; }
-@media (min-width: 900px) { .csgrid { grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px 8px; } }
-.cscell { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 0; border: 0; background: none; text-align: left; color: inherit; font: inherit; }
-.cscell:disabled { cursor: default; opacity: 1; }
-.cspic { display: flex; align-items: center; justify-content: center; aspect-ratio: 3 / 2; background: var(--panel); overflow: hidden; }
-.cspic img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.cstext { font-size: 0.6875rem; color: var(--mute); }
-.cscell.csempty .cspic { background: none; box-shadow: inset 0 0 0 1px #dcdcdc; }
-.cscell.csempty.today .cspic { box-shadow: none; outline: 1px dashed var(--red, var(--ink)); outline-offset: -1px; }
-.cscell.csempty.today .cstext { color: var(--red, var(--ink)); font-weight: 700; }
-.cscell.today:not(.csempty) .cspic { outline: 2px solid var(--red, var(--ink)); outline-offset: 1px; }
-#film .csno { display: flex; justify-content: space-between; gap: 4px; font-size: 10px; line-height: 1; color: var(--mute); }
-#film .cscell.csempty .csno { color: #b5b5b5; }
-#film .cscell.today .csno { color: var(--red, var(--ink)); }
-.csday { display: none; }
-@media (min-width: 900px) { .csday { display: inline; } }
-.film figcaption { margin-top: 12px; font-size: 0.875rem; line-height: 1.6; color: var(--mute); }
-.rollpick { margin-left: 10px; display: inline-flex; gap: 10px; }
-.rollpick .linkbtn { display: inline; width: auto; padding: 0; font-size: 0.8125rem; color: var(--mute); text-decoration: underline; text-underline-offset: 3px; }
-.rollpick .linkbtn.on { color: var(--ink); font-weight: 700; text-decoration: none; }
-.filmcount { font-variant-numeric: tabular-nums; }
+/* ── 오늘의 한 판: 왼쪽에 보스 이미지(흑백에서 한 조각씩 색이 돌아온다), 오른쪽에 보스와 미션 ── */
+.hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px 36px; align-items: start; margin-bottom: 26px; }
+@media (min-width: 860px) { .hero { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); } }
+.heroleft { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.heroright { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.heroright > .sec { gap: 0; }
+.heropic { position: relative; display: block; width: 100%; aspect-ratio: 3 / 2; padding: 0; border: 0; background: #111; overflow: hidden; color: #fff; text-align: left; font: inherit; }
+.heropic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.heropic .hgray { filter: grayscale(1) contrast(0.82) brightness(0.86); }
+.heropic .hcolor { transition: clip-path 1.1s cubic-bezier(0.6, 0, 0.2, 1); }
+.hlines { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(100% / 11 - 1px), rgba(255, 255, 255, 0.9) calc(100% / 11 - 1px), rgba(255, 255, 255, 0.9) calc(100% / 11)); }
+.hstamp { position: absolute; left: 14px; top: 14px; background: var(--red, #e4002b); color: #fff; font-weight: 800; font-size: 1rem; padding: 4px 12px; letter-spacing: 0.04em; }
+.heropic.poster { display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; padding: clamp(18px, 3.2vw, 36px); }
+.plabel { color: var(--red, #e4002b); font-size: 11px; letter-spacing: 0.12em; margin-bottom: auto; }
+.pname { font-size: clamp(2.4rem, 7vw, 5rem); font-weight: 800; letter-spacing: -0.055em; line-height: 0.95; word-break: keep-all; }
+.pdesc { font-size: 0.9375rem; line-height: 1.5; color: rgba(255, 255, 255, 0.72); max-width: 30em; word-break: keep-all; }
+.pgo { font-size: 0.875rem; font-weight: 700; }
+.heropic.poster:hover .pgo { text-decoration: underline; text-underline-offset: 4px; }
+.hslices { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 0; }
+.hs { text-align: center; font-size: 10px; line-height: 1; padding: 6px 0; color: #b5b5b5; box-shadow: inset 0 0 0 1px #dcdcdc; margin-right: -1px; font-family: var(--tt, ui-monospace, "SF Mono", Menlo, Consolas, monospace); }
+.hs.done { background: var(--ink); color: var(--paper); box-shadow: inset 0 0 0 1px var(--ink); }
+.hs.next { color: var(--red, var(--ink)); box-shadow: inset 0 0 0 1px var(--red, var(--ink)); position: relative; z-index: 1; font-weight: 700; }
+.hcount { margin-left: 10px; color: var(--red, var(--ink)); }
+/* 미션 고르기 */
+.mopts { display: flex; flex-direction: column; }
+.mopt { display: grid; grid-template-columns: 3.6em minmax(0, 1fr) auto; gap: 12px; align-items: baseline; width: 100%; padding: 13px 0; border: 0; border-bottom: 1px solid #dcdcdc; background: none; text-align: left; color: var(--ink); font: inherit; }
+.mopt:last-child { border-bottom: 0; }
+.mopt .mtier { font-size: 0.6875rem; color: var(--mute); }
+.mopt .mtext { font-weight: 700; font-size: 0.9375rem; line-height: 1.45; word-break: keep-all; }
+.mopt .mxp { font-weight: 700; color: var(--red, var(--ink)); white-space: nowrap; }
+.mopt:hover .mtext { text-decoration: underline; text-underline-offset: 3px; }
+.facts.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (prefers-reduced-motion: reduce) { .heropic .hcolor { transition: none; } }
 
 /* ── 여는 장면: 화면 전체가 슬레이트. 검은 화면, 큰 글자, 가는 줄. 딱 치고 친 자리에서 위아래로 갈라진다 ── */
 .slate-ov { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; color: #fff; font-family: var(--grot, var(--font-body)); overflow: hidden; --band: clamp(30px, 6.5vh, 58px); --open: -7deg; --ease: cubic-bezier(0.76, 0, 0.24, 1); }
