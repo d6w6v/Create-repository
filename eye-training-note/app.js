@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '33 · 내 필름';
+  const APP_VERSION = '34 · 필름 감기';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -2496,54 +2496,97 @@
     const doneToday = g.days.has(today);
     const rolls = Math.max(1, Math.ceil((n + (doneToday ? 0 : 1)) / ROLL));
     let roll = rolls; // 보고 있는 롤
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!document.getElementById('filmblur')) { // 감길 때 옆으로 번지는 흐림
+      document.body.insertAdjacentHTML('beforeend', '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="filmblur" x="-5%" width="110%"><feGaussianBlur in="SourceGraphic" stdDeviation="0 0"/></filter></svg>');
+    }
+    const blur = document.querySelector('#filmblur feGaussianBlur');
     const fig = h('figure', { class: 'film', id: 'film' });
     const scroller = h('div', { class: 'filmscroll' });
+    const flash = h('div', { class: 'filmflash', 'aria-hidden': 'true' });
+    const leak = h('div', { class: 'filmleak', 'aria-hidden': 'true' });
+    const gate = h('div', { class: 'filmgate' }, scroller, leak, flash);
+    const count = h('span', { class: 'filmcount' });
     const caption = h('figcaption', {});
     const gapDays = (a, b) => Math.round((new Date(b + 'T00:00') - new Date(a + 'T00:00')) / DAY) - 1;
-    function paint(wind) {
+    let raf = 0;
+    const stop = () => { if (raf) cancelAnimationFrame(raf); raf = 0; blur.setAttribute('stdDeviation', '0 0'); gate.classList.remove('winding'); };
+    ['pointerdown', 'wheel', 'touchstart'].forEach((ev) => scroller.addEventListener(ev, stop, { passive: true }));
+
+    function wind(strip, real, total, fromLeft) {
+      const max = scroller.scrollWidth - scroller.clientWidth;
+      const aim = real[real.length - 1];
+      const end = aim ? Math.min(max, Math.max(0, aim.offsetLeft - (scroller.clientWidth - aim.offsetWidth) / 2)) : Math.max(0, max);
+      const setCount = (k) => { count.textContent = `${k}/${ROLL}컷`; };
+      if (still || max <= 0) { scroller.scrollLeft = end; setCount(total); return; }
+      stop();
+      const start = fromLeft;
+      const dist = Math.abs(end - start);
+      const dur = Math.min(2600, 1100 + dist * 0.35);
+      const t0 = performance.now();
+      let last = start;
+      gate.classList.add('winding');
+      leak.style.animation = 'none'; void leak.offsetWidth; leak.style.animation = `leakSweep ${dur}ms ease-in-out`;
+      const tick = (t) => {
+        const k = Math.min(1, (t - t0) / dur);
+        const e = 1 - Math.pow(1 - k, 4); // 빠르게 출발해서 천천히 선다
+        const x = start + (end - start) * e;
+        scroller.scrollLeft = x;
+        const speed = Math.abs(x - last); last = x;
+        blur.setAttribute('stdDeviation', `${Math.min(22, speed * 0.45).toFixed(1)} 0`);
+        const mid = x + scroller.clientWidth / 2;
+        setCount(Math.min(total, real.filter((f) => f.offsetLeft < mid).length));
+        if (k < 1) { raf = requestAnimationFrame(tick); return; }
+        stop(); setCount(total);
+        strip.classList.remove('settle'); void strip.offsetWidth; strip.classList.add('settle');
+        flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
+        if (aim) { aim.classList.remove('snap'); void aim.offsetWidth; aim.classList.add('snap'); }
+      };
+      raf = requestAnimationFrame(tick);
+    }
+
+    function paint(play) {
       const from = (roll - 1) * ROLL;
       const mine = frames.slice(from, from + ROLL);
       const strip = h('div', { class: 'filmstrip' });
+      // 필름 앞머리: 3, 2, 1 카운트다운
+      [3, 2, 1].forEach((k) => strip.append(h('span', { class: 'frame leader', 'aria-hidden': 'true' }, h('span', { class: 'cd' }, k))));
       mine.forEach((f, i) => {
         const prev = i ? mine[i - 1] : frames[from - 1];
         const gap = prev ? gapDays(prev.day, f.day) : 0;
         if (gap > 0) strip.append(h('span', { class: 'splice' }, `${gap}일 쉼`));
         const no = ((f.no - 1) % ROLL) + 1;
-        const fresh = f.day === today && wind;
-        strip.append(h('button', { class: 'frame' + (fresh ? ' develop' : '') + (f.day === today ? ' today' : ''), type: 'button', disabled: !f.hash,
+        strip.append(h('button', { class: 'frame shot' + (f.day === today && play ? ' develop' : '') + (f.day === today ? ' today' : ''), type: 'button', disabled: !f.hash,
           'aria-label': `${f.day}의 컷`, onclick: () => { if (f.hash) location.hash = f.hash; } },
-          f.src ? h('img', { src: f.src, alt: '', loading: 'lazy', onerror: (e) => e.target.remove() }) : h('span', { class: 'noimg' }, '글로 연습한 날'),
+          f.src ? h('img', { src: f.src, alt: '', onerror: (e) => e.target.remove() }) : h('span', { class: 'noimg' }, '글로 연습한 날'),
           h('span', { class: 'fno' }, `${no}`), h('span', { class: 'fday' }, f.day.slice(5).replace('-', '.'))));
       });
+      const used = n - from;
       if (roll === rolls) {
-        const used = n - from;
-        if (!doneToday && used < ROLL) strip.append(h('span', { class: 'frame blank today' }, h('span', { class: 'noimg' }, '오늘의 컷', h('br', {}), '아직 안 찍었어요'), h('span', { class: 'fno' }, `${used + 1}`)));
-        const pad2 = Math.min(3, ROLL - used - (doneToday ? 0 : 1));
-        for (let i = 0; i < pad2; i++) strip.append(h('span', { class: 'frame blank' }, h('span', { class: 'fno' }, `${used + (doneToday ? 1 : 2) + i}`)));
+        if (!doneToday && used < ROLL) strip.append(h('span', { class: 'frame blank today shot' }, h('span', { class: 'noimg' }, '오늘의 컷', h('br', {}), '아직 안 찍었어요'), h('span', { class: 'fno' }, `${used + 1}`)));
+        const more = Math.min(3, ROLL - used - (doneToday ? 0 : 1));
+        for (let i = 0; i < more; i++) strip.append(h('span', { class: 'frame blank' }, h('span', { class: 'fno' }, `${used + (doneToday ? 1 : 2) + i}`)));
       }
       scroller.replaceChildren(strip);
+      const total = roll === rolls ? used : ROLL;
       const lastGap = n && !doneToday ? gapDays(frames[n - 1].day, today) : 0;
       caption.replaceChildren(
-        h('span', { class: 'figno' }, `내 필름 · 롤 ${roll}`),
-        roll === rolls ? `${n - from}/${ROLL}컷` : `${ROLL}/${ROLL}컷 · 현상 완료`,
+        h('span', { class: 'figno' }, `내 필름 · 롤 ${roll}`), count, roll === rolls ? null : ' · 현상 완료',
         rolls > 1 ? h('span', { class: 'rollpick' }, Array.from({ length: rolls }, (_, i) =>
-          h('button', { class: 'linkbtn' + (i + 1 === roll ? ' on' : ''), type: 'button', onclick: () => { roll = i + 1; paint(false); } }, `롤 ${i + 1}`))) : null,
+          h('button', { class: 'linkbtn' + (i + 1 === roll ? ' on' : ''), type: 'button', onclick: () => { roll = i + 1; paint(true); } }, `롤 ${i + 1}`))) : null,
+        used ? h('button', { class: 'linkbtn rewind', type: 'button', id: 'film-rewind', onclick: () => paint(true) }, '처음부터 다시 감기') : null,
         h('br', {}),
         n === 0 ? '연습한 날마다 그날의 이미지가 한 컷씩 찍혀요. 36컷이 차면 한 롤이 돼요.'
           : doneToday ? '오늘의 컷이 찍혔어요. 컷을 누르면 그날의 카드가 열려요.'
             : lastGap > 0 ? `${lastGap}일 쉬었어요. 오늘 한 단계만 써도 다음 컷이 찍혀요.` : '오늘 한 단계만 쓰면 다음 컷이 찍혀요.');
       requestAnimationFrame(() => {
-        const max = scroller.scrollWidth - scroller.clientWidth;
-        if (max <= 0) return;
-        const real = scroller.querySelectorAll('.frame.today, .frame:not(.blank)');
-        const aim = real[real.length - 1];
-        const end = aim ? Math.min(max, Math.max(0, aim.offsetLeft - (scroller.clientWidth - aim.offsetWidth) / 2)) : max;
-        if (wind && !matchMedia('(prefers-reduced-motion: reduce)').matches) { scroller.scrollLeft = Math.max(0, end - 700); scroller.scrollTo({ left: end, behavior: 'smooth' }); }
-        else scroller.scrollLeft = end;
+        const real = [...strip.querySelectorAll('.frame.shot')];
+        if (play) { scroller.scrollLeft = 0; wind(strip, real, total, 0); }
+        else { const save = still; wind(strip, real, total, scroller.scrollLeft); void save; }
       });
     }
     paint(true);
-    fig.append(scroller, caption);
+    fig.append(gate, caption);
     return { fig, count: n, rollsDone: Math.floor(n / ROLL) };
   }
 
