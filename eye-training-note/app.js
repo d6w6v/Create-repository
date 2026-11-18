@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '51 · 정장 입은 머리들';
+  const APP_VERSION = '52 · 긴 머리 얼굴들';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -2670,19 +2670,19 @@
     ['TOO MUCH', '소품과 색이 넘치는 이미지. 스무 가지가 넘는 것 중 기둥을 가려내요.', '과잉'],
     ['NOTHING SPECIAL', '특별한 게 없어 보이는데 끌리는 이미지. "틀린 것"을 찾기가 가장 어려워요.', '평범함'],
   ];
-  /* 픽셀 그림(정장 입은 사람 몸에 머리만 다른 것들): 글자 한 칸이 점 하나. k 검정, w 흰색, r 빨강, g 회색, . 빈 칸 */
-  const PX_HERO = [['...kkkkkk...', '..kwwwwwwk..', '.kwwwrrwwwk.', '.kwwrkkrwwk.', '.kwwrkkrwwk.', '.kwrwrrwwwk.', '..kwwwwwwk..', '...kkkkkk...', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..'],
-    ['...kkkkkk...', '..kwwwwwwk..', '.kwwwwrrwwk.', '.kwwwrkkrwk.', '.kwwwrkkrwk.', '.kwrwwrrwwk.', '..kwwrwwwk..', '...kkkkkk...', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kkkkkk...', '...kk..kk...', '..kk....kk..', '.kkk....kkk.']];
+  /* 픽셀 그림(긴 검은 머리에 창백한 얼굴, 머리카락 끝으로 걷는다): 글자 한 칸이 점 하나. k 검정, w 흰색, r 빨강, g 회색, . 빈 칸 */
+  const PX_HERO = [['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwwwwwkkk.', 'kkkwwkwkwkwwwkkk', 'kkwwkkkkkkkkwwkk', 'kkwkwwrrrrwwkwkk', 'kkwkwwrkkrwwkwkk', 'kkwkwwrrrrwwkwkk', 'kkwwkkkkkkkkwwkk', 'kkkwggwrwwggwkkk', 'kkkkwwwrwwwwkkkk', 'kkkkkwwkkwwkkkkk', 'kk.kkkkkkkkkk.kk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k'],
+    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwwwwwkkk.', 'kkkwwkwkwkwwwkkk', 'kkwwkkkkkkkkwwkk', 'kkwkwwwrrrrwkwkk', 'kkwkwwwrkkrwkwkk', 'kkwkwwwrrrrwkwkk', 'kkwwkkkkkkkkwwkk', 'kkkwggwrwwggwkkk', 'kkkkwwwrwwwwkkkk', 'kkkkkwwrkwwkkkkk', 'kk.kkkkkkkkkk.kk', 'kk.k..k..k..k.kk', 'k..k...kk...k..k']];
   const PX_FLAG = ['krrr.', 'krrrr', 'krrr.', 'k....', 'k....', 'k....', 'k....', 'kkk..'];
   const PX_BOSS = [
-    ['r...kkkk...r', '...kwwwwk...', 'r.kwwwwwwk.r', '..kwwrrwwk..', '..kwwrrwwk..', '...kwwwwk...', '....kggk....', '....kggk....', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..'],
-    ['...kkkkkk...', '..kkkkkkkk..', '.kkkkkkkkkk.', '.kkwrkkrwkk.', '.kkkkkkkkkk.', '.kkkkkkkkkk.', '..kkkkkkkk..', '...kkkkkk...', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..'],
-    ['....kkkk....', '...kwwwwk...', 'kkkkwkkwkkkk', 'kwwkwwwwkwwk', 'kkwkwrrwkwkk', 'kwwkkkkkkwwk', '.kkk.kk.kkk.', '....kwwk....', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..'],
-    ['............', '............', '....gggg....', '...g....g...', '...g....g...', '....gggg....', '............', '............', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..'],
-    ['...kkkkkk...', '..kkkkwwwk..', '.kkkkkwwwwk.', '.kwkkkwwkwk.', '.kkkkkwwwwk.', '.kkwwkwkkwk.', '..kkkkwwwk..', '...kkkkkk...', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..'],
-    ['..kkkkkggg..', '.kwwwwkgggg.', '.kwkwwkgggg.', '.kwwwwkgggg.', '.kwrrwkgggg.', '.kwwwwkgggg.', '..kkkkkggg..', '............', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..'],
-    ['...kkkkkk...', '..kwkwwkwk..', '.kwrwkwrwkk.', '.kkwkwrwkwk.', '.kwrwkwkwrk.', '.kwkwrwkwkk.', '..kwkwwkwk..', '...kkkkkk...', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..'],
-    ['..kkkkkkkk..', '..kwwwwwwk..', '..kwkwwkwk..', '..kwwwwwwk..', '..kkkkkkkk..', '..kwkwkwkk..', '..kwwwwwwk..', '..kkkkkkkk..', '....kwwk....', '..kkkwwkkk..', '.kkkkwrkkkk.', '.kkkkwrkkkk.', '.kk.kkrk.kk.', '.kk.kkkk.kk.', '.ww.kkkk.ww.', '....kkkk....', '...kk..kk...', '...kk..kk...', '...kk..kk...', '..kkk..kkk..']
+    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwwwwwkkk.', 'kkkwwwwwwwwwwkkk', 'kkwrrrrwwrrrrwkk', 'kkwrwwrwwrwwrwkk', 'kkwrwwrwwrwwrwkk', 'kkwrrrrwwrrrrwkk', 'kkgwwwwwwwwwwgkk', 'kkkwwrrrrrrwwkkk', 'kkkkwrwwwwrwkkkk', 'kkkkkwrrrrwkkkkk', 'kk.kkkkkkkkkk.kk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k'],
+    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkkkkkkkkkkkk.', 'kkkkgkkkkkkgkkkk', 'kkkkkgkkkkkkkkkk', 'kkkkgkkwwwwkgkkk', 'kkkkkkkwrkwkkkkk', 'kkkkkkkwwwwkkkkk', 'kkkkkgkkkkkgkkkk', 'kkkkkkgkkkkkkkkk', 'kkkkkgkkkgkkkkkk', 'kkkkkkkkkkkkkkkk', 'kk.kkkkkkkkkk.kk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k'],
+    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwwwwwkkk.', 'kkkkwkwkwkwkwkkk', 'kkwwrwwwrwwwrwkk', 'kkggggggggggggkk', 'kkwkwkkkkkkwkwkk', 'kkwwrwkwrkwrwwkk', 'kkgggwkkkkwgggkk', 'kkkwkwkwwkwkwkkk', 'kkkkwrwwwwrwkkkk', 'kkkkkwwwwwwkkkkk', 'kk.kkkkkkkkkk.kk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k'],
+    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwwwwwkkk.', 'kkkwwwwwkwwwwkkk', 'kkwwwwwkwwwwwwkk', 'kkwwggwwkwggwwkk', 'kkwwgwwkwwwgwwkk', 'kkwwwwwwkwwwwwkk', 'kkwwwwwwkrwwwwkk', 'kkkwwwwwwrwwwkkk', 'kkkkwwwwwrwwkkkk', 'kkkkkwwwwwwkkkkk', 'kk.kkkkkkkkkk.kk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k'],
+    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwgkkkkkk.', 'kkkwwwwwgkkkkkkk', 'kkwwwwwwgwwwkkkk', 'kkwwkkkwkwkwkkkk', 'kkwwkrkwkwkwkkkk', 'kkwwgggwkwwwkkkk', 'kkwwwwwwwkkkkkkk', 'kkkwwwwwwkwkwkkk', 'kkkkkkkkkwkwkkkk', 'kkkkkwwwgkkkkkkk', 'kk.kkkkkkkkkk.kk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k'],
+    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwwwwwkkk.', 'kkkwwwwwwwwwwgkk', 'kkwkkkkwwkkwwwkk', 'kkwkrkkggkkggwkk', 'kkwkkkkggggwwwkk', 'kkwwwwwwwwwwwggk', 'kkwkkkkkkkgggwkk', 'kkkwwkwkwkgggkkk', 'kkkkwkkkkkggkkkk', 'kkkkkwwwwwwkggkk', 'kk.kkkkkkkkkkgkk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k'],
+    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwwwwwkkk.', 'kkkwkkwwkkwkkkkk', 'kkwwkrwwkrwkrwkk', 'kkkkwwkkwwkkwwkk', 'kkkrwwkrwwkrwwkk', 'kkwwkkwwkkwwkkkk', 'kkwwkrwwkrwwkrkk', 'kkkwwkkwwkkwwkkk', 'kkkkwkrwwkrwkkkk', 'kkkkkwwwwwwkkkkk', 'kk.kkkkkkkkkk.kk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k'],
+    ['....kkkkkkkk....', '..kkkkkkkkkkkk..', '.kkkkkkkkkkkkkk.', '.kkkwwwwwwwwkkk.', 'kkkwwwwwwwwwwkkk', 'kkwkkkkwwkkkkwkk', 'kkwwkkwwwwkkwwkk', 'kkwwkwwwwwwkwwkk', 'kkwwwwwwwwwkwwkk', 'kkkwwwwwwwwwwkkk', 'kkkkkkkkkkkkkkkk', 'kkkwkwkwkwkwkkkk', 'kkkkkrrrrrrkkkkk', 'kk.kkkkkkkkkk.kk', 'kk..k.k..k.k..kk', 'k...k.k..k.k...k']
   ];
   function sprite(rows, scale, cls) {
     const w = rows[0].length; const fill = { k: '#111', w: '#fff', r: 'var(--red, #e4002b)', g: '#9a9a9a' };
