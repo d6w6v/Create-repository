@@ -1005,3 +1005,26 @@ html[data-skin="school"] .facts dt { font-family: var(--tt); }
 .rollpick .linkbtn { display: inline; width: auto; padding: 0; font-size: 0.8125rem; color: var(--mute); text-decoration: underline; text-underline-offset: 3px; }
 .rollpick .linkbtn.on { color: var(--ink); font-weight: 700; text-decoration: none; }
 .filmcount { font-variant-numeric: tabular-nums; }
+
+/* ── 여는 장면: 슬레이트. 흰 판, 검은 줄, 검정·흰색 줄무늬 막대. 딱 치고 위로 빠진다 ── */
+.slate-ov { position: fixed; inset: 0; z-index: 90; background: #fff; display: flex; align-items: center; justify-content: center; transition: transform 0.38s cubic-bezier(0.7, 0, 0.2, 1); }
+.slate-ov.out { transform: translateY(-100%); }
+.slate { width: min(78vw, 400px); color: #111; font-family: var(--grot, var(--font-body)); animation: slateIn 0.2s ease-out both; }
+.slstick { height: 36px; border: 2px solid #111; background: repeating-linear-gradient(-55deg, #111 0 22px, #fff 22px 44px); }
+.slstick.sltop { transform-origin: 0 100%; transform: rotate(-24deg); }
+.slstick.slbase { border-top: 0; background: repeating-linear-gradient(55deg, #111 0 22px, #fff 22px 44px); }
+.slate-ov.clap .slstick.sltop { transform: rotate(0deg); transition: transform 0.1s cubic-bezier(0.6, 0, 1, 0.5); }
+.slate-ov.clap .slate { animation: slateHit 0.24s ease-out 0.1s; }
+.slboard { border: 2px solid #111; border-top: 0; background: #fff; }
+.slrow { display: grid; grid-template-columns: minmax(0, 1fr); }
+.slrow + .slrow { border-top: 2px solid #111; }
+.slrow.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.slcell { display: flex; flex-direction: column; gap: 4px; padding: 9px 12px 11px; min-width: 0; }
+.slcell + .slcell { border-left: 2px solid #111; }
+.sllabel { font-family: var(--tt, ui-monospace, "SF Mono", Menlo, Consolas, monospace); font-size: 10px; letter-spacing: 0.1em; color: #666; }
+.sltitle { font-size: 2.1rem; font-weight: 800; letter-spacing: -0.055em; line-height: 1; }
+.sltitle::after { content: ""; display: inline-block; width: 0.26em; height: 0.26em; background: var(--red, #e4002b); margin-left: 0.08em; }
+.slnum { font-size: 2.6rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.sldate { font-family: var(--tt, ui-monospace, "SF Mono", Menlo, Consolas, monospace); font-size: 1rem; font-weight: 500; letter-spacing: 0.02em; }
+@keyframes slateIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes slateHit { 0% { transform: translateY(5px); } 45% { transform: translateY(-2px); } 100% { transform: none; } }

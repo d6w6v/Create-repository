@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '39 · 밀착 인화지';
+  const APP_VERSION = '40 · 슬레이트';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -3210,8 +3210,41 @@
     if (name.startsWith('compare-')) return showCompare(name.slice(8));
     return showList();
   }
+  /* ───────── 여는 장면: 슬레이트가 딱 치고, 위로 빠지면서 페이지가 열린다 ───────── */
+  function slateIntro() {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
+    const num = () => h('strong', { class: 'slnum' }, '--');
+    const cell = (k, v) => h('div', { class: 'slcell' }, h('span', { class: 'sllabel' }, k), v);
+    const roll = num(); const scene = num(); const take = num();
+    const d = new Date();
+    const ov = h('div', { class: 'slate-ov', id: 'slate', 'aria-hidden': 'true' },
+      h('div', { class: 'slate' },
+        h('div', { class: 'slstick sltop' }),
+        h('div', { class: 'slstick slbase' }),
+        h('div', { class: 'slboard' },
+          h('div', { class: 'slrow' }, cell('PROD.', h('strong', { class: 'sltitle' }, 'DOPEYE'))),
+          h('div', { class: 'slrow three' }, cell('ROLL', roll), cell('SCENE', scene), cell('TAKE', take)),
+          h('div', { class: 'slrow' }, cell('DATE', h('strong', { class: 'sldate' }, `${d.getFullYear()}.${pad(d.getMonth() + 1, 2)}.${pad(d.getDate(), 2)}`))))));
+    document.body.append(ov);
+    let gone = false;
+    const close = () => { if (gone) return; gone = true; ov.classList.add('out'); setTimeout(() => ov.remove(), 420); };
+    ov.addEventListener('pointerdown', close);
+    setTimeout(() => ov.classList.add('clap'), 480); // 딱
+    setTimeout(close, 980);                          // 위로 빠진다
+    return (g) => { // 롤, 지금까지 분해한 컷 수, 오늘이 몇 번째 날인지
+      const day = g.days.size + (g.days.has(dstr(new Date())) ? 0 : 1);
+      roll.textContent = pad(Math.max(1, Math.ceil(day / ROLL)), 2);
+      scene.textContent = pad(g.cards.length, 2);
+      take.textContent = pad(day, 2);
+    };
+  }
+
   window.addEventListener('hashchange', route);
-  openDB().then(route);
+  const fillSlate = slateIntro();
+  openDB().then(async () => {
+    route();
+    if (fillSlate) { try { fillSlate(await gameState()); } catch (e) { /* 숫자 없이도 열린다 */ } }
+  });
   if (!PREVIEW && 'serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
