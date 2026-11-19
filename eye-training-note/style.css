@@ -1397,3 +1397,25 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 .in-boil2.hit .boilsvg { animation: boilHit 0.26s steps(2) both; }
 @keyframes boilHit { 0% { transform: translateY(7px) scale(1.015); } 100% { transform: none; } }
 .in-boil2.s2 .bclap { animation: bclap 0.5s steps(1) both; }
+
+/* ── 펜으로 그린 얼굴들: 긴 머리, 창백한 얼굴, 눈 밑의 가는 선 ── */
+.crito .crs { fill: none; stroke: var(--cr-ink, #111); stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; }
+.crito .crs.crh { stroke-width: 0.5; }
+.crito .crlid { stroke-width: 1.5; }
+.crito .crk { fill: var(--cr-ink, #111); }
+.crito .crb { fill: var(--cr-ink, #111); }
+.crito .crlegs path { fill: none; stroke: var(--cr-ink, #111); stroke-width: 1.5; stroke-linecap: round; }
+.crito .crl1 { animation: crStep 0.5s steps(1) infinite; }
+.crito .crl2 { animation: crStep 0.5s steps(1) -0.25s infinite; }
+.crito .cre { animation: none; }
+.crito .crbody { animation: crSway 2.8s ease-in-out infinite; transform-origin: 50% 90%; transform-box: fill-box; }
+@keyframes crSway { 0%, 100% { transform: rotate(-2.2deg); } 50% { transform: rotate(2.2deg); } }
+.crroam { top: -45px; height: 45px; }
+.crroam .crt { animation-name: crRoam; }
+@keyframes crRoam { 0% { left: 0; transform: scaleX(1); } 49.9% { left: calc(100% - 38px); transform: scaleX(1); } 50% { left: calc(100% - 38px); transform: scaleX(-1); } 99.9% { left: 0; transform: scaleX(-1); } 100% { left: 0; transform: scaleX(1); } }
+#boss .hero { margin-top: 28px; }
+#boss .hlane { height: 60px; margin-top: -54px; }
+@media (max-width: 620px) { #boss .hlane { height: 44px; margin-top: -38px; } #boss .hlane .crt svg { width: 34px; height: 39px; } }
+/* 검은 판 위에서는 색을 뒤집지 않고 흰 테만 두른다 */
+.heropic.poster .crt { color: #111; --cr-eye: #fff; filter: drop-shadow(1.5px 0 0 #fff) drop-shadow(-1.5px 0 0 #fff) drop-shadow(0 1.5px 0 #fff) drop-shadow(0 -1.5px 0 #fff); }
+#boss .hlane .crt { margin-bottom: 8px; }
