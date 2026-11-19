@@ -1331,3 +1331,6 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 .in-cut.fly .pc { transition: translate 0.36s steps(4), opacity 0.36s steps(4); opacity: 0; animation: none; }
 .in-cut.fly .pcboard { translate: 0 60vh; } .in-cut.fly .pcstick { translate: 0 -60vh; }
 .in-cut.fly .pl1 { translate: -70vw -10vh; } .in-cut.fly .pl2 { translate: -60vw 30vh; } .in-cut.fly .pl3 { translate: 0 60vh; } .in-cut.fly .pl4 { translate: 60vw 30vh; }
+
+/* 로고의 빨간 점: 반짝이지 않고 가만히 */
+.lgrec i { animation: none; }
