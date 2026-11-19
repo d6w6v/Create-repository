@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '63 · 슬레이트와 손그림 발전';
+  const APP_VERSION = '64 · 탭 이동 고침';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -3504,6 +3504,8 @@
       show();
     };
   }
+  window.addEventListener('hashchange', route);
+
   /* ───────── 여는 장면 여러 가지: 백업 탭에서 고르고 바로 틀어 볼 수 있다 ───────── */
   const INTROS = [['slate', '슬레이트'], ['slate2', '슬레이트 2'], ['chalk', '분필 슬레이트'], ['boil', '손그림'], ['boil2', '손그림 2'], ['word', '글자 슬레이트'], ['cut', '종이 오리기'], ['eye', '눈 뜨기'], ['rec', '녹화 시작'], ['iris', 'o 속으로'], ['flash', '플래시 컷'], ['type', '타자'], ['shrink', '제자리로'], ['wipe', '빨간 막'], ['none', '없음']];
   const introKind = () => { try { const k = localStorage.getItem('eye-intro'); if (INTROS.some((x) => x[0] === k)) return k; } catch (e) { /* 기본값 */ } return 'slate'; };
