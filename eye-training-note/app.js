@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '61 · 되돌림';
+  const APP_VERSION = '62 · 여는 장면 열한 가지';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -3469,7 +3469,7 @@
 
   window.addEventListener('hashchange', route);
   /* ───────── 여는 장면 여러 가지: 백업 탭에서 고르고 바로 틀어 볼 수 있다 ───────── */
-  const INTROS = [['slate', '슬레이트'], ['word', '글자 슬레이트'], ['boil', '손그림'], ['cut', '종이 오리기'], ['eye', '눈 뜨기'], ['rec', '녹화 시작'], ['iris', 'o 속으로'], ['flash', '플래시 컷'], ['none', '없음']];
+  const INTROS = [['slate', '슬레이트'], ['word', '글자 슬레이트'], ['boil', '손그림'], ['cut', '종이 오리기'], ['eye', '눈 뜨기'], ['rec', '녹화 시작'], ['iris', 'o 속으로'], ['flash', '플래시 컷'], ['type', '타자'], ['shrink', '제자리로'], ['wipe', '빨간 막'], ['none', '없음']];
   const introKind = () => { try { const k = localStorage.getItem('eye-intro'); if (INTROS.some((x) => x[0] === k)) return k; } catch (e) { /* 기본값 */ } return 'slate'; };
   const introLogo = () => h('strong', { class: 'inlogo' }, 'd', eyeO(), 'p', h('span', { class: 'lge1' }, 'e'), 'y', h('span', { class: 'lge2' }, 'e'), h('span', { class: 'lgrec' }, h('i', {})));
   function playIntro(kind) {
@@ -3575,6 +3575,38 @@
       at(1370, () => ov.classList.add('c2'));
       at(2050, () => ov.classList.add('fly'));
       at(2450, () => end(120));
+    } else if (kind === 'type') { // 검은 화면에 이름이 한 글자씩 쳐진다. 빨간 커서가 따라가고, 마지막에 마침표
+      const line = h('strong', { class: 'inlogo' });
+      const cur = h('span', { class: 'incur' });
+      line.append(cur);
+      ov.append(h('div', { class: 'incenter' }, line));
+      ov.classList.add('show');
+      const parts = ['d', eyeO(), 'p', h('span', { class: 'lge1' }, 'e'), 'y', h('span', { class: 'lge2' }, 'e')];
+      parts.forEach((part, i) => at(260 + i * 105, () => { cur.before(part); }));
+      at(260 + parts.length * 105 + 420, () => { cur.replaceWith(h('span', { class: 'lgrec' }, h('i', {}))); });
+      at(1900, () => end(140));
+    } else if (kind === 'shrink') { // 흰 화면 가운데 큰 이름이, 맨 위 로고 자리로 줄어들며 들어간다
+      ov.append(center);
+      at(60, () => ov.classList.add('show'));
+      at(1050, () => {
+        const target = document.querySelector('.top h1.logo .eyeclip'); const mine = logo.querySelector('.eyeclip');
+        const tr = target && target.getBoundingClientRect(); const mr = mine.getBoundingClientRect(); const lr = logo.getBoundingClientRect();
+        if (!tr || !tr.width || !mr.width) { end(220); return; }
+        const sc = tr.width / mr.width; // 두 로고의 o 구멍 크기와 자리를 맞춘다
+        const dx = (tr.left + tr.width / 2) - lr.left - (mr.left + mr.width / 2 - lr.left) * sc;
+        const dy = (tr.top + tr.height / 2) - lr.top - (mr.top + mr.height / 2 - lr.top) * sc;
+        logo.style.transformOrigin = '0 0';
+        ov.classList.add('land');
+        logo.style.transform = `translate(${dx}px, ${dy}px) scale(${sc})`;
+      });
+      at(1900, () => end(0));
+    } else if (kind === 'wipe') { // 검은 화면의 이름 위로 빨간 막이 지나가고, 막이 걷히면 페이지
+      ov.append(h('div', { class: 'inblack' }, center), h('div', { class: 'inred' }));
+      at(60, () => ov.classList.add('show'));
+      at(950, () => ov.classList.add('cover'));
+      at(1300, () => ov.classList.add('bare'));
+      at(1330, () => ov.classList.add('uncover'));
+      at(1820, () => end(0));
     } else if (kind === 'flash') { // 내가 분해한 이미지들이 탁탁탁 지나가고, 이름에서 멈춘다
       const img = h('img', { class: 'inflash', alt: '' });
       ov.append(img, center);

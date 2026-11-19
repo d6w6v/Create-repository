@@ -1334,3 +1334,19 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 
 /* 로고의 빨간 점: 반짝이지 않고 가만히 */
 .lgrec i { animation: none; }
+
+/* ── 여는 장면 더: 타자, 제자리로, 빨간 막 ── */
+.in-type { background: #0b0b0b; }
+.in-type.out { opacity: 0; transition: opacity 0.12s; }
+.in-type .incenter { transition: none; }
+.incur { display: inline-block; width: 0.42em; height: 0.78em; margin-left: 0.06em; background: var(--red, #e4002b); vertical-align: -0.04em; animation: recBlink 0.7s steps(1) infinite; }
+.in-type .eyehole { animation: none; }
+.in-shrink { background: #fff; color: #111; --ink: #111; transition: background-color 0.5s ease 0.25s; }
+.in-shrink.land { background-color: rgba(255, 255, 255, 0); }
+.in-shrink .inlogo { transition: transform 0.75s cubic-bezier(0.7, 0, 0.2, 1); will-change: transform; }
+.in-shrink .eyehole { animation: none; }
+.inblack { position: absolute; inset: 0; background: #0b0b0b; }
+.in-wipe.bare .inblack { display: none; }
+.inred { position: absolute; inset: 0; background: var(--red, #e4002b); transform: translateX(-101%); }
+.in-wipe.cover .inred { transform: translateX(0); transition: transform 0.34s cubic-bezier(0.6, 0, 0.9, 0.4); }
+.in-wipe.uncover .inred { transform: translateX(101%); transition: transform 0.46s cubic-bezier(0.1, 0.6, 0.3, 1); }
