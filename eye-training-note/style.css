@@ -1439,3 +1439,22 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 .crito .crspk { fill: var(--cr-ink, #111); animation: crSpk 0.6s steps(1) infinite; }
 .crito .crspk.s1 { animation-delay: -0.2s; } .crito .crspk.s2 { animation-delay: -0.4s; }
 @keyframes crSpk { 0% { opacity: 1; } 34% { opacity: 0; } 67% { opacity: 0.5; } }
+
+/* ── 캐릭터 발전: 눈이 따라보고, 깜빡이고, 다리 가닥이 물결치고, 건드리면 머리털이 곤두선다 ── */
+.crito { pointer-events: auto; cursor: pointer; }
+.crito .crlook { transform: translate(calc(var(--lx, 0) * 1px), calc(var(--ly, 0) * 1px)); transition: transform 0.14s ease-out; }
+.crito:not(.tracking) .crlook { animation: crGlance 7.5s ease-in-out infinite; }
+@keyframes crGlance { 0%, 34%, 100% { transform: translate(0, 0); } 41%, 57% { transform: translate(1.1px, 0.2px); } 65%, 82% { transform: translate(-1.1px, 0.3px); } 90% { transform: translate(0, -0.6px); } }
+.crito .cre { transform-box: fill-box; transform-origin: center; animation: crBlink 5.4s infinite; }
+.crito .crlegs path { transform-box: fill-box; transform-origin: 50% 0; animation: crLeg 0.85s ease-in-out infinite; }
+@keyframes crLeg { 0%, 100% { transform: rotate(-8deg) scaleY(1); } 50% { transform: rotate(8deg) scaleY(0.82); } }
+.crito.spook .crbody { animation: crSpook 0.85s cubic-bezier(0.2, 0.9, 0.3, 1.3); }
+@keyframes crSpook { 0% { transform: scale(1) rotate(0); } 12% { transform: scale(1.28) rotate(-5deg); } 26% { transform: scale(1.2) rotate(5deg); } 40% { transform: scale(1.26) rotate(-4deg); } 55% { transform: scale(1.18) rotate(3deg); } 100% { transform: scale(1) rotate(0); } }
+.crito.spook .crfeat .cre { animation: none; transform: scale(1.18); }
+.crito svg { overflow: visible; }
+.crito.spook .crlegs path { animation-duration: 0.18s; }
+.crito.spook .crbristle { stroke-width: 3.4; }
+/* 걷다가 멈춰 서서 이쪽을 본다 */
+@keyframes crRoam { 0% { left: 0; transform: scaleX(1); } 17% { left: 36%; transform: scaleX(1); } 25% { left: 36%; transform: scaleX(1); } 49.9% { left: calc(100% - 46px); transform: scaleX(1); } 50% { left: calc(100% - 46px); transform: scaleX(-1); } 68% { left: 58%; transform: scaleX(-1); } 77% { left: 58%; transform: scaleX(-1); } 99.9% { left: 0; transform: scaleX(-1); } 100% { left: 0; transform: scaleX(1); } }
+/* 폰에서 첫 칸·끝 칸에 서 있을 때 화면 가장자리에 잘리지 않게 */
+@media (max-width: 620px) { #boss .hlane .hl:first-child { justify-content: flex-start; } #boss .hlane .hl:first-child .crt { margin-left: 8px; } #boss .hlane .hl:last-child { justify-content: flex-end; } #boss .hlane .hl:last-child .crt { margin-right: 8px; } }
