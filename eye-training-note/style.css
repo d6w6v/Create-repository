@@ -1429,3 +1429,13 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 #boss .hero { margin-top: 36px; }
 #boss .hlane { height: 70px; margin-top: -64px; }
 @media (max-width: 620px) { #boss .hlane { height: 50px; margin-top: -44px; } #boss .hlane .crt svg { width: 40px; height: 46px; } }
+
+/* ── 더 자글자글: 털처럼 일어난 머리 가장자리, 점묘, 먼지, 더 가는 다리 ── */
+.crito .crbristle { fill: none; stroke: var(--cr-ink, #111); stroke-width: 1.9; stroke-dasharray: 0.42 0.62; stroke-linecap: butt; }
+.crito .crstip circle { fill: var(--cr-ink, #111); opacity: 0.75; }
+.crito .crstrand { stroke-width: 0.26; opacity: 0.4; }
+.crito .crs.crf { stroke-width: 0.32; }
+.crito .crlegs path { stroke-width: 0.72; }
+.crito .crspk { fill: var(--cr-ink, #111); animation: crSpk 0.6s steps(1) infinite; }
+.crito .crspk.s1 { animation-delay: -0.2s; } .crito .crspk.s2 { animation-delay: -0.4s; }
+@keyframes crSpk { 0% { opacity: 1; } 34% { opacity: 0; } 67% { opacity: 0.5; } }

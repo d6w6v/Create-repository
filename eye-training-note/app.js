@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '66 · 자글자글';
+  const APP_VERSION = '67 · 더 자글자글';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -2696,10 +2696,10 @@
   /* 돌아다니는 것들: 긴 검은 머리에 창백한 얼굴. 가는 펜 선으로 눈 밑을 긁어 그린다. 머리카락 가닥으로 걷는다 */
   function creature(kind, size) {
     if (!document.getElementById('inkf')) { // 선이 펜으로 그은 것처럼 자글자글해지고, 프레임마다 꿈틀거리게
-      document.body.insertAdjacentHTML('beforeend', '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="inkf" x="-12%" y="-12%" width="124%" height="124%"><feTurbulence type="fractalNoise" baseFrequency="0.34" numOctaves="2" seed="4" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="1.35"/></filter></svg>');
+      document.body.insertAdjacentHTML('beforeend', '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="inkf" x="-12%" y="-12%" width="124%" height="124%"><feTurbulence type="fractalNoise" baseFrequency="0.52" numOctaves="3" seed="4" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.1"/></filter></svg>');
       if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
         let k = 0;
-        setInterval(() => { if (!document.querySelector('.crito')) return; const t = document.querySelector('#inkf feTurbulence'); if (t) t.setAttribute('seed', String(1 + (k++ % 7))); }, 140);
+        setInterval(() => { if (!document.querySelector('.crito')) return; const t = document.querySelector('#inkf feTurbulence'); if (t) t.setAttribute('seed', String(1 + (k++ % 11))); }, 95);
       }
     }
     const hatch = (x, y) => `<path class="crs crh" d="M${x - 2.6} ${y} l0.9 1.9 M${x - 0.9} ${y + 0.4} l0.7 2 M${x + 0.8} ${y + 0.4} l0.5 1.9 M${x + 2.4} ${y} l0.2 1.7"/>`;
@@ -2726,16 +2726,24 @@
       : `<ellipse class="creye" cx="20" cy="20" rx="11.4" ry="13"/>${faces[kind] != null ? faces[kind] : faces.hero}${kind === 'hero' || kind === 0 || kind === 6 || kind === 7 || kind === 3 ? '' : ''}${[2, 5].includes(kind) ? '' : (kind === 'hero' || [0, 3, 4, 6, 7].includes(kind) ? '' : mouth)}`;
     const fringe = kind === 1 ? '' : '<path class="crb" d="M7.6 17.5 Q11 6.5 20 6 Q29 6.5 32.4 17.5 Q27 10.6 20 11.4 Q13 10.6 7.6 17.5 Z"/>';
     // 자글자글한 잔선: 얼굴 가장자리를 따라 안쪽으로 긁은 선, 이마와 볼의 주름, 머리카락 결
-    const rim = Array.from({ length: 30 }, (_, i) => { const t = (i / 30) * Math.PI * 2 + 0.1; const c = Math.cos(t); const d = Math.sin(t); if (d < -0.55) return ''; const len = 1.1 + ((i * 7) % 5) * 0.32;
-      return `M${(20 + c * 11.2).toFixed(1)} ${(20 + d * 12.8).toFixed(1)} L${(20 + c * (11.2 - len)).toFixed(1)} ${(20 + d * (12.8 - len)).toFixed(1)}`; }).join(' ');
-    const wrinkles = kind === 1 ? '' : `<path class="crs crf" d="${rim}"/>` + ([2, 6].includes(kind) ? '' : '<path class="crs crf" d="M14.6 13.6 q5.4-1.5 10.8 0 M15.6 15 q4.4-1 8.8 0 M10 24.2 l1.5 2.4 M11.2 23.4 l1.6 2.8 M12.4 23.2 l1.3 2.4 M30 24.2 l-1.5 2.4 M28.8 23.4 l-1.6 2.8 M27.6 23.2 l-1.3 2.4 M17.4 33 l0.3 1.1 M20 33.4 v1.1 M22.6 33 l-0.3 1.1"/>');
-    const strands = Array.from({ length: 13 }, (_, i) => { const x = 4.5 + i * 2.6; const bend = (x - 20) * 0.28; return `M${(20 + (x - 20) * 0.35).toFixed(1)} 3.4 Q${(x + bend).toFixed(1)} 15 ${x.toFixed(1)} ${33.5 + (i % 2)}`; }).join(' ');
-    const hem = Array.from({ length: 16 }, (_, i) => `L${(37.4 - i * 2.32).toFixed(1)} ${i % 2 ? 34 : 36.8}`).join(' ');
-    const legs = (odd) => Array.from({ length: 6 }, (_, i) => { const x = 4.6 + (i * 2 + odd) * 2.8; const w = (i % 2 ? 1 : -1) * 0.9; return `<path d="M${x.toFixed(1)} 33 q${w} 3 0 6 q${-w} 2.6 ${(w * 0.4).toFixed(1)} ${5 + (i % 3) * 0.6}"/>`; }).join('');
+    let rnd = 7 + (typeof kind === 'number' ? kind * 13 : 5); const rand = () => { rnd = (rnd * 9301 + 49297) % 233280; return rnd / 233280; };
+    const rim = Array.from({ length: 58 }, (_, i) => { const t = (i / 58) * Math.PI * 2 + 0.05; const c = Math.cos(t); const d = Math.sin(t); if (d < -0.6) return ''; const len = 0.7 + rand() * 2.3; const sk = (rand() - 0.5) * 0.9;
+      return `M${(20 + c * 11.3).toFixed(1)} ${(20 + d * 12.9).toFixed(1)} L${(20 + c * (11.3 - len) + sk).toFixed(1)} ${(20 + d * (12.9 - len)).toFixed(1)}`; }).join(' ');
+    const stipple = Array.from({ length: 70 }, () => { const t = rand() * Math.PI * 2; const r = Math.sqrt(rand()); const x = 20 + Math.cos(t) * r * 10; const y = 22 + Math.sin(t) * r * 10.5; return y < 14 ? '' : `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(0.12 + rand() * 0.14).toFixed(2)}"/>`; }).join('');
+    const cross = 'M9.6 23.6 l2 3 M10.6 22.8 l2.2 3.4 M11.8 22.6 l2 3 M13 22.8 l1.6 2.6 M9.8 26.4 l3.4-2.6 M10.4 27.6 l3.6-2.8 M30.4 23.6 l-2 3 M29.4 22.8 l-2.2 3.4 M28.2 22.6 l-2 3 M27 22.8 l-1.6 2.6 M30.2 26.4 l-3.4-2.6 M29.6 27.6 l-3.6-2.8';
+    const strays = '<path class="crs crf" style="stroke-width:0.42" d="M9 12 Q12.5 18 10.5 27 M11.5 10.5 Q14 15 13 20.5 M31 12 Q27.5 18 29.5 27 M28.5 10.5 Q26 15 27 20.5 M19 7 Q17.6 11 18.6 14.5 M21.6 7 Q22.6 10.4 21.8 13.6"/>';
+    const wrinkles = kind === 1 ? '' : `<g class="crstip">${stipple}</g><path class="crs crf" d="${rim}"/>${strays}` + ([2, 6].includes(kind) ? '' : `<path class="crs crf" d="M14.6 13.6 q5.4-1.5 10.8 0 M15.6 15 q4.4-1 8.8 0 M16.4 16.2 q3.6-0.8 7.2 0 ${cross} M17.4 33 l0.3 1.1 M18.8 33.3 l0.1 1.1 M20 33.4 v1.1 M21.2 33.3 l-0.1 1.1 M22.6 33 l-0.3 1.1"/>`);
+    const strands = Array.from({ length: 25 }, (_, i) => { const x = 3.6 + i * 1.37; const bend = (x - 20) * 0.28 + (rand() - 0.5) * 1.4; return `M${(20 + (x - 20) * 0.35).toFixed(1)} ${(3 + rand() * 1.4).toFixed(1)} Q${(x + bend).toFixed(1)} ${(13 + rand() * 4).toFixed(1)} ${x.toFixed(1)} ${(32.6 + rand() * 2.6).toFixed(1)}`; }).join(' ');
+    const hem = Array.from({ length: 24 }, (_, i) => `L${(37.4 - i * 1.51).toFixed(1)} ${(i % 2 ? 33.6 : 36 + rand() * 1.6).toFixed(1)}`).join(' ');
+    const legs = (odd) => Array.from({ length: 8 }, (_, i) => { const x = 3.8 + (i * 2 + odd) * 2.1; const w = (rand() - 0.5) * 2.4; const len = 4.4 + rand() * 2.2;
+      return `<path d="M${x.toFixed(1)} 33 q${w.toFixed(1)} 2.6 ${(w * 0.2).toFixed(1)} ${len.toFixed(1)} q${(-w).toFixed(1)} 2 ${(w * 0.5).toFixed(1)} ${(len * 0.9).toFixed(1)}"/>`; }).join('');
+    const specks = Array.from({ length: 14 }, (_, i) => { const t = rand() * Math.PI * 2; const r = 19 + rand() * 3.5; return `<circle class="crspk s${i % 3}" cx="${(20 + Math.cos(t) * r * 0.95).toFixed(1)}" cy="${(21 + Math.sin(t) * r).toFixed(1)}" r="${(0.2 + rand() * 0.3).toFixed(2)}"/>`; }).join('');
+    const hairD = `M20 1.5 C9 1.5 2.6 9.5 2.6 20 V34.5 H37.4 V20 C37.4 9.5 31 1.5 20 1.5 Z`;
     const el = h('span', { class: 'crt crito', 'aria-hidden': 'true' });
     el.innerHTML = `<svg viewBox="0 0 40 46" width="${size}" height="${Math.round(size * 1.15)}"><g filter="url(#inkf)">
       <g class="crlegs"><g class="crl1">${legs(0)}</g><g class="crl2">${legs(1)}</g></g>
-      <g class="crbody"><path class="crb" d="M20 1.5 C9 1.5 2.6 9.5 2.6 20 V34.5 ${hem} L2.6 34.5 V20 Z M2.6 34.5 H37.4 V20 C37.4 9.5 31 1.5 20 1.5 C9 1.5 2.6 9.5 2.6 20 Z"/><path class="crs crstrand" d="${strands}"/>${face}${wrinkles}${fringe}</g></g></svg>`;
+      <g class="crspks">${specks}</g>
+      <g class="crbody"><path class="crb" d="M2.6 34.5 H37.4 ${hem} Z"/><path class="crb" d="${hairD}"/><path class="crbristle" d="${hairD}"/><path class="crs crstrand" d="${strands}"/>${face}${wrinkles}${fringe}</g></g></svg>`;
     return el;
   }
   const weekId = () => dstr(weekStart(new Date()));
