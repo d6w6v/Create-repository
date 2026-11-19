@@ -1419,3 +1419,13 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 /* 검은 판 위에서는 색을 뒤집지 않고 흰 테만 두른다 */
 .heropic.poster .crt { color: #111; --cr-eye: #fff; filter: drop-shadow(1.5px 0 0 #fff) drop-shadow(-1.5px 0 0 #fff) drop-shadow(0 1.5px 0 #fff) drop-shadow(0 -1.5px 0 #fff); }
 #boss .hlane .crt { margin-bottom: 8px; }
+
+/* ── 자글자글: 더 가는 잔선, 머리카락 결, 가는 다리 여러 가닥 ── */
+.crito .crs.crf { stroke-width: 0.36; }
+.crito .crstrand { stroke: var(--cr-eye, #fff); stroke-width: 0.3; opacity: 0.32; }
+.crito .crlegs path { stroke-width: 0.95; }
+.crroam { top: -54px; height: 54px; }
+@keyframes crRoam { 0% { left: 0; transform: scaleX(1); } 49.9% { left: calc(100% - 46px); transform: scaleX(1); } 50% { left: calc(100% - 46px); transform: scaleX(-1); } 99.9% { left: 0; transform: scaleX(-1); } 100% { left: 0; transform: scaleX(1); } }
+#boss .hero { margin-top: 36px; }
+#boss .hlane { height: 70px; margin-top: -64px; }
+@media (max-width: 620px) { #boss .hlane { height: 50px; margin-top: -44px; } #boss .hlane .crt svg { width: 40px; height: 46px; } }
