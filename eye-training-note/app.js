@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '62 · 여는 장면 열한 가지';
+  const APP_VERSION = '63 · 슬레이트와 손그림 발전';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -3434,48 +3434,84 @@
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(refitEyes);
 
   /* ───────── 여는 장면: 가는 줄 두 개가 딱 붙고, 그 자리에서 이름이 올라온 뒤 위아래로 열린다 ───────── */
-  function slateIntro() {
+  function slateIntro(variant) { // variant: ''(기본) | 'v2'(다듬은 것) | 'chalk'(분필로 그린 것)
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
     const num = () => h('span', { class: 'slnum' }, '--');
     const roll = num(); const scene = num(); const take = num();
     const d = new Date();
     const meta = (k, v) => h('span', { class: 'slmeta' }, h('span', { class: 'sllabel' }, k), v);
-    const ov = h('div', { class: 'slate-ov', id: 'slate', 'aria-hidden': 'true' },
+    const ov = h('div', { class: 'slate-ov' + (variant ? ' ' + variant : ''), id: 'slate', 'aria-hidden': 'true' },
       h('div', { class: 'slup' },
         h('strong', { class: 'sltitle' },
           [...'dopeye'].map((ch, i) => h('span', { class: 'slch' + (i === 3 ? ' lge1' : i === 5 ? ' lge2' : '') }, h('span', { style: `transition-delay:${i * 38}ms` }, i === 1 ? eyeO() : ch))),
           h('span', { class: 'sldot lgrec' }, h('i', {})))),
       h('div', { class: 'sldown' },
         h('div', { class: 'slmetas' }, meta('ROLL', roll), meta('SCENE', scene), meta('TAKE', take),
-          meta('DATE', h('span', { class: 'slnum' }, `${d.getFullYear()}.${pad(d.getMonth() + 1, 2)}.${pad(d.getDate(), 2)}`)))),
-      h('span', { class: 'slline' }), h('span', { class: 'slarm' }));
-    document.body.append(ov);
-    let gone = false;
+          meta('DATE', h('span', { class: 'slnum' }, `${d.getFullYear()}.${pad(d.getMonth() + 1, 2)}.${pad(d.getDate(), 2)}`)))));
     const timers = [];
     const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+    if (variant === 'chalk') { // 줄을 분필로 그은 것처럼: 굵고, 프레임마다 떨린다
+      const box = h('div', { class: 'chalkbox' });
+      box.innerHTML = `<svg class="chalksvg" width="100%" height="100%"><defs>
+        <filter id="boilc" filterUnits="userSpaceOnUse" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="1" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="8"/></filter>
+        <filter id="boilt" x="-8%" y="-25%" width="116%" height="150%"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="7"/></filter></defs>
+        <g filter="url(#boilc)" stroke="#fff" stroke-width="3.2" stroke-linecap="round" fill="none">
+          <line class="cline" pathLength="1" x1="0" y1="54%" x2="100%" y2="54%"/>
+          <g class="carm"><line x1="0" y1="54%" x2="100%" y2="54%"/></g>
+          <g class="cmarks"><line x1="50%" y1="50%" x2="50%" y2="46%"/><line x1="46%" y1="51%" x2="44%" y2="47.5%"/><line x1="54%" y1="51%" x2="56%" y2="47.5%"/></g>
+        </g></svg>`;
+      ov.append(box);
+      const turbs = box.querySelectorAll('feTurbulence'); let seed = 1;
+      timers.push(setInterval(() => { seed++; turbs.forEach((t, i) => t.setAttribute('seed', String(seed + i * 7))); }, 120));
+    } else {
+      ov.append(h('span', { class: 'slline' }), h('span', { class: 'slarm' }));
+      if (variant === 'v2') ov.append(h('span', { class: 'slticks' }), h('span', { class: 'slrip r1' }), h('span', { class: 'slrip r2' }));
+    }
+    document.body.append(ov);
+    let gone = false;
     const close = () => { if (gone) return; gone = true; timers.forEach(clearTimeout); ov.classList.add('out'); setTimeout(() => ov.remove(), 800); };
     ov.addEventListener('pointerdown', close);
+    // 숫자: 기본은 그냥 적고, v2는 0부터 빠르게 올라간다
+    let target = null; let titled = false;
+    const show = () => {
+      if (!target) return;
+      const els = [roll, scene, take];
+      if (variant !== 'v2') { els.forEach((el, i) => { el.textContent = pad(target[i], 2); }); return; }
+      if (!titled) return;
+      const t0 = performance.now();
+      const tick = (t) => { const k = Math.min(1, (t - t0) / 520); const e = 1 - Math.pow(1 - k, 3); els.forEach((el, i) => { el.textContent = pad(Math.round(target[i] * e), 2); }); if (k < 1 && !gone) requestAnimationFrame(tick); };
+      requestAnimationFrame(tick);
+    };
     requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('go'))); // 가는 줄이 그어진다
-    at(460, () => ov.classList.add('clap'));   // 위쪽 줄이 내려와 딱 붙는다
-    at(570, () => ov.classList.add('title'));  // 붙는 순간 이름이 올라온다
-    at(1650, close);                           // 붙은 줄을 경계로 위아래로 열린다
+    if (variant === 'v2') {
+      at(330, () => ov.classList.add('wind'));   // 치기 전에 살짝 더 든다
+      at(500, () => ov.classList.add('clap'));
+      at(600, () => { ov.classList.add('title'); titled = true; show(); });
+      at(1640, () => ov.classList.add('hot'));   // 갈라지기 직전, 줄이 빨갛게
+      at(1780, close);
+    } else if (variant === 'chalk') {
+      at(520, () => ov.classList.add('clap'));
+      at(640, () => ov.classList.add('title'));
+      at(1800, close);
+    } else {
+      at(460, () => ov.classList.add('clap'));   // 위쪽 줄이 내려와 딱 붙는다
+      at(570, () => ov.classList.add('title'));  // 붙는 순간 이름이 올라온다
+      at(1650, close);                           // 붙은 줄을 경계로 위아래로 열린다
+    }
     return (g) => { // 롤, 지금까지 분해한 컷 수, 오늘이 몇 번째 날인지
       const day = g.days.size + (g.days.has(dstr(new Date())) ? 0 : 1);
-      roll.textContent = pad(Math.max(1, Math.ceil(day / ROLL)), 2);
-      scene.textContent = pad(g.cards.length, 2);
-      take.textContent = pad(day, 2);
+      target = [Math.max(1, Math.ceil(day / ROLL)), g.cards.length, day];
+      show();
     };
   }
-
-  window.addEventListener('hashchange', route);
   /* ───────── 여는 장면 여러 가지: 백업 탭에서 고르고 바로 틀어 볼 수 있다 ───────── */
-  const INTROS = [['slate', '슬레이트'], ['word', '글자 슬레이트'], ['boil', '손그림'], ['cut', '종이 오리기'], ['eye', '눈 뜨기'], ['rec', '녹화 시작'], ['iris', 'o 속으로'], ['flash', '플래시 컷'], ['type', '타자'], ['shrink', '제자리로'], ['wipe', '빨간 막'], ['none', '없음']];
+  const INTROS = [['slate', '슬레이트'], ['slate2', '슬레이트 2'], ['chalk', '분필 슬레이트'], ['boil', '손그림'], ['boil2', '손그림 2'], ['word', '글자 슬레이트'], ['cut', '종이 오리기'], ['eye', '눈 뜨기'], ['rec', '녹화 시작'], ['iris', 'o 속으로'], ['flash', '플래시 컷'], ['type', '타자'], ['shrink', '제자리로'], ['wipe', '빨간 막'], ['none', '없음']];
   const introKind = () => { try { const k = localStorage.getItem('eye-intro'); if (INTROS.some((x) => x[0] === k)) return k; } catch (e) { /* 기본값 */ } return 'slate'; };
   const introLogo = () => h('strong', { class: 'inlogo' }, 'd', eyeO(), 'p', h('span', { class: 'lge1' }, 'e'), 'y', h('span', { class: 'lge2' }, 'e'), h('span', { class: 'lgrec' }, h('i', {})));
   function playIntro(kind) {
     document.querySelectorAll('#slate').forEach((e) => e.remove());
     if (kind === 'none' || matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
-    if (kind === 'slate') { const fill = slateIntro(); return fill ? { fill, feed() {} } : null; }
+    if (kind === 'slate' || kind === 'slate2' || kind === 'chalk') { const fill = slateIntro(kind === 'slate2' ? 'v2' : kind === 'chalk' ? 'chalk' : ''); return fill ? { fill, feed() {} } : null; }
     const ov = h('div', { class: 'intro in-' + kind, id: 'slate', 'aria-hidden': 'true' });
     const timers = []; let gone = false; let raf = 0;
     const at = (ms, fn) => timers.push(setTimeout(fn, ms));
@@ -3560,6 +3596,34 @@
       at(760, () => ov.classList.add('s1'));
       at(875, () => ov.classList.add('s2'));
       at(1900, () => end(120));
+    } else if (kind === 'boil2') { // 손그림 발전판: 선이 그어지며 나타나고, 딱딱이가 한번 들렸다가 치고, 종이가 위로 넘어간다
+      const stripes = (y1, y2) => Array.from({ length: 8 }, (_, i) => { const x = 58 + i * 40; return `<line class="dr d4" pathLength="1" x1="${x}" y1="${y1}" x2="${x + 22}" y2="${y2}"/>`; }).join('');
+      const sheet = h('div', { class: 'boilsheet' });
+      const wrap = h('div', { class: 'boilwrap' });
+      wrap.innerHTML = `<svg viewBox="0 0 400 330" class="boilsvg"><defs><filter id="boil2f" x="-12%" y="-12%" width="124%" height="124%"><feTurbulence type="fractalNoise" baseFrequency="0.032" numOctaves="2" seed="1" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="6.5"/></filter></defs>
+        <g filter="url(#boil2f)" fill="none" stroke="#111" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+          <rect class="dr d1" pathLength="1" x="40" y="134" width="320" height="172"/>
+          <line class="dr d2" pathLength="1" x1="40" y1="206" x2="360" y2="206"/><line class="dr d2" pathLength="1" x1="40" y1="262" x2="360" y2="262"/><line class="dr d2" pathLength="1" x1="146" y1="206" x2="146" y2="262"/><line class="dr d2" pathLength="1" x1="253" y1="206" x2="253" y2="262"/>
+          <rect class="dr d3" pathLength="1" x="40" y="100" width="320" height="34"/>${stripes(100, 134)}
+          <g class="bstick"><rect class="dr d3" pathLength="1" x="40" y="62" width="320" height="34"/>${stripes(96, 62)}</g>
+          <g class="bclap"><line x1="372" y1="78" x2="394" y2="60"/><line x1="378" y1="98" x2="402" y2="98"/><line x1="372" y1="118" x2="394" y2="136"/><line x1="28" y1="78" x2="8" y2="62"/><line x1="24" y1="98" x2="2" y2="98"/></g>
+          <g class="bword" stroke="none" fill="#111"><text x="56" y="188" class="bt1">dopeye</text><circle cx="232" cy="181" r="6.5" fill="#e4002b"/>
+            <text x="54" y="224" class="bt2">ROLL</text><text x="160" y="224" class="bt2">SCENE</text><text x="267" y="224" class="bt2">TAKE</text>
+            <text x="54" y="254" class="bt3 b-roll">--</text><text x="160" y="254" class="bt3 b-scene">--</text><text x="267" y="254" class="bt3 b-take">--</text>
+            <text x="54" y="292" class="bt2 b-date"></text></g>
+        </g></svg>`;
+      sheet.append(wrap); ov.append(sheet);
+      const d = new Date(); wrap.querySelector('.b-date').textContent = `${d.getFullYear()}.${pad(d.getMonth() + 1, 2)}.${pad(d.getDate(), 2)}`;
+      fill = (g) => { const day = g.days.size + (g.days.has(dstr(new Date())) ? 0 : 1); wrap.querySelector('.b-roll').textContent = pad(Math.max(1, Math.ceil(day / ROLL)), 2); wrap.querySelector('.b-scene').textContent = pad(g.cards.length, 2); wrap.querySelector('.b-take').textContent = pad(day, 2); };
+      const turb = wrap.querySelector('feTurbulence'); let seed = 1;
+      timers.push(setInterval(() => { seed++; turb.setAttribute('seed', String(seed)); wrap.style.transform = `translate(${(seed % 3) - 1}px, ${((seed * 7) % 3) - 1}px) rotate(${((seed % 5) - 2) * 0.12}deg)`; }, 115));
+      at(40, () => ov.classList.add('show', 'draw'));
+      at(1150, () => ov.classList.add('lift1'));   // 들어 올린다 (두 장에 걸쳐)
+      at(1265, () => ov.classList.add('lift2'));
+      at(1700, () => ov.classList.add('s1'));      // 내려친다
+      at(1790, () => ov.classList.add('s2', 'hit'));
+      at(2600, () => ov.classList.add('turn'));    // 종이가 위로 넘어간다
+      at(3150, () => end(0));
     } else if (kind === 'cut') { // 종이를 오려 붙인 슬레이트. 한 장씩 찍은 스톱모션처럼 뚝뚝 움직인다
       const b = (t) => h('b', {}, t);
       const roll = b('--'); const scene = b('--'); const take = b('--');

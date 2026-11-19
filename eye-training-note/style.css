@@ -1350,3 +1350,50 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 .inred { position: absolute; inset: 0; background: var(--red, #e4002b); transform: translateX(-101%); }
 .in-wipe.cover .inred { transform: translateX(0); transition: transform 0.34s cubic-bezier(0.6, 0, 0.9, 0.4); }
 .in-wipe.uncover .inred { transform: translateX(101%); transition: transform 0.46s cubic-bezier(0.1, 0.6, 0.3, 1); }
+
+/* ── 슬레이트 2: 눈금, 치기 전에 한 번 더 드는 동작, 친 자리에서 퍼지는 잔물결, 올라가는 숫자, 갈라지기 직전 빨간 줄 ── */
+.slticks { position: absolute; left: 0; right: 0; top: calc(var(--seam) + 1px); height: 7px; pointer-events: none; opacity: 0; transition: opacity 0.4s ease 0.25s;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.55) 0 1px, transparent 1px 2.5vw), repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.85) 0 1px, transparent 1px 12.5vw); background-size: auto 4px, auto 7px; background-repeat: repeat-x; }
+.slate-ov.v2.go .slticks { opacity: 1; }
+.slate-ov.v2.out .slticks { opacity: 0; transition: opacity 0.15s; }
+.slate-ov.v2.wind .slarm { transform: rotate(-8.5deg); transition: transform 0.15s cubic-bezier(0.2, 0.7, 0.3, 1); }
+.slate-ov.v2.clap .slarm { transform: rotate(0deg); transition: transform 0.075s cubic-bezier(0.7, 0, 1, 0.4); }
+@media (max-width: 700px) { .slate-ov.v2.wind .slarm { transform: rotate(-15deg); } }
+.slrip { position: absolute; left: 0; right: 0; top: var(--seam); height: 1px; background: #fff; opacity: 0; pointer-events: none; }
+.slate-ov.v2.clap .slrip.r1 { animation: slRipUp 0.5s cubic-bezier(0.1, 0.7, 0.2, 1) 0.07s both; }
+.slate-ov.v2.clap .slrip.r2 { animation: slRipDown 0.5s cubic-bezier(0.1, 0.7, 0.2, 1) 0.07s both; }
+@keyframes slRipUp { 0% { opacity: 0.8; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-22px); } }
+@keyframes slRipDown { 0% { opacity: 0.8; transform: translateY(0); } 100% { opacity: 0; transform: translateY(22px); } }
+.slate-ov.v2.hot .slline { background: var(--red, #e4002b); box-shadow: 0 0 0 1px var(--red, #e4002b); transition: none; }
+/* ── 분필 슬레이트: 검은 판에 흰 분필. 줄도 글자도 프레임마다 떨린다 ── */
+.chalkbox { position: absolute; inset: 0; pointer-events: none; }
+.chalksvg { display: block; width: 100%; height: 100%; }
+.cline { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 0.5s cubic-bezier(0.3, 0.7, 0.2, 1); }
+.slate-ov.chalk.go .cline { stroke-dashoffset: 0; }
+.carm { transform-box: view-box; transform-origin: 0 54%; transform: rotate(-7deg); opacity: 0; transition: opacity 0.25s; }
+.slate-ov.chalk.go .carm { opacity: 1; }
+.slate-ov.chalk.clap .carm { transform: rotate(0deg); transition: transform 0.12s steps(2); }
+@media (max-width: 700px) { .carm { transform: rotate(-13deg); } }
+.cmarks { opacity: 0; }
+.slate-ov.chalk.clap .cmarks { animation: bclap 0.45s steps(1) 0.12s both; }
+.slate-ov.chalk .sltitle, .slate-ov.chalk .slmetas { filter: url(#boilt); }
+.slate-ov.chalk .slmeta { font-size: 13px; }
+.slate-ov.chalk.out .chalkbox { opacity: 0; transition: opacity 0.2s; }
+/* ── 손그림 2: 선이 그어지며 나타나고, 한 번 들었다 치고, 종이가 위로 넘어간다 ── */
+.in-boil2 { color: #111; }
+.boilsheet { position: absolute; inset: 0; background: #f7f5ef; display: flex; align-items: center; justify-content: center; transform-origin: 50% 0; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28); transition: transform 0.55s cubic-bezier(0.6, 0, 0.9, 0.5); }
+.in-boil2.turn .boilsheet { transform: translateY(-112%) rotate(-3.5deg); }
+.in-boil2.show .boilwrap { opacity: 1; }
+.in-boil2 .dr { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.in-boil2.draw .dr { stroke-dashoffset: 0; transition: stroke-dashoffset 0.34s cubic-bezier(0.4, 0, 0.3, 1); }
+.in-boil2.draw .dr.d2 { transition-delay: 0.26s; } .in-boil2.draw .dr.d3 { transition-delay: 0.48s; } .in-boil2.draw .dr.d4 { transition-delay: 0.68s; transition-duration: 0.2s; }
+.in-boil2 .bword { opacity: 0; }
+.in-boil2.draw .bword { opacity: 1; transition: opacity 0.01s linear 0.86s; }
+.in-boil2 .bstick { transform: rotate(0deg); }
+.in-boil2.lift1 .bstick { transform: rotate(-13deg); }
+.in-boil2.lift2 .bstick { transform: rotate(-27deg); }
+.in-boil2.s1 .bstick { transform: rotate(-8deg); }
+.in-boil2.s2 .bstick { transform: rotate(0deg); }
+.in-boil2.hit .boilsvg { animation: boilHit 0.26s steps(2) both; }
+@keyframes boilHit { 0% { transform: translateY(7px) scale(1.015); } 100% { transform: none; } }
+.in-boil2.s2 .bclap { animation: bclap 0.5s steps(1) both; }
