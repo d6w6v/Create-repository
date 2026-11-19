@@ -1482,3 +1482,5 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 .crito.spook .crtend { animation-duration: 0.22s; stroke-width: 0.6; }
 .crito.spook .crworm { animation-duration: 0.8s; }
 @media (prefers-reduced-motion: reduce) { .crito .crbody, .crito .crmaw, .crito .crhe, .crito .crtend, .crito .crdrip, .crito .crworm { animation: none; } .crito .crhe { transform: scaleY(1); } }
+/* 캐릭터를 뺐으니 사진 위에 비워 뒀던 자리도 원래대로 */
+#boss .hero { margin-top: 18px; }

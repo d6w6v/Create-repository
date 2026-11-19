@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '69 · 갈라지는 얼굴';
+  const APP_VERSION = '70 · 캐릭터 뺌';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -724,9 +724,6 @@
         } else pic.classList.add('poster'), pic.append(h('strong', { class: 'pname' }, bName), h('span', { class: 'pdesc' }, '이미지 없이 글로 쓰는 중'));
       }
       // 진행 표시는 이미지 아래 한 줄로 모은다: 01~11 칸, 그 위를 걷는 주인공
-      const bossKind = Math.max(0, BOSSES.findIndex((x) => x[0] === bName));
-      const lane = bCard ? h('div', { class: 'hlane' + (beaten ? ' won' : ''), id: 'px-stage', 'aria-hidden': 'true' },
-        STEPS.map((st, i) => h('span', { class: 'hl' }, i === Math.min(cut, hp.total - 1) ? creature('hero', 56) : null))) : null;
       const slices = bCard ? h('div', { class: 'hslices', role: 'img', 'aria-label': `${hp.total}단계 중 ${cut}단계 끝냄` },
         STEPS.map((st, i) => h('span', { class: 'hs' + (i < cut ? ' done' : i === cut && !beaten ? ' next' : '') }, pad(i + 1, 2)))) : null;
       const pzPick = h('div', { class: 'pzpick', id: 'puzzle-pick' });
@@ -734,7 +731,6 @@
         ...PUZZLES.map(([k, name]) => h('button', { class: 'btn small' + (k === puzzleKind ? ' on' : ''), type: 'button', id: 'puzzle-' + k, 'aria-pressed': String(k === puzzleKind), title: '누르면 끝까지 풀리는 모습을 미리 보여 줘요',
           onclick: () => { puzzleKind = k; try { localStorage.setItem('eye-puzzle', k); } catch (e) { /* 이번만 */ } drawPick(); previewPuzzle(k); } }, name)));
       if (drawPuzzle) drawPick();
-      if (!bCard) pic.append(creature(bossKind, 64));
 
       // 한 덩어리: 머리줄 하나, 왼쪽에 이미지와 진행 한 줄, 오른쪽에 할 일(브리프 → 오늘의 미션)
       const briefSec = h('section', { class: 'sec', id: 'boss' },
@@ -743,11 +739,11 @@
             bCard ? h('span', { class: 'btitle' }, h('strong', {}, bName), h('span', { class: 'bko' }, bKo), h('span', { class: 'hcount mono' }, `${cut}/${hp.total}`)) : null),
           h('span', { class: 'chip-state' + (beaten ? ' done' : '') }, beaten ? '완료' : bCard ? '진행 중' : '시작 전')),
         h('div', { class: 'hero', id: 'hero' },
-          h('div', { class: 'heroleft' }, bCard ? h('span', { class: 'crroam', 'aria-hidden': 'true' }, creature(bossKind, 46)) : null, pic, lane, slices, drawPuzzle ? pzPick : null),
+          h('div', { class: 'heroleft' }, pic, slices, drawPuzzle ? pzPick : null),
           h('div', { class: 'heroright' },
             h('div', { class: 'glance', id: 'brief-info' },
               h('p', { class: 'missiontext' }, bCard ? bDesc : '이 주제에 맞는 이미지를 직접 골라 오면 시작돼요.'),
-              h('p', { class: 'note' }, beaten ? '11단계를 다 끝냈어요.' : '단계를 하나 끝낼 때마다 이미지가 한 조각 풀리고, 아래 줄에서 한 칸 걸어가요.'),
+              h('p', { class: 'note' }, beaten ? '11단계를 다 끝냈어요.' : '단계를 하나 끝낼 때마다 이미지가 한 조각씩 풀려요.'),
               h('dl', { class: 'facts' },
                 fact('방식', '깊게 파기'),
                 fact('분량', '11단계 전부'),
@@ -2693,86 +2689,6 @@
     ['TOO MUCH', '소품과 색이 넘치는 이미지. 스무 가지가 넘는 것 중 기둥을 가려내요.', '과잉'],
     ['NOTHING SPECIAL', '특별한 게 없어 보이는데 끌리는 이미지. "틀린 것"을 찾기가 가장 어려워요.', '평범함'],
   ];
-  /* 눈동자가 마우스나 손가락을 따라간다. 한동안 움직임이 없으면 제멋대로 두리번거린다 */
-  let eyesOn = false;
-  function watchEyes() {
-    if (eyesOn) return; eyesOn = true;
-    let px = 0; let py = 0; let raf = 0; let idle = 0;
-    const apply = () => { raf = 0;
-      document.querySelectorAll('.crito').forEach((el) => { const r = el.getBoundingClientRect(); if (!r.width) return;
-        let dx = px - (r.left + r.width / 2); const dy = py - (r.top + r.height * 0.45); const len = Math.hypot(dx, dy) || 1; const k = Math.min(1, len / 160) * 1.25;
-        if (getComputedStyle(el).transform.startsWith('matrix(-1')) dx = -dx; // 돌아서서 걷는 중이면 좌우를 뒤집는다
-        el.style.setProperty('--lx', ((dx / len) * k).toFixed(2)); el.style.setProperty('--ly', ((dy / len) * k * 0.8).toFixed(2)); el.classList.add('tracking'); }); };
-    window.addEventListener('pointermove', (e) => { px = e.clientX; py = e.clientY; if (!raf) raf = requestAnimationFrame(apply);
-      clearTimeout(idle); idle = setTimeout(() => document.querySelectorAll('.crito').forEach((el) => el.classList.remove('tracking')), 3500); }, { passive: true });
-  }
-  /* 돌아다니는 것들: 긴 검은 머리에 창백한 얼굴. 가는 펜 선으로 눈 밑을 긁어 그린다. 머리카락 가닥으로 걷는다 */
-  function creature(kind, size) {
-    if (!document.getElementById('inkf')) { // 선이 펜으로 그은 것처럼 자글자글해지고, 프레임마다 꿈틀거리게
-      document.body.insertAdjacentHTML('beforeend', '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="inkf" x="-12%" y="-12%" width="124%" height="124%"><feTurbulence type="fractalNoise" baseFrequency="0.52" numOctaves="3" seed="4" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.1"/></filter><filter id="inkf2" x="-12%" y="-12%" width="124%" height="124%"><feTurbulence type="fractalNoise" baseFrequency="0.3" numOctaves="2" seed="2" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="0.75"/></filter></svg>');
-      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        let k = 0;
-        setInterval(() => { if (!document.querySelector('.crito')) return; k++; const t = document.querySelector('#inkf feTurbulence'); if (t) t.setAttribute('seed', String(1 + (k % 11))); const t2 = document.querySelector('#inkf2 feTurbulence'); if (t2 && k % 2 === 0) t2.setAttribute('seed', String(1 + ((k / 2) % 5))); }, 95);
-      }
-    }
-    const hatch = (x, y) => `<path class="crs crh" d="M${x - 2.6} ${y} l0.9 1.9 M${x - 0.9} ${y + 0.4} l0.7 2 M${x + 0.8} ${y + 0.4} l0.5 1.9 M${x + 2.4} ${y} l0.2 1.7"/>`;
-    const eye = (x, y, o, dbl) => `<g class="cre" style="animation-delay:-${((x * 7 + y * 3) % 47 / 10).toFixed(1)}s"${o ? ` opacity="${o}"` : ''}><path class="crs crlid" d="M${x - 3.6} ${y} Q${x} ${y - 3.4} ${x + 3.6} ${y}"/><path class="crs crh" d="M${x - 3.2} ${y + 1} Q${x} ${y + 2.8} ${x + 3.2} ${y + 1}"/><circle class="crk crlook" cx="${dbl ? x - 0.9 : x}" cy="${y + 0.2}" r="${dbl ? 0.8 : 0.95}"/>${dbl ? `<circle class="crk crlook" cx="${x + 1.2}" cy="${y + 0.35}" r="0.62"/>` : ''}</g>`;
-    const eyes = eye(14.6, 20) + eye(25.4, 20) + hatch(14.6, 23.2) + hatch(25.4, 23.2);
-    const mouth = '<path class="crs crh" d="M17.2 30 Q20 30.9 22.8 30"/>';
-    const holes = [[13, 14], [20, 12.5], [27, 14], [11.5, 20], [17, 18.5], [23, 18.5], [28.5, 20], [14, 25], [20, 24], [26, 25], [17, 29.5], [23, 29.5]];
-    const faces = {
-      hero: '<g class="cre"><path class="crs crlid" d="M10.6 19.6 Q20 11 29.4 19.6"/><path class="crs" style="stroke-width:0.8" d="M11 20.6 Q20 27.6 29 20.6"/><g class="crlook"><circle class="crpup" cx="20" cy="19.7" r="4.3"/><circle class="crk" cx="20" cy="19.7" r="1.8"/></g></g>'
-        + '<path class="crs crh" d="M13 15.4 l-1-1.8 M16 13.6 l-0.5-2 M20 13 v-2 M24 13.6 l0.5-2 M27 15.4 l1-1.8"/><path class="crs crh" style="stroke:var(--red,#e4002b)" d="M12 19.8 l3 0.5 M28 20 l-3 0.3 M20 26 V32.5"/>'
-        + hatch(14, 25.6) + hatch(26, 25.6),
-      0: '<circle class="crk" cx="14.6" cy="20" r="3.3"/><circle class="creye crlook" cx="14.6" cy="20" r="1.1"/><circle class="crk" cx="25.4" cy="20" r="3.3"/><circle class="creye crlook" cx="25.4" cy="20" r="1.1"/><ellipse class="crk" cx="20" cy="29" rx="3.2" ry="2.6"/><ellipse class="crpup" cx="20" cy="29.3" rx="1.6" ry="1.2"/>'
-        + '<path class="crs crh" d="M9.6 17 l-1.6-1 M9.2 20 h-1.8 M9.6 23 l-1.6 1 M30.4 17 l1.6-1 M30.8 20 h1.8 M30.4 23 l1.6 1"/>',
-      1: null, // 머리카락이 얼굴을 덮는다 (아래에서 따로 그린다)
-      2: eye(14.6, 14.5) + eye(25.4, 14.5) + eye(14.6, 21) + eye(25.4, 21) + eye(14.6, 27.5) + eye(25.4, 27.5) + '<path class="crs crh" d="M18.4 17.4 h3.2 M18.4 24 h3.2 M18.4 31 h3.2 M9 17.8 h22 M9.4 24.4 h21"/>',
-      3: '<path class="crs crh" d="M20.4 8.5 L18.6 14 L21.4 19 L19 25 L20.6 31.5 M18.6 14 l-3 1.6 M21.4 19 l3.4-1 M19 25 l-3.2 1.2"/><path class="crs crh" d="M12 20.4 q2.6-1.6 5.2 0 M22.8 20.4 q2.6-1.6 5.2 0"/>',
-      4: '<path class="crk" d="M20 7 A11.5 13 0 0 1 20 33 Z"/>' + eye(14.6, 20) + hatch(14.6, 23.2) + '<circle class="creye" cx="25.6" cy="19.6" r="3.1"/><circle class="crk crlook" cx="25.6" cy="19.6" r="1"/><path class="creye" d="M24.4 24 l1.2 2.4 l1.2-2.4 Z"/><path d="M20.4 29.6 h7.4" style="stroke:var(--cr-eye,#fff);stroke-width:2.6;stroke-dasharray:1 0.55"/><path class="crs crh" d="M16.6 30 Q18.4 30.6 20 30"/>',
-      5: eye(13.4, 20) + eye(23.4, 20) + eye(16.6, 20, 0.45) + eye(26.6, 20, 0.45) + eye(19.8, 20, 0.2) + '<path class="crs crh" d="M15 30 Q20 31 31 29.4 M24 26 h8 M22 32.6 h9 M27 15 h5"/>',
-      6: holes.map(([x, y], i) => `<circle class="crk" cx="${x}" cy="${y}" r="${i % 3 ? 1.9 : 2.3}"/>${i % 2 ? `<circle class="crpup crlook" cx="${x}" cy="${y}" r="0.7"/>` : ''}`).join('')
-        + [[13, 14, -1], [23, 18.5, 1], [14, 25, -1], [26, 25, 1]].map(([x, y, d], i) => `<path class="crworm" pathLength="1" style="animation-delay:-${(i * 1.7).toFixed(1)}s" d="M${x} ${y} q${d * 1.6} -1 ${d * 1.2} -2.6 q${-d * 1.4} -1.2 ${d * 0.4} -2.6 q${d * 1.2} -0.8 ${d * 0.6} -2"/>`).join(''),
-      7: eye(14.6, 19.4, 0, 1) + eye(25.4, 19.4, 0, 1) + '<path class="crs crh" d="M11.2 18 l-1.2-1 M12.6 16.8 l-0.8-1.4 M28.8 18 l1.2-1 M27.4 16.8 l0.8-1.4"/><path class="crk" d="M9.6 26 Q20 37 30.4 26 Q20 30.4 9.6 26 Z"/><path d="M12.6 28.4 Q20 34 27.4 28.4" style="fill:none;stroke:var(--cr-eye,#fff);stroke-width:1.5;stroke-dasharray:0.9 0.7"/>',
-    };
-    const faceBase = kind === 1
-      ? '<path class="creye" d="M20.5 9.5 Q25.5 20 21.5 33.5 L27 33.5 Q29.6 20 25 9.5 Z"/><path class="crs crh" style="stroke:var(--cr-eye,#fff);opacity:.5" d="M9 10 Q12 22 9.5 34 M13 8 Q16.5 22 14 34 M17 7.5 Q19.6 20 17.6 34 M31 10 Q33.6 22 31.5 34"/>'
-      : '<ellipse class="creye" cx="20" cy="20" rx="11.4" ry="13"/>';
-    const feat = kind === 1 ? eye(23.6, 20) + hatch(23.8, 23.2)
-      : (faces[kind] != null ? faces[kind] : faces.hero) + ([1, 5].includes(kind) || kind === 2 ? '' : (kind === 'hero' || [0, 3, 4, 6, 7].includes(kind) ? '' : mouth));
-    const kn = typeof kind === 'number' ? kind : 8;
-    const maw = kind === 1 ? '' : `<g class="crmaw" style="--md:-${(kn * 1.9).toFixed(1)}s"><path class="crk" d="M20 8.6 Q27.4 21 20 34 Q12.6 21 20 8.6 Z"/><path class="crteeth" d="M20 10.6 Q25.4 21 20 32 M20 10.6 Q14.6 21 20 32"/><path class="crpup" d="M20 15 Q22.4 21 20 28.5 Q17.6 21 20 15 Z"/><ellipse class="creye" cx="20" cy="20.6" rx="1.5" ry="2"/><circle class="crk crlook" cx="20" cy="20.6" r="0.75"/></g>`;
-    const hairEyes = [[5.4, 24], [34.6, 17.6], [8.6, 8.8], [31.2, 8.4], [34.4, 29], [5.8, 14.6]].map(([x, y], i) => `<g class="crhe" style="animation-delay:-${((i * 2.3 + kn * 0.7) % 11).toFixed(1)}s;animation-duration:${(8 + (i * 1.7 + kn) % 5).toFixed(1)}s"><path class="creye" d="M${x - 1.9} ${y} Q${x} ${y - 1.7} ${x + 1.9} ${y} Q${x} ${y + 1.7} ${x - 1.9} ${y} Z"/><circle class="crpup crlook" cx="${x}" cy="${y}" r="0.62"/></g>`).join('');
-    const veins = kind === 1 ? '' : '<path class="crvein" d="M8.8 19 q1.6 0.9 3 0 q0.6 1 1.8 0.9 M9.4 22.6 q1.4-0.4 2.4 0.6 M31.2 19 q-1.6 0.9-3 0 q-0.6 1-1.8 0.9 M30.6 22.6 q-1.4-0.4-2.4 0.6 M17.6 31.8 q0.9-1.4 0.3-2.6 M22.4 31.8 q-0.9-1.4-0.3-2.6 M13.4 11.6 q1.2 1.2 0.8 2.8 M26.6 11.6 q-1.2 1.2-0.8 2.8"/>';
-    const tendrils = [[3.4, 17, -1, 5.5], [3, 22, -1, 8], [3.2, 27.5, -1, 6.4], [36.6, 17, 1, 6], [37, 22, 1, 8.4], [36.8, 27.5, 1, 5.6]].map(([x, y, d, len], i) => `<path class="crtend ${d < 0 ? 'tl' : 'tr'}" style="animation-delay:-${(i * 0.7).toFixed(1)}s" d="M${x} ${y} q${d * 2.4} -0.4 ${d * 2.6} ${(len * 0.4).toFixed(1)} q${-d * 0.9} ${(len * 0.3).toFixed(1)} ${d * 0.5} ${(len * 0.36).toFixed(1)} q${d * 1.1} ${(len * 0.2).toFixed(1)} ${d * 0.1} ${(len * 0.3).toFixed(1)}"/>`).join('');
-    const drips = [8.5, 20.5, 31.5].map((x, i) => `<path class="crdrip" style="animation-delay:-${(i * 1.5 + kn * 0.4).toFixed(1)}s" d="M${x} 39 q-1.1 2.8 0 3.6 q1.1 -0.8 0 -3.6 Z"/>`).join('');
-    const fringe = kind === 1 ? '' : '<path class="crb" d="M7.6 17.5 Q11 6.5 20 6 Q29 6.5 32.4 17.5 Q27 10.6 20 11.4 Q13 10.6 7.6 17.5 Z"/>';
-    // 자글자글한 잔선: 얼굴 가장자리를 따라 안쪽으로 긁은 선, 이마와 볼의 주름, 머리카락 결
-    let rnd = 7 + (typeof kind === 'number' ? kind * 13 : 5); const rand = () => { rnd = (rnd * 9301 + 49297) % 233280; return rnd / 233280; };
-    const rim = Array.from({ length: 58 }, (_, i) => { const t = (i / 58) * Math.PI * 2 + 0.05; const c = Math.cos(t); const d = Math.sin(t); if (d < -0.6) return ''; const len = 0.7 + rand() * 2.3; const sk = (rand() - 0.5) * 0.9;
-      return `M${(20 + c * 11.3).toFixed(1)} ${(20 + d * 12.9).toFixed(1)} L${(20 + c * (11.3 - len) + sk).toFixed(1)} ${(20 + d * (12.9 - len)).toFixed(1)}`; }).join(' ');
-    const stipple = Array.from({ length: 70 }, () => { const t = rand() * Math.PI * 2; const r = Math.sqrt(rand()); const x = 20 + Math.cos(t) * r * 10; const y = 22 + Math.sin(t) * r * 10.5; return y < 14 ? '' : `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(0.12 + rand() * 0.14).toFixed(2)}"/>`; }).join('');
-    const cross = 'M9.6 23.6 l2 3 M10.6 22.8 l2.2 3.4 M11.8 22.6 l2 3 M13 22.8 l1.6 2.6 M9.8 26.4 l3.4-2.6 M10.4 27.6 l3.6-2.8 M30.4 23.6 l-2 3 M29.4 22.8 l-2.2 3.4 M28.2 22.6 l-2 3 M27 22.8 l-1.6 2.6 M30.2 26.4 l-3.4-2.6 M29.6 27.6 l-3.6-2.8';
-    const strays = '<path class="crs crf" style="stroke-width:0.42" d="M9 12 Q12.5 18 10.5 27 M11.5 10.5 Q14 15 13 20.5 M31 12 Q27.5 18 29.5 27 M28.5 10.5 Q26 15 27 20.5 M19 7 Q17.6 11 18.6 14.5 M21.6 7 Q22.6 10.4 21.8 13.6"/>';
-    const wrinkles = kind === 1 ? '' : `<g class="crstip">${stipple}</g><path class="crs crf" d="${rim}"/>${strays}` + ([2, 6].includes(kind) ? '' : `<path class="crs crf" d="M14.6 13.6 q5.4-1.5 10.8 0 M15.6 15 q4.4-1 8.8 0 M16.4 16.2 q3.6-0.8 7.2 0 ${cross} M17.4 33 l0.3 1.1 M18.8 33.3 l0.1 1.1 M20 33.4 v1.1 M21.2 33.3 l-0.1 1.1 M22.6 33 l-0.3 1.1"/>`);
-    const strands = Array.from({ length: 25 }, (_, i) => { const x = 3.6 + i * 1.37; const bend = (x - 20) * 0.28 + (rand() - 0.5) * 1.4; return `M${(20 + (x - 20) * 0.35).toFixed(1)} ${(3 + rand() * 1.4).toFixed(1)} Q${(x + bend).toFixed(1)} ${(13 + rand() * 4).toFixed(1)} ${x.toFixed(1)} ${(32.6 + rand() * 2.6).toFixed(1)}`; }).join(' ');
-    const hem = Array.from({ length: 24 }, (_, i) => `L${(37.4 - i * 1.51).toFixed(1)} ${(i % 2 ? 33.6 : 36 + rand() * 1.6).toFixed(1)}`).join(' ');
-    const legs = Array.from({ length: 16 }, (_, i) => { const x = 3.8 + i * 2.1; const w = (rand() - 0.5) * 2.4; const len = 4.4 + rand() * 2.2;
-      return `<path style="animation-delay:-${(i * 0.11).toFixed(2)}s" d="M${x.toFixed(1)} 33 q${w.toFixed(1)} 2.6 ${(w * 0.2).toFixed(1)} ${len.toFixed(1)} q${(-w).toFixed(1)} 2 ${(w * 0.5).toFixed(1)} ${(len * 0.9).toFixed(1)}"/>`; }).join('');
-    const specks = Array.from({ length: 14 }, (_, i) => { const t = rand() * Math.PI * 2; const r = 19 + rand() * 3.5; return `<circle class="crspk s${i % 3}" cx="${(20 + Math.cos(t) * r * 0.95).toFixed(1)}" cy="${(21 + Math.sin(t) * r).toFixed(1)}" r="${(0.2 + rand() * 0.3).toFixed(2)}"/>`; }).join('');
-    const hairD = `M20 1.5 C9 1.5 2.6 9.5 2.6 20 V34.5 H37.4 V20 C37.4 9.5 31 1.5 20 1.5 Z`;
-    const el = h('span', { class: 'crt crito', 'aria-hidden': 'true' });
-    el.innerHTML = `<svg viewBox="0 0 40 46" width="${size}" height="${Math.round(size * 1.15)}">
-      <g filter="url(#inkf)"><g class="crtends">${tendrils}</g><g class="crlegs">${legs}</g>${drips}<g class="crspks">${specks}</g></g>
-      <g class="crbody" style="--tw:-${(kn * 0.83).toFixed(2)}s"><g filter="url(#inkf)"><path class="crb" d="M2.6 34.5 H37.4 ${hem} Z"/><path class="crb" d="${hairD}"/><path class="crbristle" d="${hairD}"/><path class="crs crstrand" d="${strands}"/>${faceBase}${veins}${wrinkles}${fringe}</g>
-        <g filter="url(#inkf2)" class="crfeat">${feat}${maw}${hairEyes}</g></g></svg>`;
-    // 건드리면 머리털이 곤두선다
-    const spook = () => { if (el.classList.contains('spook')) return; el.classList.add('spook'); tick(); setTimeout(() => el.classList.remove('spook'), 900); };
-    el.addEventListener('pointerenter', spook); el.addEventListener('pointerdown', (e) => { e.stopPropagation(); spook(); });
-    el.addEventListener('click', (e) => e.stopPropagation());
-    watchEyes();
-    return el;
-  }
   const weekId = () => dstr(weekStart(new Date()));
   const bossOf = (wid) => BOSSES[[...wid].reduce((x, ch) => x * 31 + ch.charCodeAt(0), 3) % BOSSES.length];
   const bossBeaten = (c) => !!c.boss && c.mode === 'deep' && cardDone(c) && c.unknown.length <= 3;
