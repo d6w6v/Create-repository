@@ -1212,7 +1212,7 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 .crroam .crt { position: absolute; bottom: -1px; left: 0; animation: crRoam 30s linear infinite; }
 @keyframes crRoam { 0% { left: 0; transform: scaleX(1); } 49.9% { left: calc(100% - 30px); transform: scaleX(1); } 50% { left: calc(100% - 30px); transform: scaleX(-1); } 99.9% { left: 0; transform: scaleX(-1); } 100% { left: 0; transform: scaleX(1); } }
 /* 주인공: 이미지 아래 가장자리, 지금 단계 칸 위에서 서성인다. 어두운 이미지 위에서도 보이게 흰 테를 두른다 */
-#boss .hlane .crt { filter: drop-shadow(1.5px 0 0 #fff) drop-shadow(-1.5px 0 0 #fff) drop-shadow(0 1.5px 0 #fff) drop-shadow(0 -1.5px 0 #fff); animation: crPace 5s ease-in-out infinite; }
+#boss .hlane .crt { animation: crPace 5s ease-in-out infinite; }
 @keyframes crPace { 0%, 100% { transform: translateX(-7px) scaleX(1); } 48% { transform: translateX(7px) scaleX(1); } 50% { transform: translateX(7px) scaleX(-1); } 98% { transform: translateX(-7px) scaleX(-1); } }
 #boss .hlane.won .crt { animation: pxJump 0.5s steps(1) infinite; }
 @media (max-width: 620px) { #boss .hlane .crt svg { width: 28px; height: 31px; } }
@@ -1458,3 +1458,27 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 @keyframes crRoam { 0% { left: 0; transform: scaleX(1); } 17% { left: 36%; transform: scaleX(1); } 25% { left: 36%; transform: scaleX(1); } 49.9% { left: calc(100% - 46px); transform: scaleX(1); } 50% { left: calc(100% - 46px); transform: scaleX(-1); } 68% { left: 58%; transform: scaleX(-1); } 77% { left: 58%; transform: scaleX(-1); } 99.9% { left: 0; transform: scaleX(-1); } 100% { left: 0; transform: scaleX(1); } }
 /* 폰에서 첫 칸·끝 칸에 서 있을 때 화면 가장자리에 잘리지 않게 */
 @media (max-width: 620px) { #boss .hlane .hl:first-child { justify-content: flex-start; } #boss .hlane .hl:first-child .crt { margin-left: 8px; } #boss .hlane .hl:last-child { justify-content: flex-end; } #boss .hlane .hl:last-child .crt { margin-right: 8px; } }
+
+/* ── 더 징그럽게: 얼굴이 세로로 갈라지고, 머리카락 속에서 눈이 뜨고, 목이 꺾이고, 먹물이 떨어진다 ── */
+.crito .crbody { animation: crTwitch 6.4s linear infinite; animation-delay: var(--tw, 0s); }
+@keyframes crTwitch { 0% { transform: rotate(-2deg); } 22% { transform: rotate(2deg); } 44% { transform: rotate(-2deg); } 60% { transform: rotate(1.6deg); } 61% { transform: rotate(-11deg) translateX(-0.5px); } 63% { transform: rotate(-11deg) translateX(-0.5px); } 64% { transform: rotate(7deg); } 65.5% { transform: rotate(-13deg); } 67% { transform: rotate(-12deg); } 70% { transform: rotate(1deg); } 100% { transform: rotate(-2deg); } }
+.crito .crmaw { transform-box: fill-box; transform-origin: center; transform: scaleX(0); animation: crMaw 15s infinite; animation-delay: var(--md, 0s); }
+@keyframes crMaw { 0%, 84% { transform: scaleX(0); } 85.5% { transform: scaleX(0.5); } 86.5% { transform: scaleX(0.28); } 88% { transform: scaleX(1); } 93% { transform: scaleX(0.92); } 95% { transform: scaleX(1.06); } 97.5%, 100% { transform: scaleX(0); } }
+.crito .crteeth { fill: none; stroke: var(--cr-eye, #fff); stroke-width: 1.5; stroke-dasharray: 0.55 0.5; stroke-linecap: butt; }
+.crito .crhe { transform-box: fill-box; transform-origin: center; transform: scaleY(0); animation: crHairEye 9s infinite; }
+@keyframes crHairEye { 0%, 58% { transform: scaleY(0); } 61% { transform: scaleY(1.1); } 63%, 80% { transform: scaleY(1); } 82% { transform: scaleY(0.1); } 84%, 90% { transform: scaleY(1); } 93%, 100% { transform: scaleY(0); } }
+.crito .crvein { fill: none; stroke: var(--red, #e4002b); stroke-width: 0.24; stroke-linecap: round; opacity: 0.85; }
+.crito .crtend { fill: none; stroke: var(--cr-ink, #111); stroke-width: 0.42; stroke-linecap: round; transform-box: fill-box; animation: crWrithe 2.3s ease-in-out infinite; transition: transform 0.12s; }
+.crito .crtend.tl { transform-origin: 100% 0; } .crito .crtend.tr { transform-origin: 0 0; }
+@keyframes crWrithe { 0%, 100% { transform: rotate(-9deg) scaleY(0.86); } 50% { transform: rotate(11deg) scaleY(1.1); } }
+.crito .crdrip { fill: var(--cr-ink, #111); transform-box: fill-box; transform-origin: 50% 0; animation: crDrip 4.6s ease-in infinite; }
+@keyframes crDrip { 0% { transform: translateY(-2px) scale(0.2); opacity: 0; } 22% { transform: translateY(0) scale(1); opacity: 1; } 50% { transform: translateY(0.6px) scale(1, 1.7); opacity: 1; } 88% { transform: translateY(7px) scale(0.8, 1.2); opacity: 0.9; } 100% { transform: translateY(8.5px) scale(0.4); opacity: 0; } }
+.crito .crworm { fill: none; stroke: var(--cr-ink, #111); stroke-width: 0.85; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: crWorm 6.8s ease-in-out infinite; }
+@keyframes crWorm { 0%, 30% { stroke-dashoffset: 1; } 48% { stroke-dashoffset: 0.25; } 56% { stroke-dashoffset: 0.4; } 66% { stroke-dashoffset: 0; } 80% { stroke-dashoffset: 0.1; } 94%, 100% { stroke-dashoffset: 1; } }
+/* 건드리면: 얼굴이 벌어지고, 머리 속 눈이 한꺼번에 뜨고, 머리카락이 뻗친다 */
+.crito.spook .crmaw { animation: crMawSnap 0.85s both; animation-delay: 0s; }
+@keyframes crMawSnap { 0% { transform: scaleX(0); } 14% { transform: scaleX(1.25); } 30% { transform: scaleX(0.9); } 46% { transform: scaleX(1.18); } 78% { transform: scaleX(1.05); } 100% { transform: scaleX(0); } }
+.crito.spook .crhe { animation: none; transform: scaleY(1.3); }
+.crito.spook .crtend { animation-duration: 0.22s; stroke-width: 0.6; }
+.crito.spook .crworm { animation-duration: 0.8s; }
+@media (prefers-reduced-motion: reduce) { .crito .crbody, .crito .crmaw, .crito .crhe, .crito .crtend, .crito .crdrip, .crito .crworm { animation: none; } .crito .crhe { transform: scaleY(1); } }

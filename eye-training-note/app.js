@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '68 · 쳐다보는 것들';
+  const APP_VERSION = '69 · 갈라지는 얼굴';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -2716,7 +2716,7 @@
       }
     }
     const hatch = (x, y) => `<path class="crs crh" d="M${x - 2.6} ${y} l0.9 1.9 M${x - 0.9} ${y + 0.4} l0.7 2 M${x + 0.8} ${y + 0.4} l0.5 1.9 M${x + 2.4} ${y} l0.2 1.7"/>`;
-    const eye = (x, y, o) => `<g class="cre" style="animation-delay:-${((x * 7 + y * 3) % 47 / 10).toFixed(1)}s"${o ? ` opacity="${o}"` : ''}><path class="crs crlid" d="M${x - 3.6} ${y} Q${x} ${y - 3.4} ${x + 3.6} ${y}"/><path class="crs crh" d="M${x - 3.2} ${y + 1} Q${x} ${y + 2.8} ${x + 3.2} ${y + 1}"/><circle class="crk crlook" cx="${x}" cy="${y + 0.2}" r="0.95"/></g>`;
+    const eye = (x, y, o, dbl) => `<g class="cre" style="animation-delay:-${((x * 7 + y * 3) % 47 / 10).toFixed(1)}s"${o ? ` opacity="${o}"` : ''}><path class="crs crlid" d="M${x - 3.6} ${y} Q${x} ${y - 3.4} ${x + 3.6} ${y}"/><path class="crs crh" d="M${x - 3.2} ${y + 1} Q${x} ${y + 2.8} ${x + 3.2} ${y + 1}"/><circle class="crk crlook" cx="${dbl ? x - 0.9 : x}" cy="${y + 0.2}" r="${dbl ? 0.8 : 0.95}"/>${dbl ? `<circle class="crk crlook" cx="${x + 1.2}" cy="${y + 0.35}" r="0.62"/>` : ''}</g>`;
     const eyes = eye(14.6, 20) + eye(25.4, 20) + hatch(14.6, 23.2) + hatch(25.4, 23.2);
     const mouth = '<path class="crs crh" d="M17.2 30 Q20 30.9 22.8 30"/>';
     const holes = [[13, 14], [20, 12.5], [27, 14], [11.5, 20], [17, 18.5], [23, 18.5], [28.5, 20], [14, 25], [20, 24], [26, 25], [17, 29.5], [23, 29.5]];
@@ -2731,14 +2731,21 @@
       3: '<path class="crs crh" d="M20.4 8.5 L18.6 14 L21.4 19 L19 25 L20.6 31.5 M18.6 14 l-3 1.6 M21.4 19 l3.4-1 M19 25 l-3.2 1.2"/><path class="crs crh" d="M12 20.4 q2.6-1.6 5.2 0 M22.8 20.4 q2.6-1.6 5.2 0"/>',
       4: '<path class="crk" d="M20 7 A11.5 13 0 0 1 20 33 Z"/>' + eye(14.6, 20) + hatch(14.6, 23.2) + '<circle class="creye" cx="25.6" cy="19.6" r="3.1"/><circle class="crk crlook" cx="25.6" cy="19.6" r="1"/><path class="creye" d="M24.4 24 l1.2 2.4 l1.2-2.4 Z"/><path d="M20.4 29.6 h7.4" style="stroke:var(--cr-eye,#fff);stroke-width:2.6;stroke-dasharray:1 0.55"/><path class="crs crh" d="M16.6 30 Q18.4 30.6 20 30"/>',
       5: eye(13.4, 20) + eye(23.4, 20) + eye(16.6, 20, 0.45) + eye(26.6, 20, 0.45) + eye(19.8, 20, 0.2) + '<path class="crs crh" d="M15 30 Q20 31 31 29.4 M24 26 h8 M22 32.6 h9 M27 15 h5"/>',
-      6: holes.map(([x, y], i) => `<circle class="crk" cx="${x}" cy="${y}" r="${i % 3 ? 1.9 : 2.3}"/>${i % 2 ? `<circle class="crpup crlook" cx="${x}" cy="${y}" r="0.7"/>` : ''}`).join(''),
-      7: eye(14.6, 19.4) + eye(25.4, 19.4) + '<path class="crs crh" d="M11.2 18 l-1.2-1 M12.6 16.8 l-0.8-1.4 M28.8 18 l1.2-1 M27.4 16.8 l0.8-1.4"/><path class="crk" d="M9.6 26 Q20 37 30.4 26 Q20 30.4 9.6 26 Z"/><path d="M12.6 28.4 Q20 34 27.4 28.4" style="fill:none;stroke:var(--cr-eye,#fff);stroke-width:1.5;stroke-dasharray:0.9 0.7"/>',
+      6: holes.map(([x, y], i) => `<circle class="crk" cx="${x}" cy="${y}" r="${i % 3 ? 1.9 : 2.3}"/>${i % 2 ? `<circle class="crpup crlook" cx="${x}" cy="${y}" r="0.7"/>` : ''}`).join('')
+        + [[13, 14, -1], [23, 18.5, 1], [14, 25, -1], [26, 25, 1]].map(([x, y, d], i) => `<path class="crworm" pathLength="1" style="animation-delay:-${(i * 1.7).toFixed(1)}s" d="M${x} ${y} q${d * 1.6} -1 ${d * 1.2} -2.6 q${-d * 1.4} -1.2 ${d * 0.4} -2.6 q${d * 1.2} -0.8 ${d * 0.6} -2"/>`).join(''),
+      7: eye(14.6, 19.4, 0, 1) + eye(25.4, 19.4, 0, 1) + '<path class="crs crh" d="M11.2 18 l-1.2-1 M12.6 16.8 l-0.8-1.4 M28.8 18 l1.2-1 M27.4 16.8 l0.8-1.4"/><path class="crk" d="M9.6 26 Q20 37 30.4 26 Q20 30.4 9.6 26 Z"/><path d="M12.6 28.4 Q20 34 27.4 28.4" style="fill:none;stroke:var(--cr-eye,#fff);stroke-width:1.5;stroke-dasharray:0.9 0.7"/>',
     };
     const faceBase = kind === 1
       ? '<path class="creye" d="M20.5 9.5 Q25.5 20 21.5 33.5 L27 33.5 Q29.6 20 25 9.5 Z"/><path class="crs crh" style="stroke:var(--cr-eye,#fff);opacity:.5" d="M9 10 Q12 22 9.5 34 M13 8 Q16.5 22 14 34 M17 7.5 Q19.6 20 17.6 34 M31 10 Q33.6 22 31.5 34"/>'
       : '<ellipse class="creye" cx="20" cy="20" rx="11.4" ry="13"/>';
     const feat = kind === 1 ? eye(23.6, 20) + hatch(23.8, 23.2)
       : (faces[kind] != null ? faces[kind] : faces.hero) + ([1, 5].includes(kind) || kind === 2 ? '' : (kind === 'hero' || [0, 3, 4, 6, 7].includes(kind) ? '' : mouth));
+    const kn = typeof kind === 'number' ? kind : 8;
+    const maw = kind === 1 ? '' : `<g class="crmaw" style="--md:-${(kn * 1.9).toFixed(1)}s"><path class="crk" d="M20 8.6 Q27.4 21 20 34 Q12.6 21 20 8.6 Z"/><path class="crteeth" d="M20 10.6 Q25.4 21 20 32 M20 10.6 Q14.6 21 20 32"/><path class="crpup" d="M20 15 Q22.4 21 20 28.5 Q17.6 21 20 15 Z"/><ellipse class="creye" cx="20" cy="20.6" rx="1.5" ry="2"/><circle class="crk crlook" cx="20" cy="20.6" r="0.75"/></g>`;
+    const hairEyes = [[5.4, 24], [34.6, 17.6], [8.6, 8.8], [31.2, 8.4], [34.4, 29], [5.8, 14.6]].map(([x, y], i) => `<g class="crhe" style="animation-delay:-${((i * 2.3 + kn * 0.7) % 11).toFixed(1)}s;animation-duration:${(8 + (i * 1.7 + kn) % 5).toFixed(1)}s"><path class="creye" d="M${x - 1.9} ${y} Q${x} ${y - 1.7} ${x + 1.9} ${y} Q${x} ${y + 1.7} ${x - 1.9} ${y} Z"/><circle class="crpup crlook" cx="${x}" cy="${y}" r="0.62"/></g>`).join('');
+    const veins = kind === 1 ? '' : '<path class="crvein" d="M8.8 19 q1.6 0.9 3 0 q0.6 1 1.8 0.9 M9.4 22.6 q1.4-0.4 2.4 0.6 M31.2 19 q-1.6 0.9-3 0 q-0.6 1-1.8 0.9 M30.6 22.6 q-1.4-0.4-2.4 0.6 M17.6 31.8 q0.9-1.4 0.3-2.6 M22.4 31.8 q-0.9-1.4-0.3-2.6 M13.4 11.6 q1.2 1.2 0.8 2.8 M26.6 11.6 q-1.2 1.2-0.8 2.8"/>';
+    const tendrils = [[3.4, 17, -1, 5.5], [3, 22, -1, 8], [3.2, 27.5, -1, 6.4], [36.6, 17, 1, 6], [37, 22, 1, 8.4], [36.8, 27.5, 1, 5.6]].map(([x, y, d, len], i) => `<path class="crtend ${d < 0 ? 'tl' : 'tr'}" style="animation-delay:-${(i * 0.7).toFixed(1)}s" d="M${x} ${y} q${d * 2.4} -0.4 ${d * 2.6} ${(len * 0.4).toFixed(1)} q${-d * 0.9} ${(len * 0.3).toFixed(1)} ${d * 0.5} ${(len * 0.36).toFixed(1)} q${d * 1.1} ${(len * 0.2).toFixed(1)} ${d * 0.1} ${(len * 0.3).toFixed(1)}"/>`).join('');
+    const drips = [8.5, 20.5, 31.5].map((x, i) => `<path class="crdrip" style="animation-delay:-${(i * 1.5 + kn * 0.4).toFixed(1)}s" d="M${x} 39 q-1.1 2.8 0 3.6 q1.1 -0.8 0 -3.6 Z"/>`).join('');
     const fringe = kind === 1 ? '' : '<path class="crb" d="M7.6 17.5 Q11 6.5 20 6 Q29 6.5 32.4 17.5 Q27 10.6 20 11.4 Q13 10.6 7.6 17.5 Z"/>';
     // 자글자글한 잔선: 얼굴 가장자리를 따라 안쪽으로 긁은 선, 이마와 볼의 주름, 머리카락 결
     let rnd = 7 + (typeof kind === 'number' ? kind * 13 : 5); const rand = () => { rnd = (rnd * 9301 + 49297) % 233280; return rnd / 233280; };
@@ -2756,9 +2763,9 @@
     const hairD = `M20 1.5 C9 1.5 2.6 9.5 2.6 20 V34.5 H37.4 V20 C37.4 9.5 31 1.5 20 1.5 Z`;
     const el = h('span', { class: 'crt crito', 'aria-hidden': 'true' });
     el.innerHTML = `<svg viewBox="0 0 40 46" width="${size}" height="${Math.round(size * 1.15)}">
-      <g filter="url(#inkf)"><g class="crlegs">${legs}</g><g class="crspks">${specks}</g></g>
-      <g class="crbody"><g filter="url(#inkf)"><path class="crb" d="M2.6 34.5 H37.4 ${hem} Z"/><path class="crb" d="${hairD}"/><path class="crbristle" d="${hairD}"/><path class="crs crstrand" d="${strands}"/>${faceBase}${wrinkles}${fringe}</g>
-        <g filter="url(#inkf2)" class="crfeat">${feat}</g></g></svg>`;
+      <g filter="url(#inkf)"><g class="crtends">${tendrils}</g><g class="crlegs">${legs}</g>${drips}<g class="crspks">${specks}</g></g>
+      <g class="crbody" style="--tw:-${(kn * 0.83).toFixed(2)}s"><g filter="url(#inkf)"><path class="crb" d="M2.6 34.5 H37.4 ${hem} Z"/><path class="crb" d="${hairD}"/><path class="crbristle" d="${hairD}"/><path class="crs crstrand" d="${strands}"/>${faceBase}${veins}${wrinkles}${fringe}</g>
+        <g filter="url(#inkf2)" class="crfeat">${feat}${maw}${hairEyes}</g></g></svg>`;
     // 건드리면 머리털이 곤두선다
     const spook = () => { if (el.classList.contains('spook')) return; el.classList.add('spook'); tick(); setTimeout(() => el.classList.remove('spook'), 900); };
     el.addEventListener('pointerenter', spook); el.addEventListener('pointerdown', (e) => { e.stopPropagation(); spook(); });
