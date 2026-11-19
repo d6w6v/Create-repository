@@ -1484,3 +1484,50 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 @media (prefers-reduced-motion: reduce) { .crito .crbody, .crito .crmaw, .crito .crhe, .crito .crtend, .crito .crdrip, .crito .crworm { animation: none; } .crito .crhe { transform: scaleY(1); } }
 /* 캐릭터를 뺐으니 사진 위에 비워 뒀던 자리도 원래대로 */
 #boss .hero { margin-top: 18px; }
+
+/* ── 움직임 일곱 가지 (fx-): 백업 탭에서 켜고 끈다 ── */
+/* 1 조리개 초점 */
+.fx-lens { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.fx-lens.fx-go { animation: fxRack 0.85s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes fxRack { 0% { -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); } 45% { -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); } 62% { -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); } 100% { -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); } }
+.fx-br { position: absolute; left: 50%; top: 50%; width: 22%; max-width: 150px; aspect-ratio: 3 / 2; transform: translate(-50%, -50%); opacity: 0; }
+.fx-br i { position: absolute; width: 14px; height: 14px; border: 2px solid #fff; }
+.fx-br i:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; } .fx-br i:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; }
+.fx-br i:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; } .fx-br i:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; }
+.fx-lens.fx-go .fx-br { animation: fxBr 0.95s ease-out both; }
+@keyframes fxBr { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } 35% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); } }
+.fx-lens.fx-go .fx-br i { animation: fxBrLock 0.95s steps(1) both; } @keyframes fxBrLock { 0% { border-color: #fff; } 45% { border-color: var(--red, #e4002b); } }
+/* 2 시선 점 */
+.fx-gz { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.fx-gz svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.fx-gz path { fill: none; stroke: var(--red, #e4002b); stroke-width: 0.8; stroke-dasharray: 1; stroke-dashoffset: 1; }
+.fx-gz b { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: var(--red, #e4002b); color: #fff; font-size: 11px; font-weight: 700; line-height: 22px; text-align: center; transform: scale(0); }
+.fx-gz.fx-go b { animation: fxPop 0.3s cubic-bezier(0.2, 1.5, 0.4, 1) both; animation-delay: calc(var(--i) * 0.75s); }
+.fx-gz.fx-go path { animation: fxDraw 0.5s cubic-bezier(0.5, 0, 0.2, 1) both; animation-delay: calc(var(--i) * 0.75s + 0.28s); }
+.fx-gz.fx-done b { transform: scale(1); } .fx-gz.fx-done path { stroke-dashoffset: 0; }
+@keyframes fxPop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+@keyframes fxDraw { 0% { stroke-dashoffset: 1; } 100% { stroke-dashoffset: 0; } }
+@media (max-width: 620px) { .fx-gz b { width: 18px; height: 18px; margin: -9px 0 0 -9px; line-height: 18px; font-size: 10px; } .fx-gz path { stroke-width: 1.4; } }
+/* 3 숫자 굴림 */
+.fx-num { font-variant-numeric: tabular-nums; }
+/* 4 줄 긋기 */
+.fx-wait { opacity: 0 !important; animation: none !important; }
+.fx-rise { animation: fxRise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both !important; }
+@keyframes fxRise { 0% { opacity: 0; transform: translateY(16px); } 100% { opacity: 1; transform: none; } }
+.fx-line { position: absolute; z-index: 5; pointer-events: none; transform-origin: 0 50%; animation: fxLine 0.6s cubic-bezier(0.6, 0, 0.2, 1) both; }
+@keyframes fxLine { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
+@media print { .fx-wait { opacity: 1 !important; } .fx-line, .fx-cut, .fx-lens { display: none !important; } }
+/* 5 색 띠 */
+.hslices.fx-band .hs.done { background: var(--fxc, var(--ink)); color: var(--fxt, var(--paper)); box-shadow: inset 0 0 0 1px var(--fxc, var(--ink)); }
+.hslices.fx-band.fx-fill .hs.done { animation: fxFill 0.4s ease-out both; animation-delay: calc(var(--i) * 90ms + 300ms); }
+@keyframes fxFill { 0% { background: transparent; color: #b5b5b5; box-shadow: inset 0 0 0 1px #dcdcdc; } 100% { background: var(--fxc, var(--ink)); color: var(--fxt, var(--paper)); box-shadow: inset 0 0 0 1px var(--fxc, var(--ink)); } }
+/* 6 컷 전환 */
+.fx-cut { position: fixed; inset: 0; z-index: 9000; background: #111; pointer-events: none; }
+/* 7 빨간 점 */
+.lgrec i.fx-save, .fx-savedot.fx-save { animation: fxSave 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes fxSave { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(228, 0, 43, 0.55); } 22% { transform: scale(1.9); } 55% { transform: scale(1); } 100% { transform: scale(1); box-shadow: 0 0 0 16px rgba(228, 0, 43, 0); } }
+.fx-savedot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--red, #e4002b); margin-right: -4px; align-self: center; }
+/* 켜고 끄는 단추 */
+.fx-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.fx-tog { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; height: auto; padding: 12px 14px; white-space: normal; }
+.fx-tog small { font-weight: 400; font-size: var(--fs-xs, 12px); opacity: 0.75; line-height: 1.4; }

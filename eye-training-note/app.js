@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '70 · 캐릭터 뺌';
+  const APP_VERSION = '71 · 움직임 일곱 가지';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -107,6 +107,108 @@
     requestAnimationFrame(step);
   }
 
+  /* ───────── 움직임 일곱 가지: 백업 탭에서 하나씩 켜고 끈다 ───────── */
+  const FX = [['focus', '조리개 초점', '브리프 사진이 흐릿했다가 초점이 맞아요'], ['gaze', '시선 점', '내가 찍은 눈의 순서가 사진 위에 이어져요'], ['count', '숫자 굴림', '숫자가 굴러가다 멈춰요'],
+    ['rule', '줄 긋기', '선이 그어지고 글이 올라와요'], ['band', '색 띠', '끝낸 단계가 사진 색으로 채워져요'], ['cut', '컷 전환', '화면이 바뀔 때 검은 프레임 한 장'], ['dot', '빨간 점', '저장될 때만 한 번 깜빡여요']];
+  const fxOffList = () => { try { const v = JSON.parse(localStorage.getItem('eye-fx-off') || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
+  const fxOn = (k) => !matchMedia('(prefers-reduced-motion: reduce)').matches && !fxOffList().includes(k);
+  let fxPageName = null; let fxMounts = 0;
+  const fxFresh = () => location.hash !== fxPageName; // 다른 화면에서 막 넘어왔을 때만 움직인다 (같은 화면을 다시 그릴 때는 가만히)
+  function mount(...kids) {
+    const fresh = fxFresh(); fxPageName = location.hash;
+    if (fresh && fxMounts && fxOn('cut')) { const o = h('i', { class: 'fx-cut', 'aria-hidden': 'true' }); document.body.append(o); setTimeout(() => o.remove(), 85); }
+    app.replaceChildren(...kids); fxMounts++;
+    const wrap = app.firstElementChild;
+    if (!fresh || !wrap) return;
+    if (fxOn('count')) fxCount(wrap);
+    if (fxOn('rule')) fxRule(wrap);
+  }
+  function fxCount(root) { // 숫자가 0에서 굴러 올라와 멈춘다
+    const ease = (k) => 1 - Math.pow(1 - k, 4);
+    root.querySelectorAll('.hcount, .facts dd').forEach((el, i) => {
+      if (el.children.length) return;
+      const full = el.textContent; const m = full.match(/^(\D*)(\d+)([\s\S]*)$/); if (!m || +m[2] === 0) return;
+      const to = +m[2]; const t0 = performance.now() + 150 + i * 90; const dur = 800;
+      el.classList.add('fx-num'); el.textContent = m[1] + 0 + m[3];
+      const step = (t) => { if (!el.isConnected) return; const k = Math.max(0, Math.min(1, (t - t0) / dur)); el.textContent = k >= 1 ? full : m[1] + Math.round(to * ease(k)) + m[3]; if (k < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    });
+    const bar = root.querySelector('.barfill');
+    if (bar) { const w = bar.style.width; bar.style.transition = 'none'; bar.style.width = '0';
+      requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.transition = 'width 1s cubic-bezier(.2,.8,.2,1)'; bar.style.width = w; })); }
+  }
+  function fxRule(wrap) { // 덩어리마다 윗선이 먼저 그어지고, 내용이 아래에서 올라온다. 화면 밖에 있는 것은 스크롤해서 보일 때
+    if (!('IntersectionObserver' in window)) return;
+    const blocks = [];
+    for (const el of wrap.children) {
+      if (el.id === 'boss') blocks.push(...el.querySelectorAll(':scope > header, .heroleft, #brief-info, #mission'));
+      else if (el.classList.contains('sheet')) blocks.push(...el.querySelectorAll('.tile'));
+      else blocks.push(el);
+    }
+    let batch = 0; let batchT = 0;
+    const show = (el) => {
+      const now = performance.now(); if (now - batchT > 400) batch = 0; batchT = now; const d = Math.min(batch++, 10) * 80;
+      const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); const bw = parseFloat(cs.borderTopWidth) || 0;
+      if (bw && r.width > 200) {
+        const line = h('i', { class: 'fx-line', 'aria-hidden': 'true', style: `left:${r.left + scrollX}px;top:${r.top + scrollY}px;width:${r.width}px;height:${bw}px;background:${cs.borderTopColor};animation-delay:${d}ms` });
+        document.body.append(line); setTimeout(() => line.remove(), d + 1000);
+      }
+      el.style.animationDelay = `${d + (bw ? 200 : 0)}ms`; el.classList.remove('fx-wait'); el.classList.add('fx-rise');
+      setTimeout(() => { el.classList.remove('fx-rise'); el.style.animationDelay = ''; }, d + 1100);
+    };
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { io.unobserve(e.target); show(e.target); } }), { rootMargin: '0px 0px -5% 0px' });
+    blocks.forEach((el) => { el.classList.add('fx-wait'); io.observe(el); });
+  }
+  /* 브리프 사진 위에 얹는 것들: 초점 괄호, 시선 점. 퍼즐이 다시 그려져도 남아 있게 따로 들고 있다 */
+  function fxLens(pic) {
+    const lens = h('span', { class: 'fx-lens', 'aria-hidden': 'true' }, h('span', { class: 'fx-br' }, h('i', {}), h('i', {}), h('i', {}), h('i', {})));
+    let t = 0;
+    const play = () => { clearTimeout(t); lens.classList.remove('fx-go'); void lens.offsetWidth; lens.classList.add('fx-go'); t = setTimeout(() => lens.classList.remove('fx-go'), 950); };
+    if (matchMedia('(hover: hover)').matches) pic.addEventListener('pointerenter', play);
+    return { el: lens, play };
+  }
+  function fxGaze(pic, gaze, src) {
+    const pts = (gaze || []).filter((r) => r && r.x != null);
+    if (!pts.length) return null;
+    const layer = h('span', { class: 'fx-gz', 'aria-hidden': 'true' });
+    let t = 0; let ready = false; let want = false;
+    const play = () => { if (!ready) { want = true; return; } clearTimeout(t); layer.classList.remove('fx-go', 'fx-done'); void layer.offsetWidth; layer.classList.add('fx-go');
+      t = setTimeout(() => { layer.classList.remove('fx-go'); layer.classList.add('fx-done'); }, pts.length * 750 + 400); };
+    const im = new Image();
+    im.onload = () => { // 사진이 3:2로 잘려 보이므로, 원본에 찍은 자리를 잘린 화면의 자리로 옮긴다
+      const iw = im.naturalWidth; const ih = im.naturalHeight; const sc = Math.max(300 / iw, 200 / ih); const ox = (300 - iw * sc) / 2; const oy = (200 - ih * sc) / 2;
+      const at = pts.map((r) => [r.x * iw * sc + ox, r.y * ih * sc + oy]);
+      const svg = document.createElementNS(SVGNS, 'svg'); svg.setAttribute('viewBox', '0 0 300 200');
+      svg.innerHTML = at.slice(1).map((q, i) => `<path pathLength="1" style="--i:${i}" d="M${at[i][0].toFixed(1)} ${at[i][1].toFixed(1)} L${q[0].toFixed(1)} ${q[1].toFixed(1)}"/>`).join('');
+      layer.replaceChildren(svg, ...at.map(([x, y], i) => h('b', { class: 'mono', style: `left:${(x / 3).toFixed(2)}%;top:${(y / 2).toFixed(2)}%;--i:${i}` }, i + 1)));
+      ready = true; if (want) play();
+    };
+    im.src = src;
+    if (matchMedia('(hover: hover)').matches) pic.addEventListener('pointerenter', play);
+    return { el: layer, play };
+  }
+  function fxBand(slices, src, fresh) { // 끝낸 단계 칸을 그 사진의 색으로 채운다 (사진을 열한 줄로 나눠 줄마다 평균 색)
+    const im = new Image();
+    im.onload = () => { try {
+      const c = document.createElement('canvas'); c.width = 110; c.height = 73; const x = c.getContext('2d');
+      const iw = im.naturalWidth; const ih = im.naturalHeight; const cw = Math.min(iw, ih * 1.5); const ch = cw / 1.5;
+      x.drawImage(im, (iw - cw) / 2, (ih - ch) / 2, cw, ch, 0, 0, 110, 73);
+      [...slices.children].forEach((cell, i) => { const d = x.getImageData(i * 10 + 2, 12, 6, 50).data; let r = 0; let g = 0; let b = 0;
+        for (let k = 0; k < d.length; k += 4) { r += d[k]; g += d[k + 1]; b += d[k + 2]; } const n = d.length / 4; r = Math.round(r / n); g = Math.round(g / n); b = Math.round(b / n);
+        cell.style.setProperty('--fxc', `rgb(${r},${g},${b})`); cell.style.setProperty('--fxt', r * 0.3 + g * 0.59 + b * 0.11 > 150 ? '#111' : '#fff'); cell.style.setProperty('--i', i); });
+      slices.classList.add('fx-band'); if (fresh) slices.classList.add('fx-fill');
+    } catch (e) { /* 색을 못 읽으면 검은 칸 그대로 */ } };
+    im.src = src;
+  }
+  /* 빨간 점: 내가 뭔가 하고 나서 저장이 끝난 순간에만 한 번 */
+  let fxTouchT = 0; let fxDotT = 0;
+  ['pointerdown', 'keydown', 'input'].forEach((ev) => document.addEventListener(ev, () => { fxTouchT = Date.now(); }, true));
+  function fxSaved() {
+    if (Date.now() - fxTouchT > 4000 || !fxOn('dot')) return;
+    clearTimeout(fxDotT);
+    fxDotT = setTimeout(() => document.querySelectorAll('.lgrec i, .fx-savedot').forEach((d) => { d.classList.remove('fx-save'); void d.offsetWidth; d.classList.add('fx-save'); }), 120);
+  }
+
   /* ───────── 저장소 (이 기기의 브라우저 안 서랍) ───────── */
   const DB_NAME = 'eye-training-note';
   let db = null;
@@ -144,6 +246,7 @@
     del: (s, id) => db ? run(s, 'readwrite', (o) => o.delete(id)) : Promise.resolve(void mem[s].delete(id)),
     clear: (s) => db ? run(s, 'readwrite', (o) => o.clear()) : Promise.resolve(void mem[s].clear()),
   };
+  { const put = store.put; store.put = (st, v) => put(st, v).then((r) => { fxSaved(); return r; }); }
 
   /* ───────── 카드 모양 ───────── */
   function newCard(no, type) {
@@ -657,7 +760,7 @@
       const PUZZLES = [['wash', '번짐'], ['bloom', '퍼짐'], ['fade', '서서히'], ['strips', '띠'], ['grid', '격자'], ['cover', '가림막'], ['mix', '뒤섞임']];
       const SOFT = ['wash', 'bloom', 'fade']; // 조각으로 자르지 않고 색이 번져 들어오는 방식
       let puzzleKind = 'wash'; try { const k = localStorage.getItem('eye-puzzle'); if (PUZZLES.some((x) => x[0] === k)) puzzleKind = k; } catch (e) { /* 기본값 */ }
-      let drawPuzzle = null; let previewPuzzle = null;
+      let drawPuzzle = null; let previewPuzzle = null; let fxSrc = '';
       const pic = h('button', { class: 'heropic' + (bCard ? '' : ' poster'), type: 'button', id: 'boss-pic', onclick: openBoss, 'aria-label': bCard ? '브리프 카드 열기' : '새 카드로 이번 주 브리프 시작' });
       if (!bCard) {
         pic.append(h('span', { class: 'plabel mono' }, `WEEKLY BRIEF / ${bKo}`), h('strong', { class: 'pname' }, bName), h('span', { class: 'pdesc' }, bDesc),
@@ -720,12 +823,22 @@
             timer = setInterval(() => { k++; if (!pic.isConnected) { clearInterval(timer); return; }
               if (k <= total) drawPuzzle(kind, k, false); else if (k === total + 1) drawPuzzle(kind, total, true); else if (k >= total + 4) { clearInterval(timer); drawPuzzle(kind, cut, beaten); } }, 260);
           };
+          { // 초점 괄호와 시선 점은 퍼즐을 다시 그려도 사진 위에 남는다
+            const fresh = fxFresh(); const decor = [];
+            const gz = fxOn('gaze') ? fxGaze(pic, ((bCard.steps || {}).s2 || {}).gaze, src) : null; if (gz) decor.push(gz.el);
+            const lens = fxOn('focus') ? fxLens(pic) : null; if (lens) decor.push(lens.el);
+            if (decor.length) { const base = drawPuzzle; drawPuzzle = (...a) => { base(...a); pic.append(...decor); }; }
+            if (fresh && lens) lens.play();
+            if (gz) { if (fresh) setTimeout(gz.play, lens ? 700 : 200); else gz.el.classList.add('fx-done'); }
+            fxSrc = src;
+          }
           drawPuzzle(puzzleKind, cut, beaten);
         } else pic.classList.add('poster'), pic.append(h('strong', { class: 'pname' }, bName), h('span', { class: 'pdesc' }, '이미지 없이 글로 쓰는 중'));
       }
       // 진행 표시는 이미지 아래 한 줄로 모은다: 01~11 칸, 그 위를 걷는 주인공
       const slices = bCard ? h('div', { class: 'hslices', role: 'img', 'aria-label': `${hp.total}단계 중 ${cut}단계 끝냄` },
         STEPS.map((st, i) => h('span', { class: 'hs' + (i < cut ? ' done' : i === cut && !beaten ? ' next' : '') }, pad(i + 1, 2)))) : null;
+      if (slices && fxSrc && fxOn('band')) fxBand(slices, fxSrc, fxFresh());
       const pzPick = h('div', { class: 'pzpick', id: 'puzzle-pick' });
       const drawPick = () => pzPick.replaceChildren(h('span', { class: 'flabel' }, '퍼즐 모양'),
         ...PUZZLES.map(([k, name]) => h('button', { class: 'btn small' + (k === puzzleKind ? ' on' : ''), type: 'button', id: 'puzzle-' + k, 'aria-pressed': String(k === puzzleKind), title: '누르면 끝까지 풀리는 모습을 미리 보여 줘요',
@@ -854,7 +967,7 @@
       draw();
       wrap.append(h('div', { class: 'searchbar' }, h('div', { class: 'searchrow' }, search, filterBtn), activeBox, panel, tagBox, vidRow, count), sheet);
     }
-    app.replaceChildren(wrap);
+    mount(wrap);
     window.scrollTo(0, 0);
   }
   let listQuery = '';
@@ -989,7 +1102,7 @@
         h('button', { class: 'btn quiet', onclick: () => { location.hash = 'list'; } }, '← 목록'),
         curPersisted ? h('button', { class: 'btn quiet', id: 'to-view', onclick: () => { location.hash = 'view-' + c.id; } }, '한 장으로 보기') : null,
         curPersisted ? confirmDel('카드 지우기', '이 카드와 이미지를 지울까요? 되돌릴 수 없어요.', removeCard, 'btn quiet') : null),
-      h('div', { class: 'slate mono' }, h('strong', {}, `No.${pad(c.no, 3)}`), h('span', {}, typeName(c)), savedLabel)));
+      h('div', { class: 'slate mono' }, h('strong', {}, `No.${pad(c.no, 3)}`), h('span', {}, typeName(c)), fxOn('dot') ? h('i', { class: 'fx-savedot', 'aria-hidden': 'true' }) : null, savedLabel)));
 
     /* 왼쪽: 이미지 */
     const stage = h('div', { class: 'stage' });
@@ -1037,7 +1150,7 @@
       reImg: c.reshoot && c.reshoot.has ? ((await store.get('images', c.id + '-re')) || {}).data || '' : '',
     }));
     wrap.append(body);
-    app.replaceChildren(wrap);
+    mount(wrap);
   }
 
   function grow(ta) {
@@ -1759,7 +1872,7 @@
     if (unk.length) cols.append(h('section', { class: 'opStep' }, h('h3', {}, '모르겠음으로 남긴 칸'), h('ul', {}, unk.map((t) => h('li', {}, t)))));
     page.append(cols);
 
-    app.replaceChildren(h('div', { class: 'wrap' },
+    mount(h('div', { class: 'wrap' },
       h('div', { class: 'bar noprint' },
         h('button', { class: 'btn quiet', onclick: () => { location.hash = 'card-' + c.id; } }, '← 카드로 돌아가기'),
         h('div', { class: 'row' },
@@ -1857,7 +1970,7 @@
           }))
         : h('div', { class: 'empty' }, h('strong', {}, '아직 시리즈가 없어요'),
             h('p', {}, '같은 캠페인, 같은 뮤비, 같은 작가의 컷을 한 줄로 세워 놓고 컷끼리 무엇이 같고 무엇이 다른지 비교하는 곳이에요.')));
-    app.replaceChildren(h('div', { class: 'wrap' }, topBar('series', '컷끼리 나란히 놓고 비교하기'), body));
+    mount(h('div', { class: 'wrap' }, topBar('series', '컷끼리 나란히 놓고 비교하기'), body));
     window.scrollTo(0, 0);
   }
 
@@ -1926,7 +2039,7 @@
       : [h('button', { class: 'btn small quiet', type: 'button', onclick: () => drawDanger(true) }, '이 시리즈 지우기')]));
     drawDanger(false);
 
-    app.replaceChildren(h('div', { class: 'wrap' },
+    mount(h('div', { class: 'wrap' },
       h('div', { class: 'bar' },
         h('button', { class: 'btn quiet', onclick: () => { location.hash = 'series'; } }, '← 시리즈 목록'), status),
       h('div', { class: 'form' },
@@ -2066,7 +2179,7 @@
 
     drawToday(); drawStats();
     if (persisted) status.textContent = '자동 저장됨';
-    app.replaceChildren(h('div', { class: 'wrap' },
+    mount(h('div', { class: 'wrap' },
       topBar('diary', '하루 한 장, 세 줄'),
       h('div', { class: 'diary' }, stats, todayBox, wordsBox, pastBox)));
     window.scrollTo(0, 0);
@@ -2267,7 +2380,7 @@
     });
     total.textContent = `${sum()}초`;
     drawSheet();
-    app.replaceChildren(h('div', { class: 'wrap' },
+    mount(h('div', { class: 'wrap' },
       h('div', { class: 'bar noprint' },
         h('button', { class: 'btn quiet', onclick: () => { location.hash = 'card-' + c.id; } }, '← 카드로 돌아가기'),
         h('div', { class: 'row' }, status,
@@ -2315,7 +2428,7 @@
     const form = buildForm(secondView(c), { origSrc: src, pass2: (allDone) => { end.hidden = !allDone; } });
     form.prepend(h('div', { class: 'nudge' }, '1차에 쓴 답은 가려 뒀어요. 처음 보는 이미지처럼 새 눈으로 다시 써요.'));
     form.append(end);
-    app.replaceChildren(h('div', { class: 'wrap' },
+    mount(h('div', { class: 'wrap' },
       h('div', { class: 'bar' },
         h('button', { class: 'btn quiet', onclick: () => { location.hash = 'card-' + c.id; } }, '← 카드로 돌아가기'),
         h('div', { class: 'slate mono' }, h('strong', {}, `No.${pad(c.no, 3)}`), h('span', {}, '2차 다시 쓰기'), savedLabel)),
@@ -2357,7 +2470,7 @@
     }));
     const wrong = h('input', { class: 'text', id: 'wrong-guess', value: s.wrongGuess, placeholder: '1차에는 이렇게 추정했는데, 다시 보니 아니었다',
       oninput: () => { s.wrongGuess = wrong.value; touch(); } });
-    app.replaceChildren(h('div', { class: 'wrap' },
+    mount(h('div', { class: 'wrap' },
       h('div', { class: 'bar' },
         h('button', { class: 'btn quiet', onclick: () => { location.hash = 'card-' + c.id; } }, '← 카드로 돌아가기'),
         h('div', { class: 'slate mono' }, h('strong', {}, `No.${pad(c.no, 3)}`), h('span', {}, '1차 · 2차 비교'), savedLabel)),
@@ -2541,7 +2654,7 @@
       if (ok) showBackup();
     } }, '기록 보호 켜기');
 
-    app.replaceChildren(h('div', { class: 'wrap' }, topBar('backup', '기록을 파일로 지키기'),
+    mount(h('div', { class: 'wrap' }, topBar('backup', '기록을 파일로 지키기'),
       h('div', { class: 'diary' },
         h('section', { class: 'sec', id: 'skins' }, h('header', {}, h('h2', {}, '디자인')),
           h('div', { class: 'stepbody', style: 'padding-top:18px' },
@@ -2555,6 +2668,13 @@
             h('div', { class: 'seg', role: 'group', 'aria-label': '여는 장면 고르기' }, INTROS.map(([key, name]) =>
               h('button', { class: 'btn' + (introKind() === key ? ' on' : ''), type: 'button', id: 'intro-' + key,
                 onclick: () => { try { localStorage.setItem('eye-intro', key); } catch (e) { /* 이번만 */ } showBackup(); feedIntro(playIntro(key)); } }, name))))),
+        h('section', { class: 'sec', id: 'fxs' }, h('header', {}, h('h2', {}, '움직임')),
+          h('div', { class: 'stepbody', style: 'padding-top:18px' },
+            h('p', { class: 'note' }, '화면의 움직임 일곱 가지예요. 눌러서 하나씩 끄고 켤 수 있어요. 검게 칠해진 것이 켜진 거예요.'),
+            h('div', { class: 'fx-list' }, FX.map(([key, name, desc]) => { const on = !fxOffList().includes(key);
+              return h('button', { class: 'btn fx-tog' + (on ? ' on' : ''), type: 'button', id: 'fx-' + key, 'aria-pressed': String(on),
+                onclick: () => { const off = fxOffList().filter((k) => k !== key); if (on) off.push(key); try { localStorage.setItem('eye-fx-off', JSON.stringify(off)); } catch (e) { /* 이번만 */ } showBackup(); } },
+                h('strong', {}, name), h('small', {}, desc)); })))),
         h('section', { class: 'sec', id: 'buzz' }, h('header', {}, h('h2', {}, '진동')),
           h('div', { class: 'stepbody', style: 'padding-top:18px' },
             h('p', { class: 'note' }, '예측을 맞히거나 미션을 끝냈을 때 폰이 짧게 떨려요. 컴퓨터에서는 아무 일도 일어나지 않아요.'),
@@ -2777,6 +2897,7 @@
     const pct = g.next ? Math.min(100, ((g.xp - g.floor) / span) * 100) : 100;
     const xpEl = h('strong', { class: 'mono' });
     let from = g.xp; try { from = Number(sessionStorage.getItem('eye-xp') ?? g.xp); sessionStorage.setItem('eye-xp', String(g.xp)); } catch (e) { /* 그냥 표시 */ }
+    if (from === g.xp && fxFresh() && fxOn('count')) from = 0;
     countUp(xpEl, from, g.xp, (v) => String(v));
     if (slim) { // 목록 맨 위에 한 줄로
       return h('div', { class: 'player slim', id: 'player' },
@@ -2955,7 +3076,7 @@
     const done1 = cards.filter((c) => stepDone(c, STEPS[0]));
     const charts = tasteData(cards).map(([t, sub, rows]) => barChart(t, sub, rows, '장'));
 
-    app.replaceChildren(h('div', { class: 'wrap' }, topBar('look', '쌓인 기록에서 내 취향 찾기'),
+    mount(h('div', { class: 'wrap' }, topBar('look', '쌓인 기록에서 내 취향 찾기'),
       h('div', { class: 'look' },
         h('div', { class: 'fieldtop' }, h('h2', { class: 'lookh' }, '로드맵'), status), road,
         week,
@@ -3281,7 +3402,7 @@
     const study = await loadStudy();
     const total = BOOK.reduce((a, ch) => a + ch.quiz.length, 0);
     const solved = BOOK.reduce((a, ch) => a + quizDone(study, ch), 0);
-    app.replaceChildren(h('div', { class: 'wrap' }, topBar('book', '보는 법을 배우는 열한 단원'),
+    mount(h('div', { class: 'wrap' }, topBar('book', '보는 법을 배우는 열한 단원'),
       h('div', { class: 'book' },
         h('p', { class: 'booklead' }, '각 단원은 분석 카드의 한 단계와 짝이에요. 먼저 읽고, 확인 문제를 풀고, 카드에서 직접 써 보는 순서로 공부해요.'),
         h('p', { class: 'note', id: 'study-progress' }, `읽은 단원 ${Object.keys(study.read).length}/${BOOK.length} · 확인 문제 ${solved}/${total}`),
@@ -3328,7 +3449,7 @@
     });
     drawScore();
     const prev = BOOK.find((c) => c.n === ch.n - 1); const next = BOOK.find((c) => c.n === ch.n + 1);
-    app.replaceChildren(h('div', { class: 'wrap' }, topBar('book', '보는 법을 배우는 열한 단원'),
+    mount(h('div', { class: 'wrap' }, topBar('book', '보는 법을 배우는 열한 단원'),
       h('article', { class: 'book chapter' },
         h('div', {}, h('button', { class: 'btn quiet small', type: 'button', onclick: () => { location.hash = 'book'; } }, '← 목차')),
         h('header', { class: 'chhead' }, h('span', { class: 'chno' }, pad(ch.n)), h('div', {}, h('p', { class: 'chkicker' }, `${ch.n}단원`), h('h2', {}, ch.title))),
