@@ -1275,3 +1275,59 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 .inflash { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
 .in-flash.cutting .inflash { display: block; }
 .in-flash .incenter { transition: none; }
+
+/* ── 슬레이트 시안 더: 글자 슬레이트, 손그림, 종이 오리기 ── */
+/* 글자 슬레이트: 이름을 가로로 잘라 윗부분이 딱딱이가 된다 */
+.in-word { --cut: 51%; }
+.inhalf { position: absolute; inset: 0; background: #0b0b0b; transition: transform 0.62s cubic-bezier(0.76, 0, 0.24, 1); }
+.inhalf.up { clip-path: inset(0 0 calc(100% - var(--cut)) 0); }
+.inhalf.down { clip-path: inset(var(--cut) 0 0 0); }
+.in-word .eyehole { animation: none; }
+.in-word .inhalf.up .inlogo { transform: rotate(-13deg); }
+.in-word.clap .inhalf.up .inlogo { transform: rotate(0deg); transition: transform 0.09s cubic-bezier(0.6, 0, 1, 0.5); }
+.in-word.clap .inhalf.down .inlogo { animation: slateHit 0.24s ease-out 0.09s; }
+.in-word.split .inhalf.up { transform: translateY(-101%); }
+.in-word.split .inhalf.down { transform: translateY(101%); }
+@media (max-width: 700px) { .in-word .inhalf.up .inlogo { transform: rotate(-18deg); } }
+/* 손그림: 종이에 마커. 선이 프레임마다 떨린다 */
+.in-boil { background: #f7f5ef; color: #111; display: flex; align-items: center; justify-content: center; }
+.in-boil.out { opacity: 0; transition: opacity 0.1s; }
+.boilwrap { width: min(86vw, 520px); opacity: 0; }
+.in-boil.show .boilwrap { opacity: 1; }
+.boilsvg { display: block; width: 100%; height: auto; overflow: visible; }
+.bstick { transform-box: view-box; transform-origin: 40px 96px; transform: rotate(-26deg); }
+.in-boil.s1 .bstick { transform: rotate(-9deg); }
+.in-boil.s2 .bstick { transform: rotate(0deg); }
+.bclap { opacity: 0; }
+.in-boil.s2 .bclap { animation: bclap 0.42s steps(1) both; }
+@keyframes bclap { 0% { opacity: 1; } 100% { opacity: 0; } }
+.bt1 { font: 800 46px var(--grot, Helvetica, Arial, sans-serif); letter-spacing: -3px; }
+.bt2 { font: 600 11px var(--tt, ui-monospace, Menlo, Consolas, monospace); letter-spacing: 1.6px; }
+.bt3 { font: 800 30px var(--grot, Helvetica, Arial, sans-serif); letter-spacing: -1px; }
+/* 종이 오리기: 한 장씩 놓고 찍은 스톱모션 */
+.in-cut { background: #ece8df; color: #111; display: flex; align-items: center; justify-content: center; transition: opacity 0.12s; }
+.in-cut.out { opacity: 0; }
+.pcstage { position: relative; width: 20em; height: 15.4em; font-size: clamp(13px, 4.2vw, 22px); font-family: var(--grot, var(--font-body)); }
+.pc { position: absolute; opacity: 0; filter: drop-shadow(0.14em 0.2em 0 rgba(0, 0, 0, 0.17)); animation: pcJit 0.34s steps(1) infinite; }
+@keyframes pcJit { 0% { translate: 0 0; rotate: 0deg; } 50% { translate: 0.05em -0.04em; rotate: 0.5deg; } }
+.pcboard { left: 0; top: 4.2em; width: 20em; height: 11.2em; background: #111; transform: rotate(-1.2deg); }
+.pcstick { left: 0; width: 20em; height: 1.9em; background: repeating-linear-gradient(-55deg, #111 0 1.25em, #fff 1.25em 2.5em); box-shadow: inset 0 0 0 0.14em #111; }
+.pcbase { top: 2.2em; transform: rotate(0.8deg); background: repeating-linear-gradient(55deg, #111 0 1.25em, #fff 1.25em 2.5em); }
+.pctop { top: 0.1em; transform-origin: 0.2em 100%; transform: rotate(-24deg); animation-delay: -0.17s; }
+.in-cut.c1 .pctop { transform: rotate(-10deg); }
+.in-cut.c2 .pctop { transform: rotate(-1deg); }
+.pclabel { background: #fbfaf6; color: #111; padding: 0.28em 0.5em 0.24em; font-weight: 800; white-space: nowrap; }
+.pl1 { left: 0.9em; top: 5.2em; font-size: 2.1em; letter-spacing: -0.06em; line-height: 1; padding: 0.12em 0.3em 0.16em; transform: rotate(-2.4deg); }
+.pl1 i { display: inline-block; width: 0.2em; height: 0.2em; border-radius: 50%; background: #e4002b; margin-left: 0.06em; }
+.pl2, .pl3, .pl4 { top: 10.9em; font-family: var(--tt, ui-monospace, Menlo, Consolas, monospace); font-size: 0.62em; letter-spacing: 0.1em; font-weight: 600; }
+.pl2 b, .pl3 b, .pl4 b { font-family: var(--grot, var(--font-body)); font-size: 2.1em; font-weight: 800; letter-spacing: -0.03em; margin-left: 0.25em; vertical-align: -0.12em; }
+.pl2 { left: 1.5em; transform: rotate(1.6deg); animation-delay: -0.1s; }
+.pl3 { left: 11.4em; transform: rotate(-2.2deg); animation-delay: -0.22s; }
+.pl4 { left: 21.6em; transform: rotate(1.1deg); animation-delay: -0.05s; }
+.pctape { width: 3.2em; height: 1em; background: rgba(214, 196, 150, 0.82); filter: none; }
+.pt1 { left: -1.1em; top: 4.6em; transform: rotate(-38deg); }
+.pt2 { right: -1.1em; top: 14.3em; transform: rotate(-32deg); }
+.in-cut.p1 .pcboard, .in-cut.p2 .pcstick, .in-cut.p3 .pl1, .in-cut.p4 .pl2, .in-cut.p5 .pl3, .in-cut.p6 .pl4, .in-cut.p7 .pctape { opacity: 1; }
+.in-cut.fly .pc { transition: translate 0.36s steps(4), opacity 0.36s steps(4); opacity: 0; animation: none; }
+.in-cut.fly .pcboard { translate: 0 60vh; } .in-cut.fly .pcstick { translate: 0 -60vh; }
+.in-cut.fly .pl1 { translate: -70vw -10vh; } .in-cut.fly .pl2 { translate: -60vw 30vh; } .in-cut.fly .pl3 { translate: 0 60vh; } .in-cut.fly .pl4 { translate: 60vw 30vh; }

@@ -8,7 +8,7 @@
     if (name) document.documentElement.dataset.skin = name; else delete document.documentElement.dataset.skin;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '58 · 빨간 점';
+  const APP_VERSION = '59 · 슬레이트 시안 더';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -3469,7 +3469,7 @@
 
   window.addEventListener('hashchange', route);
   /* ───────── 여는 장면 여러 가지: 백업 탭에서 고르고 바로 틀어 볼 수 있다 ───────── */
-  const INTROS = [['slate', '슬레이트'], ['eye', '눈 뜨기'], ['rec', '녹화 시작'], ['iris', 'o 속으로'], ['flash', '플래시 컷'], ['none', '없음']];
+  const INTROS = [['slate', '슬레이트'], ['word', '글자 슬레이트'], ['boil', '손그림'], ['cut', '종이 오리기'], ['eye', '눈 뜨기'], ['rec', '녹화 시작'], ['iris', 'o 속으로'], ['flash', '플래시 컷'], ['none', '없음']];
   const introKind = () => { try { const k = localStorage.getItem('eye-intro'); if (INTROS.some((x) => x[0] === k)) return k; } catch (e) { /* 기본값 */ } return 'slate'; };
   const introLogo = () => h('strong', { class: 'inlogo' }, 'd', eyeO(), 'p', h('span', { class: 'lge1' }, 'e'), 'y', h('span', { class: 'lge2' }, 'e'), h('span', { class: 'lgrec' }, h('i', {})));
   function playIntro(kind) {
@@ -3524,6 +3524,57 @@
         requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add('grow')));
       });
       at(2150, () => end(0));
+    } else if (kind === 'word') { // 이름 자체가 슬레이트: 글자의 윗부분이 들려 있다가 딱 내려와 붙고, 그 줄에서 갈라진다
+      const mk = (cls) => { const lg = introLogo(); return [h('div', { class: 'inhalf ' + cls }, h('div', { class: 'incenter' }, lg)), lg]; };
+      const [down] = mk('down'); const [up, upLogo] = mk('up');
+      ov.append(down, up);
+      at(140, () => { // o 글자의 한가운데 높이를 재서 거기를 자르는 줄로 삼는다
+        const clip = upLogo.querySelector('.eyeclip').getBoundingClientRect(); const lr = upLogo.getBoundingClientRect();
+        if (clip.height) { const y = clip.top + clip.height / 2; ov.style.setProperty('--cut', `${y}px`); upLogo.style.transformOrigin = `0px ${y - lr.top}px`; }
+        ov.classList.add('show');
+      });
+      at(820, () => ov.classList.add('clap'));
+      at(1650, () => ov.classList.add('split'));
+      at(2300, () => end(0));
+    } else if (kind === 'boil') { // 마커로 그린 슬레이트. 선이 프레임마다 떨린다(손으로 한 장씩 그린 애니메이션처럼)
+      const stripes = (y1, y2, dir) => Array.from({ length: 8 }, (_, i) => { const x = 58 + i * 40; return `<line x1="${x}" y1="${y1}" x2="${x + dir * 22}" y2="${y2}"/>`; }).join('');
+      const wrap = h('div', { class: 'boilwrap' });
+      wrap.innerHTML = `<svg viewBox="0 0 400 330" class="boilsvg"><defs><filter id="boil" x="-12%" y="-12%" width="124%" height="124%"><feTurbulence type="fractalNoise" baseFrequency="0.032" numOctaves="2" seed="1" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="6.5"/></filter></defs>
+        <g filter="url(#boil)" fill="none" stroke="#111" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+          <g class="bstick"><rect x="40" y="62" width="320" height="34"/>${stripes(96, 62, 1)}</g>
+          <rect x="40" y="100" width="320" height="34"/>${stripes(100, 134, 1)}
+          <rect x="40" y="134" width="320" height="172"/>
+          <line x1="40" y1="206" x2="360" y2="206"/><line x1="40" y1="262" x2="360" y2="262"/><line x1="146" y1="206" x2="146" y2="262"/><line x1="253" y1="206" x2="253" y2="262"/>
+          <g class="bclap"><line x1="372" y1="84" x2="392" y2="70"/><line x1="376" y1="98" x2="398" y2="98"/><line x1="372" y1="112" x2="392" y2="126"/></g>
+          <g stroke="none" fill="#111"><text x="56" y="188" class="bt1">dopeye</text><circle cx="232" cy="181" r="6.5" fill="#e4002b"/>
+            <text x="54" y="224" class="bt2">ROLL</text><text x="160" y="224" class="bt2">SCENE</text><text x="267" y="224" class="bt2">TAKE</text>
+            <text x="54" y="254" class="bt3 b-roll">--</text><text x="160" y="254" class="bt3 b-scene">--</text><text x="267" y="254" class="bt3 b-take">--</text>
+            <text x="54" y="292" class="bt2 b-date"></text></g>
+        </g></svg>`;
+      ov.append(wrap);
+      const d = new Date(); wrap.querySelector('.b-date').textContent = `${d.getFullYear()}.${pad(d.getMonth() + 1, 2)}.${pad(d.getDate(), 2)}`;
+      fill = (g) => { const day = g.days.size + (g.days.has(dstr(new Date())) ? 0 : 1); wrap.querySelector('.b-roll').textContent = pad(Math.max(1, Math.ceil(day / ROLL)), 2); wrap.querySelector('.b-scene').textContent = pad(g.cards.length, 2); wrap.querySelector('.b-take').textContent = pad(day, 2); };
+      const turb = wrap.querySelector('feTurbulence'); let seed = 1;
+      timers.push(setInterval(() => { seed++; turb.setAttribute('seed', String(seed)); wrap.style.transform = `translate(${(seed % 3) - 1}px, ${((seed * 7) % 3) - 1}px) rotate(${((seed % 5) - 2) * 0.12}deg)`; }, 115));
+      at(60, () => ov.classList.add('show'));
+      at(760, () => ov.classList.add('s1'));
+      at(875, () => ov.classList.add('s2'));
+      at(1900, () => end(120));
+    } else if (kind === 'cut') { // 종이를 오려 붙인 슬레이트. 한 장씩 찍은 스톱모션처럼 뚝뚝 움직인다
+      const b = (t) => h('b', {}, t);
+      const roll = b('--'); const scene = b('--'); const take = b('--');
+      ov.append(h('div', { class: 'pcstage' },
+        h('div', { class: 'pc pcstick pctop' }), h('div', { class: 'pc pcstick pcbase' }),
+        h('div', { class: 'pc pcboard' }),
+        h('div', { class: 'pc pclabel pl1' }, 'dopeye', h('i', {})),
+        h('div', { class: 'pc pclabel pl2' }, 'ROLL ', roll), h('div', { class: 'pc pclabel pl3' }, 'SCENE ', scene), h('div', { class: 'pc pclabel pl4' }, 'TAKE ', take),
+        h('div', { class: 'pc pctape pt1' }), h('div', { class: 'pc pctape pt2' })));
+      fill = (g) => { const day = g.days.size + (g.days.has(dstr(new Date())) ? 0 : 1); roll.textContent = pad(Math.max(1, Math.ceil(day / ROLL)), 2); scene.textContent = pad(g.cards.length, 2); take.textContent = pad(day, 2); };
+      [80, 240, 400, 520, 640, 760, 880].forEach((ms, i) => at(ms, () => ov.classList.add('p' + (i + 1))));
+      at(1250, () => ov.classList.add('c1'));
+      at(1370, () => ov.classList.add('c2'));
+      at(2050, () => ov.classList.add('fly'));
+      at(2450, () => end(120));
     } else if (kind === 'flash') { // 내가 분해한 이미지들이 탁탁탁 지나가고, 이름에서 멈춘다
       const img = h('img', { class: 'inflash', alt: '' });
       ov.append(img, center);
