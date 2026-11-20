@@ -12,7 +12,7 @@
     if (hand) document.documentElement.dataset.hand = '1'; else delete document.documentElement.dataset.hand;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '82 · 튕김 줄임';
+  const APP_VERSION = '83 · 멈칫 없앰';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -3828,8 +3828,7 @@
     } else {
       at(400, () => ov.classList.add('clap'));           // 막대가 살짝 더 들렸다가 무게로 떨어진다 (닿는 순간은 0.24초 뒤)
       at(640, () => ov.classList.add('hit', 'title'));   // 닿는 순간: 화면이 한 번 눌렸다 돌아오고, 이름이 올라온다
-      at(1560, () => ov.classList.add('pre'));           // 열리기 직전에 틈이 살짝 벌어진다
-      at(1800, close);                                   // 천천히 출발해서 빨라졌다가 부드럽게 멈추며 열린다
+      at(1700, close);                                   // 멈칫하지 않고 바로 출발해서 부드럽게 멈추며 열린다
     }
     return (g) => { // 롤, 지금까지 분해한 컷 수, 오늘이 몇 번째 날인지
       const day = g.days.size + (g.days.has(dstr(new Date())) ? 0 : 1);
