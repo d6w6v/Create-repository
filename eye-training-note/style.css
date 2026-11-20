@@ -1531,3 +1531,16 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 .fx-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
 .fx-tog { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; height: auto; padding: 12px 14px; white-space: normal; }
 .fx-tog small { font-weight: 400; font-size: var(--fs-xs, 12px); opacity: 0.75; line-height: 1.4; }
+
+/* ── 손그림 디자인 (hand-): 교재 디자인 위에 덧입힌다. 종이색 바탕, 마커 선, 떨리는 제목 ── */
+html[data-hand="1"]:root { --bg: #f7f5ef; --paper: #f7f5ef; --panel: #efece3; }
+html[data-hand="1"] body { background: #f7f5ef; }
+html[data-hand="1"] .hand-ink { filter: url(#hand-ink); }
+html[data-hand="1"] .hand-boil { filter: url(#hand-boil); }
+html[data-hand="1"] .hand-boil.hand-big { filter: url(#hand-big); }
+@media (hover: hover) { html[data-hand="1"] button.hand-ink:hover, html[data-hand="1"] a.hand-ink:hover, html[data-hand="1"] button:hover > .hand-ink { filter: url(#hand-boil); } }
+html[data-hand="1"] .fx-line { display: none; }
+@media print { html[data-hand="1"] .hand-ink, html[data-hand="1"] .hand-boil { filter: none !important; } }
+html[data-hand="1"] input.text, html[data-hand="1"] textarea, html[data-hand="1"] select { background-color: transparent; }
+/* 사진은 그대로 두고, 둘레에 마커로 테두리만 그린다 */
+html[data-hand="1"] .heropic, html[data-hand="1"] .tile img, html[data-hand="1"] .simcard img, html[data-hand="1"] .gazemap, html[data-hand="1"] .stage .frame { border: 1.5px solid var(--ink); }
