@@ -1557,3 +1557,42 @@ html[data-hand="1"] .btn:not(.solid):not(.on), html[data-hand="1"] .chip-state {
 
 .fx-slow { margin-left: 8px; font-size: 10px; letter-spacing: 0.08em; font-weight: 600; color: var(--red, #e4002b); }
 .btn.on .fx-slow { color: inherit; opacity: 0.8; }
+
+/* ── 작업 탭 (wk-): 펼친 책처럼 왼쪽은 본 것, 오른쪽은 만든 것. 이어진 것끼리 빨간 선 ── */
+.wk-m { font-family: var(--tt, ui-monospace, monospace); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; line-height: 1.7; }
+.wk-red { color: var(--red, #e4002b); } .wk-mute { color: var(--mute); } .wk-dim { color: #b5b5b5; }
+.wk-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; border-top: 3px solid var(--ink); padding: 12px 0 14px; margin-top: 18px; }
+.wk-head b { font-size: 15px; letter-spacing: -0.01em; }
+.wk-spread { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr); border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
+.wk-spine { border-left: 1px solid var(--ink); border-right: 1px solid var(--ink); display: flex; align-items: center; justify-content: center; }
+.wk-spine span { writing-mode: vertical-rl; white-space: nowrap; }
+.wk-page { padding: 18px 26px 34px 0; min-width: 0; } .wk-page.r { padding: 18px 0 34px 26px; }
+.wk-pt { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; } .wk-pt b { font-size: 38px; font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
+.wk-list { display: grid; gap: 22px; }
+.wk-item { display: grid; grid-template-columns: 42% minmax(0, 1fr); gap: 16px; align-items: end; width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; transition: opacity 0.18s; }
+button.wk-item { cursor: pointer; }
+.wk-item img { display: block; width: 100%; }
+.wk-zoom { display: block; padding: 0; border: 0; background: none; cursor: zoom-in; }
+.wk-txt { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.wk-t { display: block; font-size: 20px; letter-spacing: -0.02em; line-height: 1.2; margin: 4px 0 8px; overflow-wrap: anywhere; }
+.wk-to { margin-top: 2px; } .wk-learn { font-size: 14px; line-height: 1.5; margin: 6px 0 2px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.wk-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.wk-chip { border: 1px solid var(--ink); background: none; color: inherit; padding: 2px 7px; cursor: pointer; font-family: var(--tt, ui-monospace, monospace); font-size: 11px; letter-spacing: 0.06em; }
+.wk-edit { margin-top: 8px; }
+.wk-noimg { display: flex; align-items: center; justify-content: center; aspect-ratio: 4 / 3; background: var(--panel); }
+.wk-slot { display: flex; align-items: center; justify-content: center; aspect-ratio: 4 / 3; border: 1.5px dashed #b5b5b5; color: var(--mute); } .wk-slot.first { border-color: var(--red, #e4002b); color: var(--red, #e4002b); }
+.wk-more { margin-top: 20px; } .wk-empty { display: grid; gap: 12px; justify-items: start; }
+.wk-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; overflow: visible; }
+.wk-lines line { stroke: var(--red, #e4002b); stroke-width: 1.5; } .wk-lines circle { fill: var(--red, #e4002b); } .wk-lines g { transition: opacity 0.18s; }
+.wk-spread.hot .wk-item:not(.on) { opacity: 0.3; } .wk-spread.hot .wk-lines g:not(.on) { opacity: 0.12; }
+.wk-form { display: grid; gap: 16px; border: 1.5px solid var(--red, #e4002b); padding: 18px; }
+.wk-prev img { display: block; max-width: 100%; max-height: 300px; } .wk-prev { min-height: 24px; }
+.wk-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.wk-pick { display: grid; gap: 3px; padding: 0 0 3px; border: 2px solid transparent; background: none; color: inherit; cursor: pointer; text-align: left; }
+.wk-pick img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; filter: grayscale(1); opacity: 0.55; }
+.wk-pick[aria-pressed="true"] { border-color: var(--red, #e4002b); } .wk-pick[aria-pressed="true"] img { filter: none; opacity: 1; } .wk-pick[aria-pressed="true"] .wk-m { color: var(--red, #e4002b); }
+@media (max-width: 900px) {
+  .wk-spread { grid-template-columns: minmax(0, 1fr); } .wk-spine, .wk-lines { display: none; }
+  .wk-page, .wk-page.r { padding: 18px 0 26px; } .wk-page.r { order: -1; border-bottom: 1px solid var(--ink); }
+  .wk-pt b { font-size: 30px; } .wk-t { font-size: 18px; }
+}
