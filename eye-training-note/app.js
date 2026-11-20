@@ -12,7 +12,7 @@
     if (hand) document.documentElement.dataset.hand = '1'; else delete document.documentElement.dataset.hand;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '75 · 73으로 되돌림';
+  const APP_VERSION = '76 · 바로 뜨게';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -114,7 +114,8 @@
   /* ───────── 움직임 일곱 가지: 백업 탭에서 하나씩 켜고 끈다 ───────── */
   const FX = [['focus', '조리개 초점', '브리프 사진이 흐릿했다가 초점이 맞아요'], ['gaze', '시선 점', '내가 찍은 눈의 순서가 사진 위에 이어져요'], ['count', '숫자 굴림', '숫자가 굴러가다 멈춰요'],
     ['rule', '줄 긋기', '선이 그어지고 글이 올라와요'], ['band', '색 띠', '끝낸 단계가 사진 색으로 채워져요'], ['cut', '컷 전환', '화면이 바뀔 때 검은 프레임 한 장'], ['dot', '빨간 점', '저장될 때만 한 번 깜빡여요']];
-  const fxOffList = () => { try { const v = JSON.parse(localStorage.getItem('eye-fx-off') || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
+  const FX_SLOW = ['rule', 'cut', 'focus', 'count']; // 화면이 다 보이기까지 1초쯤 걸리게 하는 것들. 기본은 꺼 둔다 (켜면 화면이 늦게 뜬다)
+  const fxOffList = () => { try { const raw = localStorage.getItem('eye-fx-off2'); if (raw == null) return FX_SLOW.slice(); const v = JSON.parse(raw); return Array.isArray(v) ? v : FX_SLOW.slice(); } catch (e) { return FX_SLOW.slice(); } };
   const fxOn = (k) => !matchMedia('(prefers-reduced-motion: reduce)').matches && !fxOffList().includes(k);
   let fxPageName = null; let fxMounts = 0;
   const fxFresh = () => location.hash !== fxPageName; // 다른 화면에서 막 넘어왔을 때만 움직인다 (같은 화면을 다시 그릴 때는 가만히)
@@ -159,10 +160,11 @@
         document.body.append(line); setTimeout(() => line.remove(), d + 1000);
       }
       el.style.animationDelay = `${d + (bw ? 200 : 0)}ms`; el.classList.remove('fx-wait'); el.classList.add('fx-rise');
-      setTimeout(() => { el.classList.remove('fx-rise'); el.style.animationDelay = ''; }, d + 1100);
+      // 원래 등장 효과가 있는 것(카드 등)은 그 효과가 다시 틀어지지 않게 붙잡아 둔다. 안 그러면 올라온 뒤 한 번 더 사라졌다 나타난다
+      setTimeout(() => { if (el.dataset.fxOwn) el.classList.add('fx-still'); el.classList.remove('fx-rise'); el.style.animationDelay = ''; }, d + 1100);
     };
     const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { io.unobserve(e.target); show(e.target); } }), { rootMargin: '0px 0px -5% 0px' });
-    blocks.forEach((el) => { el.classList.add('fx-wait'); io.observe(el); });
+    blocks.forEach((el) => { if (getComputedStyle(el).animationName !== 'none') el.dataset.fxOwn = '1'; el.classList.add('fx-wait'); io.observe(el); });
   }
   /* 브리프 사진 위에 얹는 것들: 초점 괄호, 시선 점. 퍼즐이 다시 그려져도 남아 있게 따로 들고 있다 */
   function fxLens(pic) {
@@ -2753,11 +2755,11 @@
                 onclick: () => { try { localStorage.setItem('eye-intro', key); } catch (e) { /* 이번만 */ } showBackup(); feedIntro(playIntro(key)); } }, name))))),
         h('section', { class: 'sec', id: 'fxs' }, h('header', {}, h('h2', {}, '움직임')),
           h('div', { class: 'stepbody', style: 'padding-top:18px' },
-            h('p', { class: 'note' }, '화면의 움직임 일곱 가지예요. 눌러서 하나씩 끄고 켤 수 있어요. 검게 칠해진 것이 켜진 거예요.'),
+            h('p', { class: 'note' }, '화면의 움직임 일곱 가지예요. 눌러서 하나씩 끄고 켤 수 있어요. 검게 칠해진 것이 켜진 거예요. "느림"이 붙은 넷은 화면이 다 보이기까지 1초쯤 걸리게 해서, 처음에는 꺼 두었어요.'),
             h('div', { class: 'fx-list' }, FX.map(([key, name, desc]) => { const on = !fxOffList().includes(key);
               return h('button', { class: 'btn fx-tog' + (on ? ' on' : ''), type: 'button', id: 'fx-' + key, 'aria-pressed': String(on),
-                onclick: () => { const off = fxOffList().filter((k) => k !== key); if (on) off.push(key); try { localStorage.setItem('eye-fx-off', JSON.stringify(off)); } catch (e) { /* 이번만 */ } showBackup(); } },
-                h('strong', {}, name), h('small', {}, desc)); })))),
+                onclick: () => { const off = fxOffList().filter((k) => k !== key); if (on) off.push(key); try { localStorage.setItem('eye-fx-off2', JSON.stringify(off)); } catch (e) { /* 이번만 */ } showBackup(); } },
+                h('strong', {}, name, FX_SLOW.includes(key) ? h('span', { class: 'fx-slow mono' }, '느림') : null), h('small', {}, desc)); })))),
         h('section', { class: 'sec', id: 'buzz' }, h('header', {}, h('h2', {}, '진동')),
           h('div', { class: 'stepbody', style: 'padding-top:18px' },
             h('p', { class: 'note' }, '예측을 맞히거나 미션을 끝냈을 때 폰이 짧게 떨려요. 컴퓨터에서는 아무 일도 일어나지 않아요.'),
