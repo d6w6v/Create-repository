@@ -1513,6 +1513,10 @@ html[data-skin="school"] .top h1.logo::after { content: none; }
 /* 4 줄 긋기 */
 .fx-wait { opacity: 0 !important; animation: none !important; }
 .fx-rise { animation: fxRise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both !important; }
+.fx-still { animation: none !important; }
+/* 여러 단으로 흐르는 카드 목록에서는 위아래로 움직이지 않고 밝아지기만 한다 (단 사이에 조각이 남는 것을 막는다) */
+.tile.fx-rise { animation-name: fxFade !important; }
+@keyframes fxFade { 0% { opacity: 0; } 100% { opacity: 1; } }
 @keyframes fxRise { 0% { opacity: 0; transform: translateY(16px); } 100% { opacity: 1; transform: none; } }
 .fx-line { position: absolute; z-index: 5; pointer-events: none; transform-origin: 0 50%; animation: fxLine 0.6s cubic-bezier(0.6, 0, 0.2, 1) both; }
 @keyframes fxLine { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
