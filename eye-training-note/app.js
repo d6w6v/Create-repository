@@ -12,7 +12,7 @@
     if (hand) document.documentElement.dataset.hand = '1'; else delete document.documentElement.dataset.hand;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '77 · 작업 탭';
+  const APP_VERSION = '78 · 카드 묶음 불러오기';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -1092,7 +1092,7 @@
   }
   function tile(c) {
     const pr = progress(c);
-    const src = c.image.kind === 'url' ? c.image.url : c.thumb;
+    const src = cardSrc(c);
     const pic = src
       ? h('img', { class: 'pic', src, alt: '', loading: 'lazy',
           onerror: (e) => e.target.replaceWith(h('div', { class: 'nopic' }, '링크 이미지를 불러올 수 없어요')) })
@@ -2810,7 +2810,7 @@
           h('button', { class: 'btn solid', type: 'button', id: 'import-merge', onclick: () => doImport(data, false) }, '지금 기록에 합치기'),
           h('button', { class: 'btn', type: 'button', id: 'import-replace', onclick: () => doImport(data, true) }, '지금 기록을 지우고 이 파일로 바꾸기'),
           h('button', { class: 'btn quiet', type: 'button', onclick: () => drawImport(null) }, '취소')),
-        h('p', { class: 'note' }, '합치기: 같은 카드가 양쪽에 있으면 파일 쪽 내용으로 덮어써요. 바꾸기: 이 기기의 지금 기록은 사라져요.'));
+        h('p', { class: 'note' }, '합치기: 같은 카드가 양쪽에 있으면 더 최근에 고친 쪽을 남겨요. 바꾸기: 이 기기의 지금 기록은 사라져요.'));
     }
     async function doImport(data, replace) {
       try {
@@ -2819,7 +2819,9 @@
         const haveId = new Set(existing.map((c) => c.id));
         const usedNo = new Set(existing.map((c) => c.no));
         let max = existing.reduce((m, c) => Math.max(m, c.no || 0), 0);
+        const mine = new Map(existing.map((c) => [c.id, c]));
         for (const c of [...data.cards].sort((a, b) => a.createdAt - b.createdAt)) {
+          if (mine.has(c.id) && (mine.get(c.id).updatedAt || 0) > (c.updatedAt || 0)) continue; // 이 기기 쪽이 더 최근이면 그대로 둔다
           if (!haveId.has(c.id) && usedNo.has(c.no)) c.no = ++max;
           usedNo.add(c.no); max = Math.max(max, c.no || 0);
           await store.put('cards', c);
