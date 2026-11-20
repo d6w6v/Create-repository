@@ -1622,3 +1622,8 @@ button.wk-item { cursor: pointer; }
   .wk-row.head .wk-cell.l, .wk-row.add .wk-cell.l { display: none; } .wk-refs { justify-content: flex-start; } .wk-ref, .wk-refs.many .wk-ref { width: 104px; } .wk-none { text-align: left; }
   .wk-formgrid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* 연습 묶음 (pk-) */
+.pk-list { display: grid; gap: 12px; }
+.pk-item { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; border: 1.5px solid var(--ink); padding: 16px 18px; }
+.pk-item strong { font-size: 20px; letter-spacing: -0.02em; } .pk-item .note { margin-top: 4px; }

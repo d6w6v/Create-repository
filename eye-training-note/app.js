@@ -12,7 +12,7 @@
     if (hand) document.documentElement.dataset.hand = '1'; else delete document.documentElement.dataset.hand;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '79 · 작업 탭 줄 단위';
+  const APP_VERSION = '80 · 연습 묶음';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -2836,7 +2836,7 @@
           h('button', { class: 'btn quiet', type: 'button', onclick: () => drawImport(null) }, '취소')),
         h('p', { class: 'note' }, '합치기: 같은 카드가 양쪽에 있으면 더 최근에 고친 쪽을 남겨요. 바꾸기: 이 기기의 지금 기록은 사라져요.'));
     }
-    async function doImport(data, replace) {
+    async function doImport(data, replace, doneMsg) {
       try {
         if (replace) for (const s of STORES) await store.clear(s);
         const existing = replace ? [] : await store.all('cards');
@@ -2851,13 +2851,28 @@
           await store.put('cards', c);
         }
         for (const s of ['images', 'diary', 'series', 'meta', 'shotlists']) for (const rec of (data[s] || [])) await store.put(s, rec);
-        toast('불러왔어요.');
+        toast(doneMsg || '불러왔어요.');
         location.hash = 'list';
       } catch (e) {
         toast('불러오다가 멈췄어요. 기기 저장 공간이 부족한지 확인해 주세요.');
       }
     }
     drawImport(null);
+
+    const PACKS = [['nadia-lee-cohen', 'Nadia Lee Cohen', 'nlc', '화보·책·전시 사진 369장과 영상 23편, 작품별 시리즈 36개. 분석 칸은 비어 있어요.']];
+    const allCards = await store.all('cards');
+    const packBox = h('div', { class: 'pk-list' }, PACKS.map(([id, name, prefix, desc]) => {
+      const have = allCards.filter((c) => String(c.id).startsWith(prefix)).length;
+      const btn = h('button', { class: 'btn solid', type: 'button', id: 'pack-' + id, onclick: async () => {
+        btn.disabled = true; btn.textContent = '받는 중…';
+        try {
+          const res = await fetch(`packs/${id}.json`, { cache: 'no-cache' }); if (!res.ok) throw new Error('fetch');
+          const data = await res.json(); if (!data || data.app !== 'eye-training-note' || !Array.isArray(data.cards)) throw new Error('shape');
+          await doImport(data, false, `${name} 카드 ${data.cards.length}장을 넣었어요.`);
+        } catch (e) { toast('묶음을 받지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.'); btn.disabled = false; btn.textContent = have ? '다시 넣기' : '카드에 넣기'; }
+      } }, have ? '다시 넣기' : '카드에 넣기');
+      return h('div', { class: 'pk-item' }, h('div', {}, h('strong', {}, name), h('p', { class: 'note' }, desc),
+        h('p', { class: 'note', id: 'pack-state-' + id }, have ? `지금 ${have}장이 들어 있어요. 다시 넣어도 겹치지 않고, 내가 쓴 글은 그대로 남아요.` : '아직 넣지 않았어요.')), btn); }));
 
     const mb = usage != null ? `약 ${(usage / 1048576).toFixed(1)}MB 사용 중` : '';
     const protectBtn = h('button', { class: 'btn small', type: 'button', onclick: async () => {
@@ -2869,6 +2884,10 @@
 
     mount(h('div', { class: 'wrap' }, topBar('backup', '기록을 파일로 지키기'),
       h('div', { class: 'diary' },
+        PREVIEW ? null : h('section', { class: 'sec', id: 'packs' }, h('header', {}, h('h2', {}, '연습 묶음')),
+          h('div', { class: 'stepbody', style: 'padding-top:18px' },
+            h('p', { class: 'note' }, '롤모델의 작품을 한 번에 카드로 넣어요. 사진은 복사하지 않고 작가 사이트의 사진 주소로 보여 주기 때문에 인터넷이 될 때만 보여요. 지금 있는 카드는 그대로 두고 그 아래에 더해져요.'),
+            packBox)),
         h('section', { class: 'sec', id: 'skins' }, h('header', {}, h('h2', {}, '디자인')),
           h('div', { class: 'stepbody', style: 'padding-top:18px' },
             h('p', { class: 'note' }, '화면 모양을 골라요. 기록은 그대로고 겉모습만 바뀌어요.'),
