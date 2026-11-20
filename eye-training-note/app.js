@@ -12,7 +12,7 @@
     if (hand) document.documentElement.dataset.hand = '1'; else delete document.documentElement.dataset.hand;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '78 · 카드 묶음 불러오기';
+  const APP_VERSION = '79 · 작업 탭 줄 단위';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -2576,41 +2576,32 @@
      내 작업은 따로 서랍을 만들지 않고 meta 서랍에 'work-…' 이름으로 둔다 (백업 파일에 그대로 같이 실린다). 큰 이미지는 images 서랍의 'w-…' */
   const workList = async () => (await store.all('meta')).filter((m) => String(m.id).startsWith('work-')).sort((a, b) => b.createdAt - a.createdAt);
   let workDraft = null; // 지금 쓰고 있는 작업 (새로 만드는 중이거나 고치는 중)
-  let workMore = false;
+  let workPick = { q: '', tag: '', more: 1 }; // 카드 고르는 칸의 찾기 상태
   async function showWorks() {
     if (saveTimer) await saveNow();
     cur = null; savedLabel = null;
-    const cards = (await store.all('cards')).sort((a, b) => b.createdAt - a.createdAt);
+    const cards = (await store.all('cards')).sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt)); // 최근에 만진 카드가 먼저 (고를 때 찾기 쉽게)
     const works = await workList();
     const byId = new Map(cards.map((c) => [c.id, c]));
     const refsOf = (w) => (w.refs || []).filter((id) => byId.has(id));
-    const linkedIds = [...new Set(works.flatMap(refsOf))];
-    const rest = cards.filter((c) => !linkedIds.includes(c.id));
-    const LIMIT = 6;
-    const shownRest = workMore ? rest : rest.slice(0, Math.max(0, LIMIT - linkedIds.length));
+    const linked = new Set(works.flatMap(refsOf));
     const feelOf = (c) => { const f = ((c.steps || {}).s1 || {}).feel; return has(f) ? `${f}한 느낌` : '첫 반응을 아직 안 썼어요'; };
     const wno = (w) => `W.${pad(w.no, 3)}`;
     const spread = h('div', { class: 'wk-spread', id: 'wk-spread' });
     const hot = (ids, on) => { spread.classList.toggle('hot', on); spread.querySelectorAll('.on').forEach((e) => e.classList.remove('on'));
       if (on) ids.forEach((id) => spread.querySelectorAll(`[data-k="${id}"]`).forEach((e) => e.classList.add('on'))); };
 
-    /* 왼쪽: 본 것 */
-    const refItem = (c) => { const mine = works.filter((w) => refsOf(w).includes(c.id));
-      const el = h('button', { class: 'wk-item', type: 'button', 'data-k': 'c-' + c.id, 'data-ref': c.id, onclick: () => { location.hash = 'card-' + c.id; }, 'aria-label': `카드 No.${pad(c.no, 3)} 열기` },
-        cardSrc(c) ? h('img', { src: cardSrc(c), alt: '', onerror: (e) => e.target.remove() }) : h('span', { class: 'wk-noimg wk-m' }, '이미지 없음'),
-        h('span', { class: 'wk-txt' }, h('span', { class: 'wk-m wk-red' }, `No.${pad(c.no, 3)}`), h('b', { class: 'wk-t' }, feelOf(c)),
-          h('span', { class: 'wk-m wk-mute' }, c.date, c.tags.length ? ' · ' + c.tags.map((t) => '#' + t).join(' ') : ''),
-          mine.length ? h('span', { class: 'wk-m wk-red wk-to' }, '→ ' + mine.map(wno).join(' ')) : null));
-      el.addEventListener('pointerenter', () => hot(['c-' + c.id, ...mine.flatMap((w) => ['w-' + w.id, 'l-' + w.id + '-' + c.id])], true)); el.addEventListener('pointerleave', () => hot([], false));
+    /* 본 것 한 장 (작업 줄의 왼쪽에 놓이는 작은 카드). 같은 카드가 여러 작업에 쓰였으면 줄마다 다시 나온다 */
+    const refThumb = (c, w) => { const others = works.filter((x) => x.id !== w.id && refsOf(x).includes(c.id));
+      const el = h('button', { class: 'wk-ref', type: 'button', 'data-k': 'c-' + c.id, 'data-ref': c.id, onclick: () => { location.hash = 'card-' + c.id; }, 'aria-label': `카드 No.${pad(c.no, 3)} 열기`, title: feelOf(c) },
+        cardSrc(c) ? h('img', { src: cardSrc(c), alt: '', loading: 'lazy', onerror: (e) => e.target.replaceWith(h('span', { class: 'wk-noimg wk-m' }, '이미지 없음')) }) : h('span', { class: 'wk-noimg wk-m' }, c.type === 'video' ? '영상' : '이미지 없음'),
+        h('span', { class: 'wk-m wk-red' }, `No.${pad(c.no, 3)}`), h('span', { class: 'wk-reft' }, feelOf(c)),
+        others.length ? h('span', { class: 'wk-m wk-mute' }, '또 ' + others.map(wno).join(' ')) : null);
+      el.addEventListener('pointerenter', () => hot(['c-' + c.id, ...works.filter((x) => refsOf(x).includes(c.id)).map((x) => 'w-' + x.id)], true)); el.addEventListener('pointerleave', () => hot([], false));
       return el; };
-    const left = h('div', { class: 'wk-page' },
-      h('div', { class: 'wk-pt' }, h('b', {}, '본 것'), h('span', { class: 'wk-m wk-mute' }, `REFERENCE · ${cards.length}`)),
-      cards.length ? h('div', { class: 'wk-list' }, linkedIds.map((id) => refItem(byId.get(id))), shownRest.map(refItem))
-        : h('div', { class: 'wk-empty' }, h('p', { class: 'note' }, '아직 본 것이 없어요. 카드 탭에서 끌리는 이미지를 먼저 한 장 분해해 보세요.'), h('button', { class: 'btn small', type: 'button', onclick: () => { location.hash = 'new'; } }, '첫 카드 만들기')),
-      rest.length > shownRest.length || workMore ? h('button', { class: 'btn small quiet wk-more', type: 'button', id: 'wk-more', onclick: () => { workMore = !workMore; showWorks(); } }, workMore ? '접기' : `아직 잇지 않은 카드 ${rest.length - shownRest.length}장 더 보기`) : null);
 
-    /* 오른쪽: 만든 것 */
-    const startNew = () => { workDraft = { id: 'work-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), no: works.reduce((m, w) => Math.max(m, w.no || 0), 0) + 1, title: '', learned: '', refs: [], thumb: '', full: null, createdAt: Date.now(), isNew: true }; showWorks(); };
+    /* 올리기·고치기 칸 */
+    const startNew = () => { workPick = { q: '', tag: '', more: 1 }; workDraft = { id: 'work-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), no: works.reduce((m, w) => Math.max(m, w.no || 0), 0) + 1, title: '', learned: '', refs: [], thumb: '', full: null, createdAt: Date.now(), isNew: true }; showWorks(); };
     const form = () => { const d = workDraft;
       const prev = h('div', { class: 'wk-prev' }); const drawPrev = () => prev.replaceChildren(d.thumb ? h('img', { src: d.thumb, alt: '' }) : h('span', { class: 'wk-m wk-mute' }, '아직 이미지가 없어요'));
       const fileIn = h('input', { type: 'file', accept: 'image/*', hidden: true, id: 'wk-file', onchange: async () => { const f = fileIn.files[0]; fileIn.value = ''; if (!f) return;
@@ -2619,9 +2610,27 @@
       drawPrev();
       const title = h('input', { class: 'text', id: 'wk-title', value: d.title, placeholder: '예: 첫 뮤직비디오 스틸', oninput: () => { d.title = title.value; } });
       const learned = h('textarea', { class: 'text', id: 'wk-learned', rows: 3, placeholder: '예: 붉은 배경, 인물 한 명, 정면. 내 말로 적어요.', oninput: () => { d.learned = learned.value; } }); learned.value = d.learned;
-      const picks = h('div', { class: 'wk-picks' }, cards.map((c) => { const b = h('button', { class: 'wk-pick', type: 'button', id: 'wk-pick-' + c.id, 'aria-pressed': String(d.refs.includes(c.id)), title: feelOf(c),
-        onclick: () => { d.refs = d.refs.includes(c.id) ? d.refs.filter((x) => x !== c.id) : [...d.refs, c.id]; b.setAttribute('aria-pressed', String(d.refs.includes(c.id))); } },
-        cardSrc(c) ? h('img', { src: cardSrc(c), alt: '' }) : null, h('span', { class: 'wk-m' }, `No.${pad(c.no, 3)}`)); return b; }));
+      /* 카드 고르기: 카드가 수백 장이어도 찾을 수 있게. 고른 것은 맨 위에 따로, 아래에서 글자와 태그로 찾는다 */
+      const PAGE = 18; const chosen = h('div', { class: 'wk-chosen', id: 'wk-chosen' }); const results = h('div', { class: 'wk-picks', id: 'wk-picks' }); const count = h('span', { class: 'wk-m wk-mute', id: 'wk-count' }); const moreBox = h('div', {});
+      const tagCount = new Map(); for (const c of cards) for (const t of c.tags) tagCount.set(t, (tagCount.get(t) || 0) + 1);
+      const topTags = [...tagCount.entries()].sort((x, y) => y[1] - x[1]).slice(0, 10);
+      const pickBtn = (c) => { const on = d.refs.includes(c.id);
+        return h('button', { class: 'wk-pick', type: 'button', 'data-pick': c.id, 'aria-pressed': String(on), title: feelOf(c), onclick: () => { d.refs = on ? d.refs.filter((x) => x !== c.id) : [...d.refs, c.id]; drawPicks(); } },
+          cardSrc(c) ? h('img', { src: cardSrc(c), alt: '', loading: 'lazy' }) : h('span', { class: 'wk-noimg wk-m' }, c.type === 'video' ? '영상' : '없음'), h('span', { class: 'wk-m' }, `No.${pad(c.no, 3)}`)); };
+      const tagBox = h('div', { class: 'wk-tags' });
+      function drawPicks() {
+        const sel = d.refs.map((id) => byId.get(id)).filter(Boolean);
+        chosen.replaceChildren(h('span', { class: 'wk-m ' + (sel.length ? 'wk-red' : 'wk-mute') }, sel.length ? `고른 카드 ${sel.length}장 (다시 누르면 빠져요)` : '아직 고른 카드가 없어요'), sel.length ? h('div', { class: 'wk-picks' }, sel.map(pickBtn)) : null);
+        const terms = workPick.q.toLowerCase().split(/\s+/).filter(Boolean);
+        const pool = cards.filter((c) => !d.refs.includes(c.id) && (!workPick.tag || c.tags.includes(workPick.tag)) && (!terms.length || (() => { const hay = (cardText(c) + ' no.' + pad(c.no, 3) + ' ' + c.no).toLowerCase(); return terms.every((t) => hay.includes(t.replace(/^#/, ''))); })()));
+        const shown = pool.slice(0, PAGE * workPick.more);
+        results.replaceChildren(...shown.map(pickBtn));
+        count.textContent = terms.length || workPick.tag ? `찾은 카드 ${pool.length}장` : `전체 ${pool.length}장 · 최근에 만진 순서`;
+        moreBox.replaceChildren(pool.length > shown.length ? h('button', { class: 'btn small quiet', type: 'button', id: 'wk-pick-more', onclick: () => { workPick.more++; drawPicks(); } }, `${pool.length - shown.length}장 더 보기`) : null);
+        tagBox.replaceChildren(...topTags.map(([t, n]) => h('button', { class: 'btn small' + (workPick.tag === t ? ' on' : ''), type: 'button', 'aria-pressed': String(workPick.tag === t), onclick: () => { workPick.tag = workPick.tag === t ? '' : t; workPick.more = 1; drawPicks(); } }, `#${t} ${n}`)));
+      }
+      const search = h('input', { class: 'text', id: 'wk-search', type: 'search', value: workPick.q, placeholder: '찾기: 번호, 태그, 내가 쓴 단어, 출처 (예: skims, 90s, 005)', 'aria-label': '이을 카드 찾기', oninput: () => { workPick.q = search.value; workPick.more = 1; drawPicks(); } });
+      drawPicks();
       const save = async () => { if (!d.thumb) { toast('작업 이미지를 먼저 올려 주세요.'); return; }
         const rec = { id: d.id, no: d.no, title: d.title.trim(), learned: d.learned.trim(), refs: d.refs.filter((id) => byId.has(id)), thumb: d.thumb, createdAt: d.createdAt, updatedAt: Date.now() };
         try { if (d.full) await store.put('images', { id: 'w-' + d.id, data: d.full }); await store.put('meta', rec); } catch (e) { toast('저장하지 못했어요. 기기 저장 공간을 확인해 주세요.'); return; }
@@ -2629,47 +2638,62 @@
       const remove = async () => { try { await store.del('meta', d.id); await store.del('images', 'w-' + d.id); } catch (e) { /* 이미 없으면 그냥 넘어간다 */ } workDraft = null; toast('작업을 지웠어요.'); showWorks(); };
       return h('div', { class: 'wk-form', id: 'wk-form' },
         h('div', { class: 'wk-m wk-red' }, d.isNew ? `${wno(d)} · 새 작업` : `${wno(d)} · 고치기`),
-        h('div', { class: 'field' }, h('label', { class: 'flabel' }, '내 작업 이미지'), prev, fileIn, h('div', {}, h('button', { class: 'btn small', type: 'button', onclick: () => fileIn.click() }, d.thumb ? '이미지 바꾸기' : '이미지 고르기'))),
-        h('div', { class: 'field' }, h('label', { class: 'flabel', for: 'wk-title' }, '제목'), title),
-        cards.length ? h('div', { class: 'field' }, h('span', { class: 'flabel' }, '어느 카드에서 배웠나요? (여러 장 골라도 돼요)'), picks) : null,
-        h('div', { class: 'field' }, h('label', { class: 'flabel', for: 'wk-learned' }, '거기서 무엇을 가져왔나요?'), learned),
+        h('div', { class: 'wk-formgrid' },
+          h('div', { class: 'wk-formcol' },
+            h('div', { class: 'field' }, h('label', { class: 'flabel' }, '내 작업 이미지'), prev, fileIn, h('div', {}, h('button', { class: 'btn small', type: 'button', onclick: () => fileIn.click() }, d.thumb ? '이미지 바꾸기' : '이미지 고르기'))),
+            h('div', { class: 'field' }, h('label', { class: 'flabel', for: 'wk-title' }, '제목'), title),
+            h('div', { class: 'field' }, h('label', { class: 'flabel', for: 'wk-learned' }, '거기서 무엇을 가져왔나요?'), learned)),
+          cards.length ? h('div', { class: 'wk-formcol' },
+            h('div', { class: 'field' }, h('span', { class: 'flabel' }, '어느 카드에서 배웠나요? (여러 장 골라도 돼요)'), chosen),
+            h('div', { class: 'field' }, search, tagBox, count, results, moreBox)) : null),
         h('div', { class: 'seg' }, h('button', { class: 'btn solid', type: 'button', id: 'wk-save', onclick: save }, d.isNew ? '올리기' : '저장'),
           h('button', { class: 'btn', type: 'button', id: 'wk-cancel', onclick: () => { workDraft = null; showWorks(); } }, '취소'),
           d.isNew ? null : confirmDel('이 작업 지우기', '이 작업을 지울까요? 되돌릴 수 없어요.', remove, 'btn quiet'))); };
-    const workItem = (w) => { const refs = refsOf(w);
-      const el = h('div', { class: 'wk-item wk-work', 'data-k': 'w-' + w.id, 'data-work': w.id },
+
+    /* 작업 하나가 한 줄: 왼쪽에 그 작업이 배운 카드들, 오른쪽에 내 작업. 줄 안에서만 선을 긋는다 */
+    const workRow = (w) => { const refs = refsOf(w);
+      const work = h('div', { class: 'wk-item wk-work', 'data-k': 'w-' + w.id, 'data-work': w.id },
         h('button', { class: 'wk-zoom', type: 'button', 'aria-label': '크게 보기', onclick: async () => { const full = (await store.get('images', 'w-' + w.id))?.data || w.thumb; openZoom(full); } }, h('img', { src: w.thumb, alt: '' })),
         h('span', { class: 'wk-txt' }, h('span', { class: 'wk-m wk-red' }, wno(w)), h('b', { class: 'wk-t' }, has(w.title) ? w.title : '제목 없음'),
-          refs.length ? h('span', { class: 'wk-chips' }, refs.map((id) => h('button', { class: 'wk-chip', type: 'button', onclick: () => { location.hash = 'card-' + id; } }, `← No.${pad(byId.get(id).no, 3)}`))) : h('span', { class: 'wk-m wk-mute' }, '아직 이은 카드가 없어요'),
           has(w.learned) ? h('span', { class: 'wk-learn' }, w.learned) : null,
-          h('button', { class: 'btn small quiet wk-edit', type: 'button', id: 'wk-edit-' + w.id, onclick: () => { workDraft = { ...w, refs: [...(w.refs || [])], full: null, isNew: false }; showWorks(); } }, '고치기')));
-      el.addEventListener('pointerenter', () => hot(['w-' + w.id, ...refs.flatMap((id) => ['c-' + id, 'l-' + w.id + '-' + id])], true)); el.addEventListener('pointerleave', () => hot([], false));
-      return el; };
-    const slot = (first) => h('button', { class: 'wk-item wk-add', type: 'button', id: 'wk-add', onclick: startNew },
-      h('span', { class: 'wk-slot wk-m' + (first ? ' first' : '') }, first ? '+ 첫 작업 올리기' : '+ 내 작업 올리기'),
-      h('span', { class: 'wk-txt' }, h('span', { class: 'wk-m ' + (first ? 'wk-red' : 'wk-mute') }, `W.${pad(works.reduce((m, w) => Math.max(m, w.no || 0), 0) + 1, 3)}`),
-        h('b', { class: 'wk-t' + (first ? '' : ' wk-dim') }, first ? '여기에 내 작업이 와요' : '다음 작업'),
-        first ? h('span', { class: 'wk-m wk-mute' }, '올릴 때 어느 카드에서 배웠는지 고르면', h('br', {}), '본 것과 빨간 선으로 이어져요') : null));
-    const right = h('div', { class: 'wk-page r' },
-      h('div', { class: 'wk-pt' }, h('b', {}, '만든 것'), h('span', { class: 'wk-m wk-mute' }, `MY WORK · ${works.length}`)),
-      h('div', { class: 'wk-list' },
-        workDraft && workDraft.isNew ? form() : slot(!works.length),
-        works.map((w) => (workDraft && !workDraft.isNew && workDraft.id === w.id ? form() : workItem(w)))));
+          h('button', { class: 'btn small quiet wk-edit', type: 'button', id: 'wk-edit-' + w.id, onclick: () => { workPick = { q: '', tag: '', more: 1 }; workDraft = { ...w, refs: [...(w.refs || [])], full: null, isNew: false }; showWorks(); } }, '고치기')));
+      const row = h('div', { class: 'wk-row', 'data-row': w.id },
+        h('div', { class: 'wk-cell l' }, refs.length ? h('div', { class: 'wk-refs' + (refs.length > 3 ? ' many' : '') }, refs.map((id) => refThumb(byId.get(id), w))) : h('span', { class: 'wk-m wk-mute wk-none' }, '아직 이은 카드가 없어요', h('br', {}), '"고치기"에서 고를 수 있어요')),
+        h('div', { class: 'wk-cell r' }, work));
+      work.addEventListener('pointerenter', () => hot(['w-' + w.id, ...refs.map((id) => 'c-' + id)], true)); work.addEventListener('pointerleave', () => hot([], false));
+      return row; };
+    const addRow = () => h('div', { class: 'wk-row add' },
+      h('div', { class: 'wk-cell l' }, h('span', { class: 'wk-m wk-mute wk-none' }, works.length ? '새 작업을 올리면 이 자리에' : '작업을 올리고 배운 카드를 고르면', h('br', {}), works.length ? '배운 카드들이 나란히 놓여요' : '이 자리에 그 카드들이 나란히 놓이고 빨간 선으로 이어져요')),
+      h('div', { class: 'wk-cell r' }, h('button', { class: 'wk-item wk-add', type: 'button', id: 'wk-add', onclick: startNew },
+        h('span', { class: 'wk-slot wk-m' + (works.length ? '' : ' first') }, works.length ? '+ 내 작업 올리기' : '+ 첫 작업 올리기'),
+        h('span', { class: 'wk-txt' }, h('span', { class: 'wk-m ' + (works.length ? 'wk-mute' : 'wk-red') }, `W.${pad(works.reduce((m, w) => Math.max(m, w.no || 0), 0) + 1, 3)}`),
+          h('b', { class: 'wk-t' + (works.length ? ' wk-dim' : '') }, works.length ? '다음 작업' : '여기에 내 작업이 와요')))));
 
-    /* 빨간 선: 이어진 카드와 작업의 사진 사이. 화면 크기가 바뀌거나 사진이 다 뜨면 다시 긋는다 */
+    /* 빨간 선: 줄마다 하나. 그 줄의 카드 묶음에서 내 작업 사진으로 */
     const lines = document.createElementNS(SVGNS, 'svg'); lines.setAttribute('class', 'wk-lines'); lines.setAttribute('aria-hidden', 'true');
     const draw = () => { if (!spread.isConnected) return; const R = spread.getBoundingClientRect(); let out = '';
-      if (getComputedStyle(lines).display !== 'none') for (const w of works) for (const id of refsOf(w)) {
-        const a = spread.querySelector(`[data-ref="${id}"] img`) || spread.querySelector(`[data-ref="${id}"]`); const b = spread.querySelector(`[data-work="${w.id}"] img`); if (!a || !b) continue;
-        const ra = a.getBoundingClientRect(); const rb = b.getBoundingClientRect(); if (!ra.height || !rb.height) continue;
-        const x1 = ra.right - R.left - Math.min(24, ra.width * 0.15); const y1 = ra.top - R.top + ra.height * 0.5; const x2 = rb.left - R.left + Math.min(24, rb.width * 0.15); const y2 = rb.top - R.top + rb.height * 0.5;
-        out += `<g data-k="l-${w.id}-${id}"><line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/><circle cx="${x1.toFixed(1)}" cy="${y1.toFixed(1)}" r="4.5"/><circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="4.5"/></g>`; }
+      if (getComputedStyle(lines).display !== 'none') for (const w of works) { const row = spread.querySelector(`[data-row="${w.id}"]`); if (!row) continue;
+        const group = row.querySelector('.wk-refs'); const b = row.querySelector('[data-work] img'); if (!group || !b) continue;
+        const last = group.lastElementChild.querySelector('img, .wk-noimg') || group.lastElementChild; const ra = last.getBoundingClientRect(); const rb = b.getBoundingClientRect(); if (!ra.height || !rb.height) continue;
+        const x1 = ra.right - R.left - Math.min(18, ra.width * 0.2); const y1 = ra.top - R.top + ra.height * 0.5; const x2 = rb.left - R.left + Math.min(22, rb.width * 0.15); const y2 = rb.top - R.top + rb.height * 0.5;
+        out += `<g data-k="w-${w.id}"><line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"/><circle cx="${x1.toFixed(1)}" cy="${y1.toFixed(1)}" r="4.5"/><circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="4.5"/></g>`; }
       lines.setAttribute('viewBox', `0 0 ${R.width} ${R.height}`); lines.innerHTML = out; };
-    spread.append(left, h('div', { class: 'wk-spine', 'aria-hidden': 'true' }, h('span', { class: 'wk-m wk-mute' }, `dopeye · 본 것 ${cards.length} / 만든 것 ${works.length}`)), right, lines);
-    mount(h('div', { class: 'wrap' }, topBar('works', works.length ? `본 것 ${cards.length} · 만든 것 ${works.length}` : '본 것에서 배워서, 만든 것으로'),
-      h('div', { class: 'wk-head' }, h('b', {}, 'SPREAD'), h('span', { class: 'wk-m wk-mute' }, '본 것에서 배워서 → 만든 것으로')),
-      spread));
-    draw(); spread.querySelectorAll('img').forEach((im) => { if (!im.complete) im.addEventListener('load', draw, { once: true }); });
+
+    const editing = workDraft && !workDraft.isNew ? workDraft.id : null;
+    spread.append(
+      h('div', { class: 'wk-row head' }, h('div', { class: 'wk-cell l' }, h('div', { class: 'wk-pt' }, h('b', {}, '본 것'), h('span', { class: 'wk-m wk-mute' }, `이은 카드 ${linked.size} / 전체 ${cards.length}`))),
+        h('div', { class: 'wk-cell r' }, h('div', { class: 'wk-pt' }, h('b', {}, '만든 것'), h('span', { class: 'wk-m wk-mute' }, `MY WORK · ${works.length}`)))),
+      workDraft && workDraft.isNew ? h('div', { class: 'wk-row full' }, form()) : addRow(),
+      works.map((w) => (editing === w.id ? h('div', { class: 'wk-row full' }, form()) : workRow(w))),
+      h('i', { class: 'wk-spine', 'aria-hidden': 'true' }), lines);
+    const restN = cards.length - linked.size;
+    mount(h('div', { class: 'wrap' }, topBar('works', works.length ? `만든 것 ${works.length} · 이은 카드 ${linked.size}` : '본 것에서 배워서, 만든 것으로'),
+      h('div', { class: 'wk-head' }, h('b', {}, 'SPREAD'), h('span', { class: 'wk-m wk-mute' }, '작업 하나가 한 줄 · 왼쪽은 거기서 배운 카드')),
+      spread,
+      cards.length ? h('div', { class: 'wk-foot' }, h('span', { class: 'wk-m wk-mute' }, restN ? `아직 어느 작업에도 잇지 않은 카드 ${restN}장` : '모든 카드를 작업에 이었어요'),
+          h('button', { class: 'btn small quiet', type: 'button', id: 'wk-tolist', onclick: () => { location.hash = 'list'; } }, '카드 탭에서 보기'))
+        : h('div', { class: 'wk-foot' }, h('span', { class: 'note' }, '아직 본 것이 없어요. 카드 탭에서 끌리는 이미지를 먼저 한 장 분해해 보세요.'), h('button', { class: 'btn small', type: 'button', onclick: () => { location.hash = 'new'; } }, '첫 카드 만들기'))));
+    draw(); spread.querySelectorAll('img').forEach((im) => { if (!im.complete) { im.addEventListener('load', draw, { once: true }); im.addEventListener('error', draw, { once: true }); } });
     if ('ResizeObserver' in window) { const ro = new ResizeObserver(() => { if (!spread.isConnected) { ro.disconnect(); return; } draw(); }); ro.observe(spread); }
     if (workDraft) document.getElementById('wk-form')?.scrollIntoView({ block: 'nearest' });
   }
