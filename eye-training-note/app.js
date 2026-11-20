@@ -12,7 +12,7 @@
     if (hand) document.documentElement.dataset.hand = '1'; else delete document.documentElement.dataset.hand;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '80 · 연습 묶음';
+  const APP_VERSION = '81 · 자연스러운 슬레이트';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -3770,7 +3770,7 @@
     const roll = num(); const scene = num(); const take = num();
     const d = new Date();
     const meta = (k, v) => h('span', { class: 'slmeta' }, h('span', { class: 'sllabel' }, k), v);
-    const ov = h('div', { class: 'slate-ov' + (variant ? ' ' + variant : ''), id: 'slate', 'aria-hidden': 'true' },
+    const ov = h('div', { class: 'slate-ov' + (variant ? ' ' + variant : ' nat'), id: 'slate', 'aria-hidden': 'true' },
       h('div', { class: 'slup' },
         h('strong', { class: 'sltitle' },
           [...'dopeye'].map((ch, i) => h('span', { class: 'slch' + (i === 3 ? ' lge1' : i === 5 ? ' lge2' : '') }, h('span', { style: `transition-delay:${i * 38}ms` }, i === 1 ? eyeO() : ch))),
@@ -3799,7 +3799,9 @@
     }
     document.body.append(ov);
     let gone = false;
-    const close = () => { if (gone) return; gone = true; timers.forEach(clearTimeout); ov.classList.add('out'); setTimeout(() => ov.remove(), 800); };
+    const close = () => { if (gone) return; gone = true; timers.forEach(clearTimeout); ov.classList.add('out');
+      if (!variant) { const root = document.documentElement; root.classList.add('sln-open'); setTimeout(() => root.classList.remove('sln-open'), 1100); } // 문이 열리는 동안 뒤의 화면도 살짝 다가온다
+      setTimeout(() => ov.remove(), variant ? 800 : 980); };
     ov.addEventListener('pointerdown', close);
     // 숫자: 기본은 그냥 적고, v2는 0부터 빠르게 올라간다
     let target = null; let titled = false;
@@ -3824,9 +3826,10 @@
       at(640, () => ov.classList.add('title'));
       at(1800, close);
     } else {
-      at(460, () => ov.classList.add('clap'));   // 위쪽 줄이 내려와 딱 붙는다
-      at(570, () => ov.classList.add('title'));  // 붙는 순간 이름이 올라온다
-      at(1650, close);                           // 붙은 줄을 경계로 위아래로 열린다
+      at(400, () => ov.classList.add('clap'));           // 막대가 살짝 더 들렸다가 무게로 떨어진다 (닿는 순간은 0.24초 뒤)
+      at(640, () => ov.classList.add('hit', 'title'));   // 닿는 순간: 화면이 한 번 눌렸다 돌아오고, 이름이 올라온다
+      at(1560, () => ov.classList.add('pre'));           // 열리기 직전에 틈이 살짝 벌어진다
+      at(1800, close);                                   // 천천히 출발해서 빨라졌다가 부드럽게 멈추며 열린다
     }
     return (g) => { // 롤, 지금까지 분해한 컷 수, 오늘이 몇 번째 날인지
       const day = g.days.size + (g.days.has(dstr(new Date())) ? 0 : 1);

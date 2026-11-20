@@ -1627,3 +1627,28 @@ button.wk-item { cursor: pointer; }
 .pk-list { display: grid; gap: 12px; }
 .pk-item { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; border: 1.5px solid var(--ink); padding: 16px 18px; }
 .pk-item strong { font-size: 20px; letter-spacing: -0.02em; } .pk-item .note { margin-top: 4px; }
+
+/* ── 슬레이트(기본) 여는 장면을 더 자연스럽게: 막대가 들렸다 무게로 떨어져 한 번 튕기고, 닿는 순간 화면이 눌렸다 돌아오고, 문은 천천히 출발해 부드럽게 멈춘다 ── */
+.slate-ov.nat { --arm: -6deg; }
+@media (max-width: 700px) { .slate-ov.nat { --arm: -12deg; } }
+.slate-ov.nat .slarm { transform: rotate(var(--arm)); }
+.slate-ov.nat.clap .slarm { transition: opacity 0.3s; animation: slnArm 0.46s both; }
+@keyframes slnArm {
+  0% { transform: rotate(var(--arm)); animation-timing-function: cubic-bezier(0.3, 0, 0.4, 1); }
+  26% { transform: rotate(calc(var(--arm) * 1.38)); animation-timing-function: cubic-bezier(0.7, 0, 1, 0.55); }
+  52% { transform: rotate(0deg); animation-timing-function: cubic-bezier(0, 0.6, 0.4, 1); }
+  67% { transform: rotate(calc(var(--arm) * 0.24)); animation-timing-function: cubic-bezier(0.6, 0, 1, 0.6); }
+  82% { transform: rotate(0deg); animation-timing-function: ease-out; }
+  90% { transform: rotate(calc(var(--arm) * 0.06)); }
+  100% { transform: rotate(0deg); }
+}
+.slate-ov.nat.hit .slup, .slate-ov.nat.hit .sldown { animation: slnHit 0.38s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes slnHit { 0% { transform: translateY(0); } 16% { transform: translateY(5px); } 44% { transform: translateY(-2px); } 70% { transform: translateY(1px); } 100% { transform: translateY(0); } }
+.slate-ov.nat.hit .slline { animation: slnLine 0.42s ease-out; }
+@keyframes slnLine { 0% { box-shadow: 0 0 0 1.5px #fff; } 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); } }
+.slate-ov.nat.pre .slup { transform: translateY(-5px); transition: transform 0.26s cubic-bezier(0.3, 0, 0.3, 1); }
+.slate-ov.nat.pre .sldown { transform: translateY(5px); transition: transform 0.26s cubic-bezier(0.3, 0, 0.3, 1); }
+.slate-ov.nat.out .slup, .slate-ov.nat.out .sldown { transition: transform 0.9s cubic-bezier(0.76, 0, 0.18, 1); animation: none; }
+.slate-ov.nat.out .slup { transform: translateY(-101%); } .slate-ov.nat.out .sldown { transform: translateY(101%); }
+html.sln-open #app { animation: slnPage 1s cubic-bezier(0.2, 0.7, 0.2, 1) both; transform-origin: 50% 30vh; }
+@keyframes slnPage { 0% { opacity: 0.25; transform: scale(1.018); } 35% { opacity: 0.6; } 100% { opacity: 1; transform: none; } }
