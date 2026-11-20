@@ -12,7 +12,7 @@
     if (hand) document.documentElement.dataset.hand = '1'; else delete document.documentElement.dataset.hand;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '72 · 손그림 디자인';
+  const APP_VERSION = '73 · 더 삐뚤고 굵게';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -222,7 +222,7 @@
   function handSetup() { // 떨림 필터 셋(가만히 있는 것, 떨리는 것, 로고용 큰 것)을 한 번만 심는다
     if (document.getElementById('hand-defs')) return;
     const f = (id, freq, scale, box) => `<filter id="${id}" ${box}><feTurbulence type="fractalNoise" baseFrequency="${freq}" numOctaves="2" seed="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="${scale}" xChannelSelector="R" yChannelSelector="G"/></filter>`;
-    document.body.insertAdjacentHTML('beforeend', `<svg id="hand-defs" width="0" height="0" style="position:absolute" aria-hidden="true">${f('hand-ink', 0.04, 2.6, 'x="-15%" y="-60%" width="130%" height="220%"')}${f('hand-boil', 0.04, 3, 'x="-15%" y="-60%" width="130%" height="220%"')}${f('hand-big', 0.022, 5.5, 'x="-8%" y="-30%" width="116%" height="160%"')}</svg>`);
+    document.body.insertAdjacentHTML('beforeend', `<svg id="hand-defs" width="0" height="0" style="position:absolute" aria-hidden="true">${f('hand-ink', 0.034, 3.8, 'x="-15%" y="-60%" width="130%" height="220%"')}${f('hand-boil', 0.034, 4.6, 'x="-15%" y="-60%" width="130%" height="220%"')}${f('hand-big', 0.02, 8.5, 'x="-8%" y="-30%" width="116%" height="160%"')}</svg>`);
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
       let k = 0; const turbs = ['hand-boil', 'hand-big'].map((id) => document.querySelector(`#${id} feTurbulence`));
       setInterval(() => { if (!handOn() || document.hidden) return; k++; turbs.forEach((t) => t.setAttribute('seed', String(1 + (k % 6)))); }, 125);
@@ -241,12 +241,12 @@
     document.addEventListener('focusin', (e) => { if (handOn() && e.target.matches && e.target.matches('input, textarea, select')) requestAnimationFrame(() => handEdge(e.target)); });
     document.addEventListener('focusout', (e) => { if (handOn() && e.target.matches && e.target.matches('input, textarea, select')) requestAnimationFrame(() => handEdge(e.target)); });
   }
-  function handLine(v, vert) { // 삐뚤빼뚤한 선 한 줄. 마디마다 수평으로 지나가게 해서 이어 붙여도 꺾이지 않는다. 양 끝은 모서리를 살짝 지나친다
+  function handLine(v, vert, calm) { // 삐뚤빼뚤한 선 한 줄. 마디마다 수평으로 지나가게 해서 이어 붙여도 꺾이지 않는다. 양 끝은 모서리를 넉넉히 지나친다
     let r = 11 + v * 37; const rnd = () => { r = (r * 9301 + 49297) % 233280; return r / 233280; };
     const pt = (a, b) => (vert ? `${b.toFixed(1)} ${a}` : `${a} ${b.toFixed(1)}`);
-    let y = 15; let d = `M${pt(4, 15 + (rnd() - 0.5) * 3)} L${pt(30, 15)}`;
-    for (let x = 30; x < 510; x += 80) { const ny = x + 80 >= 510 ? 15 : 15 + (rnd() - 0.5) * 6.4; d += ` C${pt(x + 30, y)} ${pt(x + 50, ny)} ${pt(x + 80, ny)}`; y = ny; }
-    return d + ` L${pt(536, 15 + (rnd() - 0.5) * 3)}`;
+    let y = 15; let d = `M${pt(1, 15 + (rnd() - 0.5) * 7)} L${pt(30, 15)}`;
+    for (let x = 30; x < 510; x += 60) { const ny = x + 60 >= 510 ? 15 : 15 + (rnd() - 0.5) * (calm ? 3 : 10.5); d += ` C${pt(x + 22, y)} ${pt(x + 36, ny)} ${pt(x + 60, ny)}`; y = ny; }
+    return d + ` L${pt(539, 15 + (rnd() - 0.5) * 7)}`;
   }
   function handEdge(el) { // 테두리를 손으로 그은 선 그림으로 바꿔 끼운다 (색과 굵기는 원래 테두리를 따른다)
     const cs = getComputedStyle(el); const sides = ['Top', 'Right', 'Bottom', 'Left'];
@@ -257,16 +257,17 @@
     const color = cs[`border${sides[i]}Color`]; if (/, 0\)$|transparent/.test(color)) return clear();
     const dashed = /dash|dot/.test(cs[`border${sides[i]}Style`]);
     const v = el.dataset.handE ? +el.dataset.handE : 1 + (handN++ % 4);
-    const key = [color, w.join(','), dashed, v].join('|');
+    const box = el.getBoundingClientRect(); const calmH = box.width < 150; const calmV = box.height < 150; // 짧은 변은 덜 구불거리게 (눌려서 지렁이처럼 보이지 않게)
+    const key = [color, w.join(','), dashed, v, calmH, calmV].join('|');
     let uri = handUri.get(key);
     if (!uri) {
-      const st = (bw) => `stroke-width="${(Math.min(Math.max(bw, 1), 4.5) * 4.4).toFixed(1)}"${dashed ? ' stroke-dasharray="30 22"' : ''}`;
+      const st = (bw) => `stroke-width="${((Math.min(Math.max(bw, 1), 4.5) * 1.25 + 1.2) * 2.5).toFixed(1)}"${dashed ? ' stroke-dasharray="34 26"' : ''}`; // 원래 테두리보다 굵게, 마커처럼
       const line = (bw, d, shift) => (bw ? `<path ${st(bw)} d="${d}"${shift ? ` transform="${shift}"` : ''}/>` : '');
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="540" height="540" viewBox="0 0 540 540" fill="none" stroke="${color}" stroke-linecap="round" stroke-linejoin="round">${line(w[0], handLine(v, false))}${line(w[2], handLine(v + 5, false), 'translate(0 510)')}${line(w[3], handLine(v + 9, true))}${line(w[1], handLine(v + 13, true), 'translate(510 0)')}</svg>`;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="540" height="540" viewBox="0 0 540 540" fill="none" stroke="${color}" stroke-linecap="round" stroke-linejoin="round">${line(w[0], handLine(v, false, calmH))}${line(w[2], handLine(v + 5, false, calmH), 'translate(0 510)')}${line(w[3], handLine(v + 9, true, calmV))}${line(w[1], handLine(v + 13, true, calmV), 'translate(510 0)')}</svg>`;
       uri = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`; handUri.set(key, uri);
     }
-    const W = 7.5; el.dataset.handE = String(v);
-    const inset = el.matches('input, textarea, select') ? 1.6 : 0; // 입력칸은 선을 살짝 안쪽에 긋는다 (바깥으로 나가면 둘레에서 잘리는 곳이 있다)
+    const W = 12; el.dataset.handE = String(v);
+    const inset = el.matches('input, textarea, select') ? 3.4 : 0; // 입력칸은 선을 살짝 안쪽에 긋는다 (바깥으로 나가면 둘레에서 잘리는 곳이 있다)
     el.style.borderImage = `${uri} 30 / ${w.map((bw) => (bw ? W + 'px' : '0')).join(' ')} / ${w.map((bw) => (bw ? (W / 2 - Math.max(bw / 2, inset)).toFixed(2) + 'px' : '0')).join(' ')} round`;
   }
   function handify(root) {

@@ -1543,4 +1543,11 @@ html[data-hand="1"] .fx-line { display: none; }
 @media print { html[data-hand="1"] .hand-ink, html[data-hand="1"] .hand-boil { filter: none !important; } }
 html[data-hand="1"] input.text, html[data-hand="1"] textarea, html[data-hand="1"] select { background-color: transparent; }
 /* 사진은 그대로 두고, 둘레에 마커로 테두리만 그린다 */
-html[data-hand="1"] .heropic, html[data-hand="1"] .tile img, html[data-hand="1"] .simcard img, html[data-hand="1"] .gazemap, html[data-hand="1"] .stage .frame { border: 1.5px solid var(--ink); }
+html[data-hand="1"] .heropic, html[data-hand="1"] .tile img, html[data-hand="1"] .simcard img, html[data-hand="1"] .gazemap, html[data-hand="1"] .stage .frame { border: 2px solid var(--ink); }
+/* 더 삐뚤게: 단추와 딱지와 제목이 조금씩 기울어 있다 */
+html[data-hand="1"] .btn.hand-ink:nth-child(odd), html[data-hand="1"] .btn.hand-boil { rotate: -0.9deg; }
+html[data-hand="1"] .btn.hand-ink:nth-child(even) { rotate: 0.8deg; }
+html[data-hand="1"] .chip-state.hand-ink, html[data-hand="1"] .chip.hand-ink { rotate: 1.2deg; }
+html[data-hand="1"] h2.hand-boil { rotate: -0.6deg; transform-origin: 0 50%; }
+html[data-hand="1"] .tile:nth-child(3n+1) img { rotate: -0.5deg; } html[data-hand="1"] .tile:nth-child(3n+2) img { rotate: 0.45deg; }
+html[data-hand="1"] .btn:not(.solid):not(.on), html[data-hand="1"] .chip-state { border-width: 2px; }
