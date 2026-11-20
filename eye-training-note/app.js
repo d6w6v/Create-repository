@@ -12,7 +12,7 @@
     if (hand) document.documentElement.dataset.hand = '1'; else delete document.documentElement.dataset.hand;
     try { localStorage.setItem('eye-skin', name); } catch (e) { /* 기억 못 해도 그냥 진행 */ }
   }
-  const APP_VERSION = '74 · 깜빡임 고침';
+  const APP_VERSION = '73 · 더 삐뚤고 굵게';
   try {
     // 교재 디자인을 기본으로 바꾸면서, 예전에 골라 둔 디자인을 한 번만 교재로 맞춘다
     if (localStorage.getItem('eye-skin-reset') !== '1') { localStorage.setItem('eye-skin', 'school'); localStorage.setItem('eye-skin-reset', '1'); }
@@ -159,11 +159,10 @@
         document.body.append(line); setTimeout(() => line.remove(), d + 1000);
       }
       el.style.animationDelay = `${d + (bw ? 200 : 0)}ms`; el.classList.remove('fx-wait'); el.classList.add('fx-rise');
-      // 원래 등장 효과가 있는 것(카드 등)은 그 효과가 다시 틀어지지 않게 붙잡아 둔다. 안 그러면 올라온 뒤 한 번 더 사라졌다 나타난다
-      setTimeout(() => { if (el.dataset.fxOwn) el.classList.add('fx-still'); el.classList.remove('fx-rise'); el.style.animationDelay = ''; }, d + 1100);
+      setTimeout(() => { el.classList.remove('fx-rise'); el.style.animationDelay = ''; }, d + 1100);
     };
     const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { io.unobserve(e.target); show(e.target); } }), { rootMargin: '0px 0px -5% 0px' });
-    blocks.forEach((el) => { if (getComputedStyle(el).animationName !== 'none') el.dataset.fxOwn = '1'; el.classList.add('fx-wait'); io.observe(el); });
+    blocks.forEach((el) => { el.classList.add('fx-wait'); io.observe(el); });
   }
   /* 브리프 사진 위에 얹는 것들: 초점 괄호, 시선 점. 퍼즐이 다시 그려져도 남아 있게 따로 들고 있다 */
   function fxLens(pic) {
